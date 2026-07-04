@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/availability-engine" },
+    { "path": "packages/db-types" },
+    { "path": "packages/shared" }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "name": "@turnosbot/dashboard",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Dashboard web (Next.js App Router) — CRUD de profesionales, servicios, turnos, y panel de superadmin. Stub: dependencias declaradas, sin código de app aún (Fase 2 construye la UI).",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@turnosbot/availability-engine": "workspace:*",
+    "@turnosbot/db-types": "workspace:*",
+    "@turnosbot/shared": "workspace:*",
+    "@supabase/ssr": "^0.12.0",
+    "@supabase/supabase-js": "^2.110.0",
+    "next": "^16.2.10",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.3"
+  }
+}

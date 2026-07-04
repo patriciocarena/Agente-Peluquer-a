@@ -1,0 +1,22 @@
+# Secrets / env — NUNCA commitear credenciales
+.env
+.env.*
+!.env.example
+*.key
+
+# Node / build
+node_modules/
+dist/
+build/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+
+# OS / editor
+.DS_Store
+*.log

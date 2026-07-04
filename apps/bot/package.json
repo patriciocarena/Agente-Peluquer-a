@@ -1,0 +1,26 @@
+{
+  "name": "@turnosbot/bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "TurnosBot — WhatsApp bot service (Fastify webhook/health server)",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.0",
+    "@turnosbot/db-types": "workspace:*",
+    "fastify": "^5.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

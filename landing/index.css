@@ -1,0 +1,740 @@
+/* ==========================================================================
+   FONO DESIGN SYSTEM - INSPIRED BY TAILGRIDS SYNTHAI
+   ========================================================================== */
+
+/* Design Tokens & Theme Variables */
+:root {
+    /* Fonts */
+    --font-sans: 'Figtree', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: 'Space Mono', monospace;
+
+    /* Theme - Light (Default) */
+    --bg-main: #F4F4F5;
+    --bg-card: #FFFFFF;
+    --bg-input: #FFFFFF;
+    --border-color: rgba(0, 0, 0, 0.08);
+    --border-color-glow: rgba(139, 92, 246, 0.3);
+    
+    --text-primary: #18181B;
+    --text-secondary: #52525B;
+    --text-muted: #A1A1AA;
+    
+    --logo-color: #09090B;
+    --logo-dot: #8B5CF6;
+    
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.08);
+    
+    /* UI Accent Colors */
+    --color-primary: #09090B;
+    --color-primary-hover: #27272A;
+    --color-accent: #8B5CF6;
+    
+    /* WhatsApp Dark-themed Mockup colors */
+    --wa-bg: #0F121B;
+    --wa-header: #171E2D;
+    --wa-bubble-rx: #1E293B;
+    --wa-bubble-tx: #8B5CF6;
+}
+
+/* Dark Mode Theme overrides */
+html.dark {
+    --bg-main: #09090B;
+    --bg-card: #18181B;
+    --bg-input: #27272A;
+    --border-color: rgba(255, 255, 255, 0.06);
+    --border-color-glow: rgba(255, 255, 255, 0.15);
+    
+    --text-primary: #F8FAFC;
+    --text-secondary: #A1A1AA;
+    --text-muted: #52525B;
+    
+    --logo-color: #FFFFFF;
+    --logo-dot: #FFFFFF;
+    
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.6);
+    
+    --color-primary: #FFFFFF;
+    --color-primary-hover: #E4E4E7;
+    
+    --wa-bg: #0A0A0C;
+    --wa-header: #121215;
+    --wa-bubble-rx: #18181C;
+    --wa-bubble-tx: #7C3AED;
+}
+
+/* Basic Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+    font-size: 16px;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.p-3 {
+    padding: 0.75rem;
+}
+
+.max-w-7xl {
+    max-width: 80rem; /* 1280px */
+}
+
+.mx-auto {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+/* Typography styles */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+}
+
+p {
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.font-mono {
+    font-family: var(--font-mono);
+}
+
+.uppercase {
+    text-transform: uppercase;
+}
+
+.text-xs { font-size: 0.75rem; }
+.text-sm { font-size: 0.875rem; }
+.text-base { font-size: 1rem; }
+.text-lg { font-size: 1.125rem; }
+.text-xl { font-size: 1.25rem; }
+.text-2xl { font-size: 1.5rem; }
+.text-3xl { font-size: 1.875rem; }
+.text-4xl { font-size: 2.25rem; }
+.text-5xl { font-size: 3rem; }
+.text-6xl { font-size: 3.75rem; }
+
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+
+.text-center { text-align: center; }
+
+/* Grid / Flex Utilities */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: justify-center; }
+.flex-wrap { flex-wrap: wrap; }
+.gap-1 { gap: 0.25rem; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
+.gap-4 { gap: 1rem; }
+.gap-5 { gap: 1.25rem; }
+.gap-6 { gap: 1.5rem; }
+.gap-8 { gap: 2rem; }
+.gap-10 { gap: 2.5rem; }
+.gap-12 { gap: 3rem; }
+.gap-16 { gap: 4rem; }
+.gap-20 { gap: 5rem; }
+
+.grid { display: grid; }
+.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+.aspect-video { aspect-ratio: 16 / 9; }
+
+/* Spacing Utilities */
+.w-full { width: 100%; }
+.h-11 { height: 2.75rem; }
+.h-13 { height: 3.25rem; }
+.size-5 { width: 1.25rem; height: 1.25rem; }
+.size-11\.5 { width: 2.875rem; height: 2.875rem; }
+.size-20 { width: 5rem; height: 5rem; }
+.shrink-0 { flex-shrink: 0; }
+.rounded-lg { border-radius: 0.5rem; }
+.rounded-xl { border-radius: 0.75rem; }
+.rounded-2xl { border-radius: 1.25rem; }
+.rounded-full { border-radius: 9999px; }
+
+.mt-3 { margin-top: 0.75rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.mb-8 { margin-bottom: 2rem; }
+.mb-10 { margin-bottom: 2.5rem; }
+.mb-11 { margin-bottom: 2.75rem; }
+.mb-16 { margin-bottom: 4rem; }
+.mb-24 { margin-bottom: 6rem; }
+.pb-2 { padding-bottom: 0.5rem; }
+.pb-10 { padding-bottom: 2.5rem; }
+.pt-6 { padding-top: 1.5rem; }
+
+.space-y-3 > * + * { margin-top: 0.75rem; }
+.space-y-4 > * + * { margin-top: 1rem; }
+.space-y-5 > * + * { margin-top: 1.25rem; }
+.space-y-8 > * + * { margin-top: 2rem; }
+
+/* Border / Shadow / Background Utilities */
+.border { border: 1px solid var(--border-color); }
+.border-2 { border: 2px solid var(--border-color); }
+.border-b { border-bottom: 1px solid var(--border-color); }
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow-md { box-shadow: var(--shadow-md); }
+.bg-white { background-color: #FFFFFF; }
+.bg-black { background-color: #000000; }
+.bg-neutral-50 { background-color: var(--bg-card); }
+.bg-neutral-100 { background-color: var(--bg-main); }
+.bg-green-50 { background-color: #E8F5E9; }
+.bg-purple-50 { background-color: #F3E5F5; }
+.bg-pink-50 { background-color: #FCE4EC; }
+
+.stroke-neutral-900 { stroke: #171717; }
+.dark .stroke-neutral-900 { stroke: #E4E4E7; }
+
+/* Transitions */
+.transition-colors { transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease; }
+.duration-300 { transition-duration: 0.3s; }
+
+/* ==========================================================================
+   HEADER & FLOATING NAVBAR STYLES
+   ========================================================================== */
+
+.logo {
+    color: var(--logo-color);
+}
+
+.logo-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: var(--logo-dot);
+    border-radius: 50%;
+    margin-right: 6px;
+    margin-top: 2px;
+}
+
+header nav {
+    box-shadow: 0 10px 25px -10px rgba(0, 0, 0, 0.05);
+}
+
+header nav ul li a {
+    display: inline-flex;
+    align-items: center;
+    color: var(--text-secondary);
+}
+
+header nav ul li a:hover {
+    color: var(--text-primary);
+}
+
+header nav ul li a.nav-active {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.theme-toggle-btn {
+    cursor: pointer;
+    background: none;
+    border: none;
+}
+
+/* ==========================================================================
+   HERO / FEATURE INTRO STYLES
+   ========================================================================== */
+
+#features {
+    position: relative;
+    border-color: var(--border-color);
+}
+
+/* ==========================================================================
+   WHATSAPP SIMULATOR MOCKUP
+   ========================================================================== */
+
+.phone-frame {
+    width: 320px;
+    height: 560px;
+    background: #000000;
+    border: 11px solid #1E293B;
+    border-radius: 40px;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    z-index: 10;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.phone-header {
+    height: 22px;
+    background: #000000;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+}
+
+.phone-speaker {
+    width: 45px;
+    height: 3px;
+    background: #334155;
+    border-radius: 2px;
+    position: absolute;
+    top: 5px;
+}
+
+.phone-camera {
+    width: 7px;
+    height: 7px;
+    background: #1E293B;
+    border-radius: 50%;
+    position: absolute;
+    top: 3px;
+    right: 100px;
+}
+
+.chat-container {
+    flex: 1;
+    background: var(--wa-bg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chat-header {
+    height: 52px;
+    background: var(--wa-header);
+    display: flex;
+    align-items: center;
+    padding: 0 0.75rem;
+    gap: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.chat-back {
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+}
+
+.chat-avatar {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #FFFFFF;
+    font-size: 0.85rem;
+}
+
+.chat-user-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.chat-user-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #FFFFFF;
+}
+
+.chat-user-status {
+    font-size: 0.65rem;
+    color: #10B981;
+    font-weight: 500;
+}
+
+.chat-actions {
+    color: var(--text-muted);
+}
+
+.chat-body {
+    flex: 1;
+    padding: 0.75rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    scrollbar-width: none;
+}
+
+.chat-body::-webkit-scrollbar {
+    display: none;
+}
+
+.message {
+    max-width: 85%;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    border-radius: 0.75rem;
+}
+
+.message.received {
+    background: var(--wa-bubble-rx);
+    color: #FFFFFF;
+    align-self: flex-start;
+    border-bottom-left-radius: 0.15rem;
+}
+
+.message.sent {
+    background: var(--wa-bubble-tx);
+    color: #FFFFFF;
+    align-self: flex-end;
+    border-bottom-right-radius: 0.15rem;
+}
+
+.message.system-msg {
+    max-width: 100%;
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    text-align: center;
+    border-radius: 0.45rem;
+    align-self: center;
+    border: 1px dashed var(--border-color);
+}
+
+/* Typing Indicator inside chat */
+.typing-indicator {
+    background: var(--wa-bubble-rx);
+    padding: 0.6rem 0.75rem;
+    border-radius: 0.75rem;
+    border-bottom-left-radius: 0.15rem;
+    align-self: flex-start;
+    display: none;
+    align-items: center;
+    gap: 0.2rem;
+    width: 45px;
+}
+
+.typing-indicator.active {
+    display: flex;
+}
+
+.typing-indicator span {
+    width: 5px;
+    height: 5px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    animation: typing 1s infinite alternate;
+}
+
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+    from { transform: translateY(0); opacity: 0.3; }
+    to { transform: translateY(-3px); opacity: 1; }
+}
+
+.chat-suggestions {
+    padding: 0.65rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-top: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.suggestion-btn {
+    background: var(--wa-bubble-rx);
+    color: #FFFFFF;
+    font-size: 0.7rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: 0.45rem;
+    text-align: left;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.suggestion-btn:hover {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: #8B5CF6;
+    transform: translateX(1px);
+}
+
+.chat-footer {
+    height: 48px;
+    background: var(--wa-header);
+    display: flex;
+    align-items: center;
+    padding: 0 0.75rem;
+    gap: 0.65rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.chat-input-placeholder {
+    flex: 1;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    user-select: none;
+}
+
+.chat-send-btn {
+    width: 30px;
+    height: 30px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+}
+
+/* ==========================================================================
+   STICKY OVERLAPPING CARDS (CAPABILITIES)
+   ========================================================================== */
+
+#capabilities {
+    border-color: var(--border-color);
+}
+
+.text-neutral-400 { color: #A1A1AA; }
+.dark .text-neutral-400 { color: #52525B; }
+
+.sticky-card {
+    position: relative;
+    border-color: var(--border-color);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.sticky-card:hover {
+    border-color: var(--border-color-glow);
+}
+
+/* Define Overlapping Sticky Offsets */
+.sticky-card:nth-child(1) {
+    top: 90px;
+    margin-bottom: 30px;
+}
+.sticky-card:nth-child(2) {
+    top: 130px;
+    margin-bottom: 20px;
+}
+.sticky-card:nth-child(3) {
+    top: 170px;
+    margin-bottom: 0px;
+}
+
+html.dark .sticky-card {
+    background-color: #121215;
+}
+
+/* Capability Card Specific Accents */
+.text-green-700 { color: #15803D; }
+.text-purple-700 { color: #6D28D9; }
+.text-pink-700 { color: #BE185D; }
+
+.dark .text-green-700 { color: #4ADE80; }
+.dark .text-purple-700 { color: #A78BFA; }
+.dark .text-pink-700 { color: #F472B6; }
+
+.bg-green-500\/10 { background-color: rgba(34, 197, 94, 0.1); }
+.bg-purple-500\/10 { background-color: rgba(139, 92, 246, 0.1); }
+
+/* ==========================================================================
+   FLOATING INTEGRATIONS WEB
+   ========================================================================== */
+
+#integrations {
+    border-color: var(--border-color);
+}
+
+.shadow-integration {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+html.dark .shadow-integration {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+}
+
+.pointer-events-none {
+    pointer-events: none;
+}
+
+/* Floating positioning details */
+.top-10 { top: 2.5rem; }
+.top-20 { top: 5rem; }
+.bottom-10 { bottom: 2.5rem; }
+.z-0 { z-index: 0; }
+.z-10 { z-index: 10; }
+
+/* SVG connection lines styling */
+svg path {
+    transition: stroke 0.3s ease;
+}
+
+/* ==========================================================================
+   PRICING TABLE STYLING
+   ========================================================================== */
+
+#pricing {
+    border-color: var(--border-color);
+}
+
+#pricing .pricing-features li {
+    display: flex;
+    align-items: center;
+}
+
+/* Popular pricing plan border */
+.border-2.border-neutral-950 {
+    border-color: #09090B;
+}
+
+html.dark .border-2.border-neutral-950 {
+    border-color: #FFFFFF;
+}
+
+.line-through {
+    text-decoration: line-through;
+}
+
+/* ==========================================================================
+   LEAD CAPTURE FORM
+   ========================================================================== */
+
+#demo-form {
+    border-color: var(--border-color);
+}
+
+#demo-form input,
+#demo-form select {
+    box-shadow: var(--shadow-sm);
+    transition: border-color var(--transition-fast);
+}
+
+#demo-form input:focus,
+#demo-form select:focus {
+    border-color: #000000;
+}
+
+html.dark #demo-form input:focus,
+html.dark #demo-form select:focus {
+    border-color: #FFFFFF;
+}
+
+/* Form Loader / Spinner */
+.btn-loader {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: none;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+#submit-btn.loading .btn-text {
+    display: none;
+}
+
+#submit-btn.loading .btn-loader {
+    display: block;
+}
+
+.form-feedback.success {
+    color: #10B981;
+}
+
+.form-feedback.error {
+    color: #EF4444;
+}
+
+/* ==========================================================================
+   FOOTER STYLING
+   ========================================================================== */
+
+.rounded-\[22px\] {
+    border-radius: 22px;
+}
+
+footer {
+    color: #FFFFFF;
+}
+
+footer a {
+    transition: color 0.2s ease;
+}
+
+footer a:hover {
+    color: #FFFFFF;
+}
+
+.border-t {
+    border-top: 1px solid var(--border-color);
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN BREAKPOINTS
+   ========================================================================== */
+
+@media (min-width: 1024px) {
+    .lg\:flex { display: flex; }
+    .lg\:flex-row { flex-direction: row; }
+    .lg\:hidden { display: none; }
+    .lg\:col-span-4 { grid-column: span 4 / span 4; }
+    .lg\:col-span-8 { grid-column: span 8 / span 8; }
+    .lg\:w-1/2 { width: 50%; }
+    .lg\:pr-10 { padding-right: 2.5rem; }
+    .lg\:ml-10 { margin-left: 2.5rem; }
+    .lg\:border-l { border-left: 1px solid var(--border-color); }
+    .lg\:leading-14 { line-height: 3.5rem; }
+    
+    .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1023px) {
+    .phone-frame {
+        width: 290px;
+        height: 520px;
+    }
+}
+
+@media (max-width: 768px) {
+    .text-5xl { font-size: 2.5rem; }
+    .text-6xl { font-size: 3rem; }
+    .p-3 { padding: 0.5rem; }
+    
+    header.absolute {
+        top: 2rem;
+    }
+    
+    .sticky-card {
+        position: relative !important;
+        top: 0 !important;
+        margin-bottom: 2rem !important;
+    }
+}

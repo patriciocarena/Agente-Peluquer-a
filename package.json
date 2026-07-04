@@ -1,0 +1,20 @@
+{
+  "name": "turnosbot",
+  "private": true,
+  "version": "0.0.0",
+  "description": "TurnosBot — SaaS multitenant de agentes de WhatsApp para peluquerías",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "pnpm -r --if-present run build",
+    "typecheck": "tsc -b --pretty"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.110.0",
+    "@turnosbot/db-types": "workspace:*",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.3"
+  }
+}

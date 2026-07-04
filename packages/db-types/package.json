@@ -1,0 +1,16 @@
+{
+  "name": "@turnosbot/db-types",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared Supabase-generated DB types (single source of truth for RLS + tenantScoped query layers, CORE-03). Stub — real types generated in a later plan via `supabase gen types typescript`.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

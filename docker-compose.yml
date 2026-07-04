@@ -1,0 +1,18 @@
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    platform: linux/arm64
+    image: turnosbot-bot:arm64
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: "3001"
+      TZ: UTC
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
