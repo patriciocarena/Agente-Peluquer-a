@@ -2,13 +2,14 @@
   "name": "@turnosbot/dashboard",
   "version": "0.0.0",
   "private": true,
-  "description": "Dashboard web (Next.js App Router) — CRUD de profesionales, servicios, turnos, y panel de superadmin. Stub: dependencias declaradas, sin código de app aún (Fase 2 construye la UI).",
+  "description": "Dashboard web (Next.js App Router) — CRUD de profesionales, servicios, turnos, y panel de superadmin. Base visual: Tailwind v4 + shadcn/ui + tema claro/oscuro + vitest (Fase 2).",
   "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
@@ -39,6 +40,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "tailwindcss": "4.3.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "4.1.9"
   }
 }
