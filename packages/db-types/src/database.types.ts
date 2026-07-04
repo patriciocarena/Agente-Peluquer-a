@@ -21,8 +21,8 @@ export type Database = {
           id: string
           inicio: string
           motivo: string | null
+          negocio_id: string
           profesional_id: string
-          tenant_id: string
           updated_at: string
         }
         Insert: {
@@ -31,8 +31,8 @@ export type Database = {
           id?: string
           inicio: string
           motivo?: string | null
+          negocio_id: string
           profesional_id: string
-          tenant_id: string
           updated_at?: string
         }
         Update: {
@@ -41,23 +41,23 @@ export type Database = {
           id?: string
           inicio?: string
           motivo?: string | null
+          negocio_id?: string
           profesional_id?: string
-          tenant_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bloqueo_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocio"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bloqueo_profesional_id_fkey"
             columns: ["profesional_id"]
             isOneToOne: false
             referencedRelation: "profesional"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "bloqueo_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenant"
             referencedColumns: ["id"]
           },
         ]
@@ -66,33 +66,33 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          negocio_id: string
           nombre: string | null
           telefono: string
-          tenant_id: string
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
+          negocio_id: string
           nombre?: string | null
           telefono: string
-          tenant_id: string
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
+          negocio_id?: string
           nombre?: string | null
           telefono?: string
-          tenant_id?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "cliente_tenant_id_fkey"
-            columns: ["tenant_id"]
+            foreignKeyName: "cliente_negocio_id_fkey"
+            columns: ["negocio_id"]
             isOneToOne: false
-            referencedRelation: "tenant"
+            referencedRelation: "negocio"
             referencedColumns: ["id"]
           },
         ]
@@ -103,7 +103,7 @@ export type Database = {
           context: Json
           created_at: string
           id: string
-          tenant_id: string
+          negocio_id: string
           updated_at: string
           ventana_expira_at: string | null
         }
@@ -112,7 +112,7 @@ export type Database = {
           context?: Json
           created_at?: string
           id?: string
-          tenant_id: string
+          negocio_id: string
           updated_at?: string
           ventana_expira_at?: string | null
         }
@@ -121,7 +121,7 @@ export type Database = {
           context?: Json
           created_at?: string
           id?: string
-          tenant_id?: string
+          negocio_id?: string
           updated_at?: string
           ventana_expira_at?: string | null
         }
@@ -134,10 +134,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "conversacion_tenant_id_fkey"
-            columns: ["tenant_id"]
+            foreignKeyName: "conversacion_negocio_id_fkey"
+            columns: ["negocio_id"]
             isOneToOne: false
-            referencedRelation: "tenant"
+            referencedRelation: "negocio"
             referencedColumns: ["id"]
           },
         ]
@@ -150,8 +150,8 @@ export type Database = {
           hora_fin: string
           hora_inicio: string
           id: string
+          negocio_id: string
           profesional_id: string
-          tenant_id: string
           updated_at: string
         }
         Insert: {
@@ -161,8 +161,8 @@ export type Database = {
           hora_fin: string
           hora_inicio: string
           id?: string
+          negocio_id: string
           profesional_id: string
-          tenant_id: string
           updated_at?: string
         }
         Update: {
@@ -172,23 +172,23 @@ export type Database = {
           hora_fin?: string
           hora_inicio?: string
           id?: string
+          negocio_id?: string
           profesional_id?: string
-          tenant_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "horario_trabajo_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocio"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "horario_trabajo_profesional_id_fkey"
             columns: ["profesional_id"]
             isOneToOne: false
             referencedRelation: "profesional"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "horario_trabajo_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenant"
             referencedColumns: ["id"]
           },
         ]
@@ -200,8 +200,8 @@ export type Database = {
           created_at: string
           direccion: string
           id: string
+          negocio_id: string
           programado_en: string | null
-          tenant_id: string
           wa_message_id: string | null
         }
         Insert: {
@@ -210,8 +210,8 @@ export type Database = {
           created_at?: string
           direccion: string
           id?: string
+          negocio_id: string
           programado_en?: string | null
-          tenant_id: string
           wa_message_id?: string | null
         }
         Update: {
@@ -220,8 +220,8 @@ export type Database = {
           created_at?: string
           direccion?: string
           id?: string
+          negocio_id?: string
           programado_en?: string | null
-          tenant_id?: string
           wa_message_id?: string | null
         }
         Relationships: [
@@ -233,18 +233,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "mensaje_tenant_id_fkey"
-            columns: ["tenant_id"]
+            foreignKeyName: "mensaje_negocio_id_fkey"
+            columns: ["negocio_id"]
             isOneToOne: false
-            referencedRelation: "tenant"
+            referencedRelation: "negocio"
             referencedColumns: ["id"]
           },
         ]
       }
       negocio: {
         Row: {
+          activo: boolean
           created_at: string
           direccion: string | null
+          display_phone_number: string | null
           granularidad_min: number
           horario_general: Json | null
           id: string
@@ -253,10 +255,15 @@ export type Database = {
           tenant_id: string
           timezone: string
           updated_at: string
+          waba_id: string | null
+          whatsapp_phone_number_id: string | null
+          whatsapp_token: string | null
         }
         Insert: {
+          activo?: boolean
           created_at?: string
           direccion?: string | null
+          display_phone_number?: string | null
           granularidad_min?: number
           horario_general?: Json | null
           id?: string
@@ -265,10 +272,15 @@ export type Database = {
           tenant_id: string
           timezone?: string
           updated_at?: string
+          waba_id?: string | null
+          whatsapp_phone_number_id?: string | null
+          whatsapp_token?: string | null
         }
         Update: {
+          activo?: boolean
           created_at?: string
           direccion?: string | null
+          display_phone_number?: string | null
           granularidad_min?: number
           horario_general?: Json | null
           id?: string
@@ -277,6 +289,9 @@ export type Database = {
           tenant_id?: string
           timezone?: string
           updated_at?: string
+          waba_id?: string | null
+          whatsapp_phone_number_id?: string | null
+          whatsapp_token?: string | null
         }
         Relationships: [
           {
@@ -328,32 +343,32 @@ export type Database = {
           activo: boolean
           created_at: string
           id: string
+          negocio_id: string
           nombre: string
-          tenant_id: string
           updated_at: string
         }
         Insert: {
           activo?: boolean
           created_at?: string
           id?: string
+          negocio_id: string
           nombre: string
-          tenant_id: string
           updated_at?: string
         }
         Update: {
           activo?: boolean
           created_at?: string
           id?: string
+          negocio_id?: string
           nombre?: string
-          tenant_id?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "profesional_tenant_id_fkey"
-            columns: ["tenant_id"]
+            foreignKeyName: "profesional_negocio_id_fkey"
+            columns: ["negocio_id"]
             isOneToOne: false
-            referencedRelation: "tenant"
+            referencedRelation: "negocio"
             referencedColumns: ["id"]
           },
         ]
@@ -362,31 +377,38 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          negocio_id: string
           precio_custom: number | null
           profesional_id: string
           servicio_id: string
-          tenant_id: string
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
+          negocio_id: string
           precio_custom?: number | null
           profesional_id: string
           servicio_id: string
-          tenant_id: string
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
+          negocio_id?: string
           precio_custom?: number | null
           profesional_id?: string
           servicio_id?: string
-          tenant_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "profesional_servicio_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocio"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profesional_servicio_profesional_id_fkey"
             columns: ["profesional_id"]
@@ -401,13 +423,6 @@ export type Database = {
             referencedRelation: "servicio"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "profesional_servicio_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenant"
-            referencedColumns: ["id"]
-          },
         ]
       }
       recordatorio: {
@@ -416,8 +431,8 @@ export type Database = {
           enviado: boolean
           enviado_en: string | null
           id: string
+          negocio_id: string
           programado_en: string
-          tenant_id: string
           turno_id: string
         }
         Insert: {
@@ -425,8 +440,8 @@ export type Database = {
           enviado?: boolean
           enviado_en?: string | null
           id?: string
+          negocio_id: string
           programado_en: string
-          tenant_id: string
           turno_id: string
         }
         Update: {
@@ -434,16 +449,16 @@ export type Database = {
           enviado?: boolean
           enviado_en?: string | null
           id?: string
+          negocio_id?: string
           programado_en?: string
-          tenant_id?: string
           turno_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "recordatorio_tenant_id_fkey"
-            columns: ["tenant_id"]
+            foreignKeyName: "recordatorio_negocio_id_fkey"
+            columns: ["negocio_id"]
             isOneToOne: false
-            referencedRelation: "tenant"
+            referencedRelation: "negocio"
             referencedColumns: ["id"]
           },
           {
@@ -462,10 +477,10 @@ export type Database = {
           descripcion: string | null
           duracion_min: number
           id: string
+          negocio_id: string
           nombre: string
           orden: number
           precio: number
-          tenant_id: string
           updated_at: string
         }
         Insert: {
@@ -474,10 +489,10 @@ export type Database = {
           descripcion?: string | null
           duracion_min: number
           id?: string
+          negocio_id: string
           nombre: string
           orden?: number
           precio: number
-          tenant_id: string
           updated_at?: string
         }
         Update: {
@@ -486,18 +501,18 @@ export type Database = {
           descripcion?: string | null
           duracion_min?: number
           id?: string
+          negocio_id?: string
           nombre?: string
           orden?: number
           precio?: number
-          tenant_id?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "servicio_tenant_id_fkey"
-            columns: ["tenant_id"]
+            foreignKeyName: "servicio_negocio_id_fkey"
+            columns: ["negocio_id"]
             isOneToOne: false
-            referencedRelation: "tenant"
+            referencedRelation: "negocio"
             referencedColumns: ["id"]
           },
         ]
@@ -506,32 +521,23 @@ export type Database = {
         Row: {
           activo: boolean
           created_at: string
-          display_phone_number: string | null
           id: string
+          nombre: string
           updated_at: string
-          waba_id: string | null
-          whatsapp_phone_number_id: string | null
-          whatsapp_token: string | null
         }
         Insert: {
           activo?: boolean
           created_at?: string
-          display_phone_number?: string | null
           id?: string
+          nombre: string
           updated_at?: string
-          waba_id?: string | null
-          whatsapp_phone_number_id?: string | null
-          whatsapp_token?: string | null
         }
         Update: {
           activo?: boolean
           created_at?: string
-          display_phone_number?: string | null
           id?: string
+          nombre?: string
           updated_at?: string
-          waba_id?: string | null
-          whatsapp_phone_number_id?: string | null
-          whatsapp_token?: string | null
         }
         Relationships: []
       }
@@ -543,9 +549,9 @@ export type Database = {
           fin: string
           id: string
           inicio: string
+          negocio_id: string
           precio_total: number | null
           profesional_id: string
-          tenant_id: string
           updated_at: string
         }
         Insert: {
@@ -555,9 +561,9 @@ export type Database = {
           fin: string
           id?: string
           inicio: string
+          negocio_id: string
           precio_total?: number | null
           profesional_id: string
-          tenant_id: string
           updated_at?: string
         }
         Update: {
@@ -567,9 +573,9 @@ export type Database = {
           fin?: string
           id?: string
           inicio?: string
+          negocio_id?: string
           precio_total?: number | null
           profesional_id?: string
-          tenant_id?: string
           updated_at?: string
         }
         Relationships: [
@@ -581,17 +587,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "turno_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocio"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "turno_profesional_id_fkey"
             columns: ["profesional_id"]
             isOneToOne: false
             referencedRelation: "profesional"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "turno_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenant"
             referencedColumns: ["id"]
           },
         ]
@@ -601,45 +607,45 @@ export type Database = {
           created_at: string
           duracion_snapshot: number
           id: string
+          negocio_id: string
           nombre_snapshot: string
           precio_snapshot: number
           servicio_id: string
-          tenant_id: string
           turno_id: string
         }
         Insert: {
           created_at?: string
           duracion_snapshot: number
           id?: string
+          negocio_id: string
           nombre_snapshot: string
           precio_snapshot: number
           servicio_id: string
-          tenant_id: string
           turno_id: string
         }
         Update: {
           created_at?: string
           duracion_snapshot?: number
           id?: string
+          negocio_id?: string
           nombre_snapshot?: string
           precio_snapshot?: number
           servicio_id?: string
-          tenant_id?: string
           turno_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "turno_servicio_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocio"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "turno_servicio_servicio_id_fkey"
             columns: ["servicio_id"]
             isOneToOne: false
             referencedRelation: "servicio"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "turno_servicio_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenant"
             referencedColumns: ["id"]
           },
           {
@@ -656,6 +662,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auth_negocio_ids: { Args: never; Returns: string[] }
       auth_tenant_id: { Args: never; Returns: string }
     }
     Enums: {

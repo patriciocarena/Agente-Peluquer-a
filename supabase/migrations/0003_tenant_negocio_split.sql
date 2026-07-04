@@ -110,6 +110,33 @@ ALTER TABLE negocio
 CREATE INDEX idx_negocio_whatsapp_phone_number_id ON negocio (whatsapp_phone_number_id);
 
 -- ----------------------------------------------------------------------------
+-- 2.5. Dropear los objetos que dependen de <tabla>.tenant_id ANTES de la
+--      cirugía de columnas del paso 3 (Postgres rechaza DROP COLUMN si una
+--      policy o constraint aún referencia la columna):
+--        - las 11 policies <tabla>_aislamiento (predicado por tenant_id;
+--          se RECREAN por negocio_id en el paso 6, tras crear negocio_id);
+--        - los 2 uniques que incluyen tenant_id (se RECREAN por negocio_id
+--          en el paso 4).
+--      Ventana intra-transacción con RLS habilitada y sin policy = deny-all,
+--      irrelevante: la migración corre como rol que bypassa RLS y nadie ve el
+--      estado intermedio (todo dentro del mismo BEGIN/COMMIT).
+-- ----------------------------------------------------------------------------
+DROP POLICY IF EXISTS profesional_aislamiento ON profesional;
+DROP POLICY IF EXISTS horario_trabajo_aislamiento ON horario_trabajo;
+DROP POLICY IF EXISTS servicio_aislamiento ON servicio;
+DROP POLICY IF EXISTS profesional_servicio_aislamiento ON profesional_servicio;
+DROP POLICY IF EXISTS cliente_aislamiento ON cliente;
+DROP POLICY IF EXISTS turno_aislamiento ON turno;
+DROP POLICY IF EXISTS turno_servicio_aislamiento ON turno_servicio;
+DROP POLICY IF EXISTS bloqueo_aislamiento ON bloqueo;
+DROP POLICY IF EXISTS conversacion_aislamiento ON conversacion;
+DROP POLICY IF EXISTS mensaje_aislamiento ON mensaje;
+DROP POLICY IF EXISTS recordatorio_aislamiento ON recordatorio;
+
+ALTER TABLE cliente DROP CONSTRAINT cliente_telefono_unico_por_tenant;
+ALTER TABLE conversacion DROP CONSTRAINT conversacion_unica_por_cliente;
+
+-- ----------------------------------------------------------------------------
 -- 3. Tablas operativas: agregar negocio_id, backfillear, SET NOT NULL,
 --    dropear tenant_id (FK + índice), agregar idx_<tabla>_negocio_id.
 --    Padres directos primero (backfill desde negocio via tenant_id de la
@@ -301,10 +328,9 @@ CREATE INDEX idx_recordatorio_negocio_id ON recordatorio (negocio_id);
 -- 4. Uniques re-scopeados: cliente(tenant_id,telefono) -> (negocio_id,telefono);
 --    conversacion(tenant_id,cliente_id) -> (negocio_id,cliente_id).
 -- ----------------------------------------------------------------------------
-ALTER TABLE cliente DROP CONSTRAINT cliente_telefono_unico_por_tenant;
+-- (los DROP CONSTRAINT de los uniques viejos se hicieron en el paso 2.5)
 ALTER TABLE cliente ADD CONSTRAINT cliente_telefono_unico_por_negocio UNIQUE (negocio_id, telefono);
 
-ALTER TABLE conversacion DROP CONSTRAINT conversacion_unica_por_cliente;
 ALTER TABLE conversacion ADD CONSTRAINT conversacion_unica_por_cliente UNIQUE (negocio_id, cliente_id);
 
 -- ----------------------------------------------------------------------------
@@ -327,14 +353,13 @@ STABLE
 SECURITY DEFINER
 SET search_path = ''
 AS $$
-  SELECT id FROM public.negocio WHERE tenant_id = auth_tenant_id();
+  SELECT id FROM public.negocio WHERE tenant_id = public.auth_tenant_id();
 $$;
 
 REVOKE ALL ON FUNCTION auth_negocio_ids() FROM public;
 GRANT EXECUTE ON FUNCTION auth_negocio_ids() TO authenticated;
 
 -- profesional
-DROP POLICY profesional_aislamiento ON profesional;
 CREATE POLICY profesional_aislamiento ON profesional
   FOR ALL
   TO authenticated
@@ -342,7 +367,6 @@ CREATE POLICY profesional_aislamiento ON profesional
   WITH CHECK (negocio_id IN (SELECT auth_negocio_ids()));
 
 -- horario_trabajo
-DROP POLICY horario_trabajo_aislamiento ON horario_trabajo;
 CREATE POLICY horario_trabajo_aislamiento ON horario_trabajo
   FOR ALL
   TO authenticated
@@ -350,7 +374,6 @@ CREATE POLICY horario_trabajo_aislamiento ON horario_trabajo
   WITH CHECK (negocio_id IN (SELECT auth_negocio_ids()));
 
 -- servicio
-DROP POLICY servicio_aislamiento ON servicio;
 CREATE POLICY servicio_aislamiento ON servicio
   FOR ALL
   TO authenticated
@@ -358,7 +381,6 @@ CREATE POLICY servicio_aislamiento ON servicio
   WITH CHECK (negocio_id IN (SELECT auth_negocio_ids()));
 
 -- profesional_servicio
-DROP POLICY profesional_servicio_aislamiento ON profesional_servicio;
 CREATE POLICY profesional_servicio_aislamiento ON profesional_servicio
   FOR ALL
   TO authenticated
@@ -366,7 +388,6 @@ CREATE POLICY profesional_servicio_aislamiento ON profesional_servicio
   WITH CHECK (negocio_id IN (SELECT auth_negocio_ids()));
 
 -- cliente
-DROP POLICY cliente_aislamiento ON cliente;
 CREATE POLICY cliente_aislamiento ON cliente
   FOR ALL
   TO authenticated
@@ -374,7 +395,6 @@ CREATE POLICY cliente_aislamiento ON cliente
   WITH CHECK (negocio_id IN (SELECT auth_negocio_ids()));
 
 -- turno
-DROP POLICY turno_aislamiento ON turno;
 CREATE POLICY turno_aislamiento ON turno
   FOR ALL
   TO authenticated
@@ -382,7 +402,6 @@ CREATE POLICY turno_aislamiento ON turno
   WITH CHECK (negocio_id IN (SELECT auth_negocio_ids()));
 
 -- turno_servicio
-DROP POLICY turno_servicio_aislamiento ON turno_servicio;
 CREATE POLICY turno_servicio_aislamiento ON turno_servicio
   FOR ALL
   TO authenticated
@@ -390,7 +409,6 @@ CREATE POLICY turno_servicio_aislamiento ON turno_servicio
   WITH CHECK (negocio_id IN (SELECT auth_negocio_ids()));
 
 -- bloqueo
-DROP POLICY bloqueo_aislamiento ON bloqueo;
 CREATE POLICY bloqueo_aislamiento ON bloqueo
   FOR ALL
   TO authenticated
@@ -398,7 +416,6 @@ CREATE POLICY bloqueo_aislamiento ON bloqueo
   WITH CHECK (negocio_id IN (SELECT auth_negocio_ids()));
 
 -- conversacion
-DROP POLICY conversacion_aislamiento ON conversacion;
 CREATE POLICY conversacion_aislamiento ON conversacion
   FOR ALL
   TO authenticated
@@ -406,7 +423,6 @@ CREATE POLICY conversacion_aislamiento ON conversacion
   WITH CHECK (negocio_id IN (SELECT auth_negocio_ids()));
 
 -- mensaje
-DROP POLICY mensaje_aislamiento ON mensaje;
 CREATE POLICY mensaje_aislamiento ON mensaje
   FOR ALL
   TO authenticated
@@ -414,7 +430,6 @@ CREATE POLICY mensaje_aislamiento ON mensaje
   WITH CHECK (negocio_id IN (SELECT auth_negocio_ids()));
 
 -- recordatorio
-DROP POLICY recordatorio_aislamiento ON recordatorio;
 CREATE POLICY recordatorio_aislamiento ON recordatorio
   FOR ALL
   TO authenticated
