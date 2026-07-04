@@ -17,7 +17,7 @@ Requisitos para el release inicial. Cada uno mapea a una fase del roadmap.
 
 ### Autenticación del dashboard (AUTH)
 
-- [ ] **AUTH-01**: Un dueño de peluquería puede iniciar sesión en el dashboard con email y contraseña
+- [x] **AUTH-01**: Un dueño de peluquería puede iniciar sesión en el dashboard con email y contraseña
 - [ ] **AUTH-02**: La sesión persiste entre refrescos del navegador
 - [ ] **AUTH-03**: Un usuario autenticado solo ve y opera datos de su propio tenant
 - [ ] **AUTH-04**: El usuario puede cerrar sesión desde cualquier página
@@ -131,7 +131,7 @@ Qué fases cubren qué requisitos.
 | CORE-03 | Phase 1 | Complete |
 | CORE-04 | Phase 1 | Complete |
 | CORE-05 | Phase 1 | Complete |
-| AUTH-01 | Phase 2 | Pending |
+| AUTH-01 | Phase 2 | Complete |
 | AUTH-02 | Phase 2 | Pending |
 | AUTH-03 | Phase 2 | Pending |
 | AUTH-04 | Phase 2 | Pending |
