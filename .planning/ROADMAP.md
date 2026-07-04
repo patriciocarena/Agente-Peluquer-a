@@ -65,7 +65,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 02-03-PLAN.md — Clientes Supabase (dual + service_role) + middleware role gate + login/logout (AUTH-01..04)
+- [x] 02-03-PLAN.md — Clientes Supabase (dual + service_role) + middleware role gate + login/logout (AUTH-01..04)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -164,7 +164,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Fundación multitenant | 0/5 | Not started | - |
-| 2. Dashboard y datos del negocio | 2/8 | In Progress|  |
+| 2. Dashboard y datos del negocio | 3/8 | In Progress|  |
 | 3. Motor de disponibilidad | 0/TBD | Not started | - |
 | 4. Grilla y turnos del dashboard | 0/TBD | Not started | - |
 | 5. Integración WhatsApp Cloud API | 0/TBD | Not started | - |

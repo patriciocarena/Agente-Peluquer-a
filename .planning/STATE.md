@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-07-04T22:03:58.037Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-07-04T22:23:34.537Z"
 last_activity: 2026-07-04
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 13
-  completed_plans: 7
+  completed_plans: 8
   percent: 14
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-03)
 ## Current Position
 
 Phase: 02 (dashboard-y-datos-del-negocio) — EXECUTING
-Plan: 3 of 8 — COMPLETED (02-02: base visual del dashboard). Plan 01 sigue pausado en Task 3 (checkpoint:human-action, aplicar migración 0003 live).
+Plan: 4 of 8 — COMPLETED (02-03: capa de autenticación y aislamiento). Plan 01's Task 3 checkpoint (aplicar migración 0003 live) ya fue resuelto por el orquestador (ver 02-01-SUMMARY.md).
 Status: Ready to execute
 Last activity: 2026-07-04
 
-Progress: [█████░░░░░] 54%
+Progress: [██████░░░░] 62%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [█████░░░░░] 54%
 
 *Updated after each plan completion*
 | Phase 02 P02 | 35 | 2 tasks | 40 files |
+| Phase 02 P03 | 40min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,7 @@ Recent decisions affecting current work:
 
 - **[Phase 01 — arm64 re-verify]** ✅ RESOLVED 2026-07-04. The Dockerfile was made pnpm-workspace-aware, closing the `workspace:*` / EUNSUPPORTEDPROTOCOL regression on ROADMAP Success Criteria #5. Re-verified live: installed colima/Docker, arm64 image builds cleanly (`arch=arm64 os=linux`), container `GET /health` → HTTP 200, `docker compose up -d` healthcheck `healthy`. Phase 01 is now 5/5 Success Criteria verified — VERIFICATION.md status flipped to `passed`. Phase 01 ready to close.
 - [Phase ?]: [Phase 02-02] Tailwind v4 CSS-first + shadcn base radix: base neutral con acento azul aislado, Inter self-hosted, next-themes class strategy; vitest runner
+- [Phase 02-03]: Clientes Supabase dual (server/browser/admin server-only) + middleware con getUser() para el gate owner/superadmin + require-role.ts como capa de defensa en profundidad; login/logout via Server Actions + zod — Cierra AUTH-01..04 y el borde de seguridad dual (RLS owner / service_role aislado admin); zod@4.4.3 y server-only@0.0.1 agregados y verificados contra el registry sin necesitar checkpoint bloqueante (paquetes canonicos ya pre-aprobados en el tech-stack del proyecto)
 
 ### Blockers/Concerns
 
@@ -91,8 +93,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-04T21:10:46.772Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-07-04T22:23:34.531Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None
 
 Last activity: 2026-07-04 - Completed quick task 260704-jb5: Terminar de actualizar 02-UI-SPEC.md y 02-RESEARCH.md de la Fase 2 (dashboard-y-datos-del-negocio) reflejando el cambio de modelo Tenant->Negocio(s), y commitear
