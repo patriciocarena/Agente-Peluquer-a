@@ -1,9 +1,10 @@
 ---
 phase: 02-dashboard-y-datos-del-negocio
 verified: 2026-07-05T02:42:51Z
-status: human_needed
-score: 15/16 requirements code-complete and verified; SADMIN end-to-end blocked on human bootstrap action
+status: passed
+score: 16/16 requirements verified — SADMIN bootstrap ejecutado 2026-07-04 (superadmin creado + verify-admin-tenant-lifecycle PASSED); solo resta un spot-check visual no bloqueante (ver 02-HUMAN-UAT.md test 3)
 overrides_applied: 0
+human_action_resolved: "2026-07-04 — bootstrap-superadmin.ts ejecutado (auth.users.id=f66ffbaf-6141-4441-87bd-543faea1c2f9, phono4884@gmail.com, rol=superadmin) y verify-admin-tenant-lifecycle.ts PASSED contra bdgufnitakelyialjoqg (SADMIN-01/02/03 end-to-end). Pendiente no bloqueante: spot-check visual en navegador."
 human_verification:
   - test: "Ejecutar scripts/bootstrap-superadmin.ts contra bdgufnitakelyialjoqg con credenciales reales del primer superadmin (email/password provistos por el humano, nunca hardcodeados)"
     expected: "Se crea un auth.user + una fila perfil(rol='superadmin', tenant_id=NULL); el superadmin puede loguearse en /login y el middleware lo redirige a /admin"
