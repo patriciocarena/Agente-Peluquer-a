@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { BOOKING_MAX_ADVANCE_DAYS, BOOKING_MIN_LEAD_MINUTES } from "./constants";
+import { BOOKING_MAX_ADVANCE_DAYS, BOOKING_MIN_LEAD_MINUTES } from "./constants.js";
 
 describe("constants", () => {
   it("BOOKING_MIN_LEAD_MINUTES es exactamente 60 (D-04)", () => {
