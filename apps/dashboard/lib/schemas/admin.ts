@@ -50,6 +50,16 @@ export const negocioAdminSchema = z
 
 export type NegocioAdminInput = z.infer<typeof negocioAdminSchema>;
 
+/**
+ * Tipo "de entrada" (pre-parseo) del form — `granularidad_min` es opcional
+ * acá porque el schema le aplica `.default(30)`. react-hook-form necesita
+ * este tipo (no el de salida) como `TFieldValues` del form; el de salida
+ * (`NegocioAdminInput`, con `granularidad_min` ya resuelto) es el que
+ * recibe el submit handler — ver components/admin/negocio-dialog.tsx /
+ * tenant-dialog.tsx (`useForm<FormValues, any, OutputValues>`).
+ */
+export type NegocioAdminFormValues = z.input<typeof negocioAdminSchema>;
+
 export const createTenantWithNegocioSchema = z.object({
   tenantNombre: z.string().min(1, "El nombre del grupo es obligatorio."),
   ownerEmail: z.email("Ingresá un email válido para el dueño."),
@@ -60,5 +70,10 @@ export const createTenantWithNegocioSchema = z.object({
 });
 
 export type CreateTenantWithNegocioInput = z.infer<
+  typeof createTenantWithNegocioSchema
+>;
+
+/** Ver NegocioAdminFormValues — mismo motivo (negocio.granularidad_min). */
+export type CreateTenantWithNegocioFormValues = z.input<
   typeof createTenantWithNegocioSchema
 >;
