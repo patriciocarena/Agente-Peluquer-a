@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-07-05T19:39:54.055Z"
+stopped_at: Completed 03-04-PLAN.md
+last_updated: "2026-07-05T19:53:33.609Z"
 last_activity: 2026-07-05
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 18
-  completed_plans: 16
+  completed_plans: 17
   percent: 29
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-03)
 ## Current Position
 
 Phase: 03 (motor-de-disponibilidad) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-07-05
 
-Progress: [█████████░] 89%
+Progress: [█████████░] 94%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [█████████░] 89%
 | Phase 02 P07 | 25min | 3 tasks | 8 files |
 | Phase 03 P01 | 12min | 3 tasks | 6 files |
 | Phase 03 P03 | 8min | 3 tasks | 6 files |
+| Phase 03 P04 | 10min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,7 @@ Recent decisions affecting current work:
 - [Phase 02]: [Phase 02-07]: Horario semanal multi-bloque (delete+insert por profesional) + matriz de servicios/precio custom (upsert onConflict profesional_id,servicio_id); profesional-editar-form.tsx orquesta 3 Server Actions secuenciales tras un unico 'Guardar cambios' — Cierra PRO-02/03/04
 - [Phase 03]: [Phase 03-01] Fundación de @turnosbot/availability-engine: vitest+date-fns/@date-fns/tz/zod instalados, constantes de ventana de reserva (60min/30d, D-05) en un único archivo, types.ts con row aliases type-only desde db-types (motor puro, AVAIL-04) y fixtures deterministas — Wave 0 que desbloquea el algoritmo — AVAIL-04: un único paquete puro con contratos únicos que bot y dashboard importan sin drift
 - [Phase ?]: [Phase 03-03] Tres primitivos del motor de intervalos (subtractIntervals half-open, snapToGrid anclado a medianoche-en-zona con gate Pitfall 5, resolveWorkIntervalsForDate via TZDate sin offset -3) con TDD RED-GREEN, 20 tests verdes — AVAIL-01/AVAIL-02
+- [Phase 03]: [Phase 03-04] Orquestación pura de computeSlots (schedule-bloqueos-turnos->grid->ventana->auto-assign) + autoAssign con tie-break estable por professionalId + index.ts como barrel público
 
 ### Blockers/Concerns
 
@@ -101,8 +103,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-05T19:39:54.050Z
-Stopped at: Completed 03-03-PLAN.md
+Last session: 2026-07-05T19:53:33.604Z
+Stopped at: Completed 03-04-PLAN.md
 Resume file: None
 
 Last activity: 2026-07-04 - Completed quick task 260704-jb5: Terminar de actualizar 02-UI-SPEC.md y 02-RESEARCH.md de la Fase 2 (dashboard-y-datos-del-negocio) reflejando el cambio de modelo Tenant->Negocio(s), y commitear
