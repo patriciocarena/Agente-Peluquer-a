@@ -1,7 +1,8 @@
 ---
 phase: 4
 slug: grilla-y-turnos-del-dashboard
-status: draft
+status: approved
+reviewed_at: 2026-07-05
 shadcn_initialized: true
 preset: "radix-nova — ya inicializado en apps/dashboard/components.json (Fase 2). Base color 'neutral', cssVariables: true, iconLibrary: lucide. Este phase NO reinicializa shadcn — solo agrega el componente Popover (faltante) sobre la config existente."
 created: 2026-07-05
