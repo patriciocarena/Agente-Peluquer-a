@@ -202,7 +202,10 @@ export async function updateServiciosMatrix(
   await requireRole("owner");
 
   const precioInvalido = asignaciones.some(
-    (asignacion) => asignacion.precioCustom !== null && asignacion.precioCustom < 0,
+    (asignacion) =>
+      asignacion.precioCustom !== null &&
+      // Number.isFinite descarta NaN/Infinity (NaN < 0 === false, se colaba); luego exige >= 0.
+      (!Number.isFinite(asignacion.precioCustom) || asignacion.precioCustom < 0),
   );
   if (precioInvalido) {
     return { error: SAVE_ERROR_COPY };
