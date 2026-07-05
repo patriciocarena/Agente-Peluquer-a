@@ -96,7 +96,24 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. El mismo cálculo de disponibilidad es usado por cualquier consumidor (no hay dos implementaciones que puedan discrepar)
   5. Cuando el cliente no pide un profesional específico, el sistema asigna automáticamente el primero disponible para ese horario
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+**Wave 1** *(paralelas — sin overlap de archivos)*
+
+- [ ] 03-01-PLAN.md — Wave 0: deps (date-fns/@date-fns/tz/zod/vitest) + vitest.config + types.ts (contra db-types) + constants.ts (60min/30d, D-04/D-05) + fixtures deterministas (AVAIL-04)
+- [ ] 03-02-PLAN.md — [BLOCKING] fix tenantScoped→negocioScoped (Pitfall 7: columna negocio_id post-0003) + smoke test cross-negocio live (gated)
+
+**Wave 2** *(depende de 03-01)*
+
+- [ ] 03-03-PLAN.md — Primitivos puros TDD: subtractIntervals (half-open [)), snapToGrid (D-01, Pitfall 5), resolveWorkIntervalsForDate (TZDate, Pitfall 2) (AVAIL-01/02)
+
+**Wave 3** *(depende de 03-03)*
+
+- [ ] 03-04-PLAN.md — computeSlots orquestación pura + autoAssign (hueco más temprano, D-03) + ventana de reserva + barrel index.ts (AVAIL-01/02/04/05)
+
+**Wave 4** *(depende de 03-04)*
+
+- [ ] 03-05-PLAN.md — bookAppointment: snapshots congelados + precio_total + manejo 23P01 + verify script live (gated) (AVAIL-03/04)
 
 ### Phase 4: Grilla y turnos del dashboard
 
@@ -165,7 +182,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Fundación multitenant | 5/5 | Complete | 2026-07-04 |
 | 2. Dashboard y datos del negocio | 8/8 | Complete (verified 16/16; solo resta spot-check visual no bloqueante) | 2026-07-04 |
-| 3. Motor de disponibilidad | 0/TBD | Not started | - |
+| 3. Motor de disponibilidad | 0/5 | Not started | - |
 | 4. Grilla y turnos del dashboard | 0/TBD | Not started | - |
 | 5. Integración WhatsApp Cloud API | 0/TBD | Not started | - |
 | 6. Agente conversacional de agendamiento | 0/TBD | Not started | - |
