@@ -119,3 +119,7 @@ None - no external service configuration required. Este plan es puro andamiaje d
 ## Next Phase Readiness
 - **Listo para Wave 2+:** El paquete ya tiene runner de tests, tipos y fixtures. Los siguientes planes pueden escribir `intervals.ts`, `grid.ts`, `schedule.ts`, `computeSlots.ts` y `booking.ts` con TDD sobre los fixtures deterministas.
 - **Recordatorio (fuera de este plan):** `apps/bot/src/db/tenantScoped.ts` sigue referenciando la columna `tenant_id` eliminada por migración 0003 (Pitfall 7) — es un defecto pre-existente bloqueante para el path bot-side, planificado como tarea temprana de otro plan de esta fase, no abordado aquí (este plan es solo la fundación del paquete puro).
+
+## Self-Check: PASSED
+
+Todos los archivos creados existen y los 5 commits (2bf459c, 54d13d6, a159415, 772c1a4, a43d910) están en el historial.
