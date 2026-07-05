@@ -13,8 +13,8 @@ TurnosBot se construye en siete fases que van de la base hacia el valor central.
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Fundación multitenant** - Base de datos, aislamiento por tenant y esqueleto de infraestructura listos y verificados
-- [ ] **Phase 2: Dashboard y datos del negocio** - El dueño puede loguearse y cargar profesionales, servicios, precios y perfil del negocio
+- [x] **Phase 1: Fundación multitenant** - Base de datos, aislamiento por tenant y esqueleto de infraestructura listos y verificados
+- [x] **Phase 2: Dashboard y datos del negocio** - El dueño puede loguearse y cargar profesionales, servicios, precios y perfil del negocio
 - [ ] **Phase 3: Motor de disponibilidad** - El sistema calcula con precisión qué horarios están realmente libres, probado en aislamiento
 - [ ] **Phase 4: Grilla y turnos del dashboard** - El dueño puede ver, bloquear, crear, cancelar y reagendar turnos desde el dashboard
 - [ ] **Phase 5: Integración WhatsApp Cloud API** - El sistema recibe y envía mensajes de WhatsApp de forma segura, enrutados al tenant correcto
@@ -163,8 +163,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Fundación multitenant | 0/5 | Not started | - |
-| 2. Dashboard y datos del negocio | 7/8 | In Progress (02-08 paused at checkpoint:human-action) | - |
+| 1. Fundación multitenant | 5/5 | Complete | 2026-07-04 |
+| 2. Dashboard y datos del negocio | 8/8 | Complete (verified 16/16; solo resta spot-check visual no bloqueante) | 2026-07-04 |
 | 3. Motor de disponibilidad | 0/TBD | Not started | - |
 | 4. Grilla y turnos del dashboard | 0/TBD | Not started | - |
 | 5. Integración WhatsApp Cloud API | 0/TBD | Not started | - |
