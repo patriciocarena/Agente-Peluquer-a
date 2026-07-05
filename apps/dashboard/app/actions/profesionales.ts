@@ -11,12 +11,11 @@
  * 4) — así que un `negocio_id` ajeno tampoco podría matchear ninguna fila
  * aunque algo más arriba fallara (defensa en profundidad).
  *
- * `toggleProfesionalActivo` se agrega primero (Task 2, deviation Rule 3):
- * `components/profesionales-table.tsx` necesita esta action para el Switch
- * de soft-delete antes de que Task 3 complete el resto del CRUD — sin esto,
- * Task 2 no compila (`tsc --noEmit` fallaría por el import inexistente).
- * `createProfesional`/`updateProfesional` se agregan en Task 3 en este mismo
- * archivo.
+ * `toggleProfesionalActivo` se agregó primero (Task 2, deviation Rule 3):
+ * `components/profesionales-table.tsx` necesitaba esta action para el
+ * Switch de soft-delete antes de que este Task 3 completara el resto del
+ * CRUD. `createProfesional`/`updateProfesional` (Task 3) re-validan con el
+ * mismo `profesionalSchema` usado por `components/profesional-form.tsx`.
  *
  * Deja el archivo preparado para que 02-07 agregue las actions de horario
  * semanal (PRO-02) y la matriz de servicios/precio custom (PRO-03/04).
@@ -28,12 +27,82 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/require-role";
 import { getNegocioActivo } from "@/lib/negocio-context";
 import { createClient } from "@/lib/supabase/server";
+import { profesionalSchema, type ProfesionalInput } from "@/lib/schemas/profesional";
 
+const SAVE_ERROR_COPY =
+  "No pudimos guardar los cambios. Revisá los datos marcados e intentá de nuevo.";
 const GENERIC_ERROR = "No pudimos completar la operación. Intentá de nuevo.";
 
 export type ProfesionalActionResult<T = undefined> =
   | { data: T; error?: undefined }
   | { data?: undefined; error: string };
+
+/** PRO-01 — crear un profesional (datos generales) del negocio activo. */
+export async function createProfesional(
+  input: ProfesionalInput,
+): Promise<ProfesionalActionResult<{ profesionalId: string }>> {
+  await requireRole("owner");
+
+  const parsed = profesionalSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: SAVE_ERROR_COPY };
+  }
+
+  // negocio_id derivado del contexto server-side — nunca de `input` (T-02-16).
+  const { negocio } = await getNegocioActivo();
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profesional")
+    .insert({
+      negocio_id: negocio.id,
+      nombre: parsed.data.nombre,
+      activo: parsed.data.activo,
+    })
+    .select()
+    .single();
+
+  if (error || !data) {
+    return { error: SAVE_ERROR_COPY };
+  }
+
+  revalidatePath("/profesionales");
+  return { data: { profesionalId: data.id } };
+}
+
+/** PRO-01 — editar datos generales (nombre/activo) de un profesional existente. */
+export async function updateProfesional(
+  profesionalId: string,
+  input: ProfesionalInput,
+): Promise<ProfesionalActionResult> {
+  await requireRole("owner");
+
+  const parsed = profesionalSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: SAVE_ERROR_COPY };
+  }
+
+  // negocio_id derivado del contexto server-side, usado como filtro extra
+  // (defensa en profundidad) además del propio RLS (T-02-16).
+  const { negocio } = await getNegocioActivo();
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profesional")
+    .update({
+      nombre: parsed.data.nombre,
+      activo: parsed.data.activo,
+    })
+    .eq("id", profesionalId)
+    .eq("negocio_id", negocio.id); // RLS-scoped: solo matchea si pertenece al negocio activo
+
+  if (error) {
+    return { error: SAVE_ERROR_COPY };
+  }
+
+  revalidatePath("/profesionales");
+  return { data: undefined };
+}
 
 /** PRO-01 — activar/desactivar un profesional (soft delete, Tabs/Switch). */
 export async function toggleProfesionalActivo(
