@@ -11,8 +11,13 @@
  * consumidor externo que los necesite (AVAIL-04: un único módulo puro
  * compartido, sin drift).
  *
- * `bookAppointment` (AVAIL-03) se agrega en Wave 4 (Plan 03-05).
+ * `bookAppointment` (AVAIL-03, Wave 4/Plan 03-05) se agrega debajo —
+ * único camino de escritura compartido, junto con `isSlotTakenConcurrently`
+ * para que el caller (bot/dashboard) pueda branchear su UX sobre el `23P01`
+ * (CORE-05) sin reimplementar la detección del código localmente.
  */
 export * from "./types.js";
 export * from "./constants.js";
 export { computeSlots } from "./computeSlots.js";
+export { bookAppointment } from "./booking.js";
+export { isSlotTakenConcurrently } from "./booking.js";
