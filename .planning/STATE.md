@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: "03-05 CHECKPOINT: código completo y commiteado, falta ejecutar scripts/verify-availability-engine.ts en vivo (requiere .env real)"
+status: phase-03-complete
+stopped_at: "Fase 03 100% verificada — los 2 checkpoints live (negocioScoped.test.ts + verify-availability-engine.ts) corridos y PASSED contra bdgufnitakelyialjoqg (2026-07-05). Próximo: Fase 04."
 last_updated: "2026-07-05T21:02:59.712Z"
 last_activity: 2026-07-05
 progress:
@@ -88,7 +88,7 @@ Recent decisions affecting current work:
 - Confirmar límites de rate del tier gratuito de Gemini 2.5 Flash-Lite en Google AI Studio antes de planificar capacidad para Phase 6.
 - ✅ RESUELTO: Plan 02-01 (migración 0003) fue aplicada en vivo contra bdgufnitakelyialjoqg (ver 02-01-SUMMARY.md) — este blocker quedó obsoleto.
 - **Plan 02-08 pausado en Task 3** (checkpoint:human-action, gate=blocking-human): Tasks 1-2 (Server Actions superadmin + panel /admin completo) commiteadas (`4c60ac9`, `7f6fcb6`, `fbe2b5e`). Falta ejecutar `scripts/bootstrap-superadmin.ts` + `scripts/verify-admin-tenant-lifecycle.ts` contra bdgufnitakelyialjoqg — requiere `.env` (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) + credenciales reales de email/password para el primer superadmin (nunca committear). Ver `02-08-SUMMARY.md` para el detalle exacto de cómo retomar.
-- 03-05 CHECKPOINT: scripts/verify-availability-engine.ts (smoke test live de bookAppointment) esta escrito y commiteado pero NO ejecutado — requiere un .env real (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY contra bdgufnitakelyialjoqg) que no existe en este entorno (solo .env.example). Correr 'pnpm exec tsx scripts/verify-availability-engine.ts' una vez el .env exista; ver 03-05-SUMMARY.md seccion Checkpoint.
+- ✅ RESUELTO (2026-07-05): los 2 checkpoints live de la Fase 03 se ejecutaron con .env real contra bdgufnitakelyialjoqg y PASARON — `apps/bot/src/db/negocioScoped.test.ts` (aislamiento cross-negocio) y `scripts/verify-availability-engine.ts` (bookAppointment round-trip + snapshot congelado AVAIL-03 + 23P01→slot_taken). Fix aplicado: `booking.ts` `z.uuid()` estricto → `uuidLike` (forma 8-4-4-4-12). Fase 03 100% verificada.
 
 ### Quick Tasks Completed
 

@@ -1,23 +1,22 @@
 ---
 phase: 03-motor-de-disponibilidad
 verified: 2026-07-05T21:09:34Z
-status: human_needed
-score: 10/10 must-haves verified (code-level)
+status: passed
+score: 10/10 must-haves (code-level) + 2/2 live checkpoints ejecutados y PASSED (2026-07-05)
 overrides_applied: 0
-human_verification:
-  - test: "Correr el smoke test negocioScoped.test.ts contra bdgufnitakelyialjoqg"
-    expected: "Imprime 'OK: negocioScoped(A).turnos() ...' y 'OK: negocioScoped(B).turnos() ...' y termina en 'negocioScoped.test.ts: PASSED', sin ningún error 'column ... tenant_id does not exist' ni fuga cross-negocio"
-    why_human: "Requiere .env con SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY reales contra bdgufnitakelyialjoqg, credenciales que no existen en este entorno de verificación (solo .env.example está presente). Comando: `pnpm exec tsx apps/bot/src/db/negocioScoped.test.ts`"
-  - test: "Correr scripts/verify-availability-engine.ts contra bdgufnitakelyialjoqg"
-    expected: "Siembra servicio/horario_trabajo/bloqueo de prueba, computeSlots real resta el bloqueo correctamente, bookAppointment agenda con precio_total correcto, un cambio posterior de servicio.precio no altera el precio_total ya escrito, un reintento del mismo slot con datos stale es rechazado por la GiST EXCLUDE (23P01) y traducido a slot_taken; termina en 'verify-availability-engine.ts: PASSED'"
-    why_human: "Requiere .env con credenciales reales de Supabase (mismo motivo que arriba). Comando: `pnpm exec tsx scripts/verify-availability-engine.ts`"
+live_checkpoints_resolved:
+  - test: "apps/bot/src/db/negocioScoped.test.ts contra bdgufnitakelyialjoqg"
+    result: "PASSED (2026-07-05) — negocioScoped(A).turnos() solo filas de A, negocioScoped(B).turnos() solo filas de B; sin error de columna tenant_id, sin fuga cross-negocio."
+  - test: "scripts/verify-availability-engine.ts contra bdgufnitakelyialjoqg"
+    result: "PASSED (2026-07-05) — computeSlots resta el bloqueo; bookAppointment agenda (precio_total=6000); snapshot congelado pese a cambiar servicio.precio a 8000 (AVAIL-03 live); reintento del mismo slot rechazado por la GiST EXCLUDE (23P01) y traducido a slot_taken (CORE-05)."
+    fix_applied: "Durante la verificación se corrigió bookAppointmentInputSchema (booking.ts): z.uuid() estricto → uuidLike (forma 8-4-4-4-12 hex). Los ids reales de la DB/fixtures no son RFC-v4, y la app no debe rechazar un id que su propia base guardó. 44/44 unit tests siguen verdes."
 ---
 
 # Phase 3: Motor de disponibilidad — Verification Report
 
 **Phase Goal:** El sistema calcula con exactitud qué horarios están libres para cada profesional, de forma aislada y verificable antes de conectarlo a cualquier interfaz.
-**Verified:** 2026-07-05T21:09:34Z
-**Status:** human_needed
+**Verified:** 2026-07-05T21:09:34Z (live checkpoints ejecutados 2026-07-05)
+**Status:** passed — 10/10 must-haves + los 2 smoke tests live PASSED contra bdgufnitakelyialjoqg
 **Re-verification:** No — initial verification
 
 ## Goal Achievement
