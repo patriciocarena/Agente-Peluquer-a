@@ -8,11 +8,11 @@
  * NEXT_PUBLIC_* bundle). It belongs exclusively to this bot service's
  * server-side process.
  *
- * Because service_role bypasses RLS, tenant isolation for every query made
+ * Because service_role bypasses RLS, negocio isolation for every query made
  * through this client is enforced ONLY in application code — never rely on
- * `supabaseAdmin.from(...)` directly for tenant-scoped tables. Always go
- * through `tenantScoped(tenantId)` (./tenantScoped.ts), which bakes the
- * `.eq('tenant_id', tenantId)` filter into every accessor so it is
+ * `supabaseAdmin.from(...)` directly for negocio-scoped tables. Always go
+ * through `negocioScoped(negocioId)` (./negocioScoped.ts), which bakes the
+ * `.eq('negocio_id', negocioId)` filter into every accessor so it is
  * impossible to forget.
  */
 import { createClient } from "@supabase/supabase-js";
