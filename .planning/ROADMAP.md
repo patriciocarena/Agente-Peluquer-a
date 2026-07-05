@@ -57,7 +57,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Un dueño puede editar el perfil del negocio (nombre, dirección, horario general, timezone, granularidad de grilla) y ver el número de WhatsApp vinculado
   5. Un superadmin puede crear, editar y desactivar tenants, vincular su config de WhatsApp, y listar todos los tenants desde un panel aislado del acceso de los dueños
 
-**Plans**: 5/8 plans executed
+**Plans**: 7/8 plans executed
 **Wave 1**
 
 - [x] 02-01-PLAN.md — [BLOCKING] Migración 0003 (Tenant→Negocio split + RLS auth_negocio_ids) + seeds + apply live/regen db-types (gated)
@@ -74,8 +74,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 02-05-PLAN.md — CRUD Servicios + soft-delete + reordenamiento drag-and-drop (SVC-01/02)
-- [ ] 02-06-PLAN.md — CRUD base Profesionales + soft-delete (PRO-01)
+- [x] 02-05-PLAN.md — CRUD Servicios + soft-delete + reordenamiento drag-and-drop (SVC-01/02)
+- [x] 02-06-PLAN.md — CRUD base Profesionales + soft-delete (PRO-01)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
@@ -164,7 +164,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Fundación multitenant | 0/5 | Not started | - |
-| 2. Dashboard y datos del negocio | 5/8 | In Progress|  |
+| 2. Dashboard y datos del negocio | 7/8 | In Progress|  |
 | 3. Motor de disponibilidad | 0/TBD | Not started | - |
 | 4. Grilla y turnos del dashboard | 0/TBD | Not started | - |
 | 5. Integración WhatsApp Cloud API | 0/TBD | Not started | - |

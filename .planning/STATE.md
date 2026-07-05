@@ -5,16 +5,16 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: dashboard-y-datos-del-negocio
 status: executing
-stopped_at: "Wave 3: 02-04 complete; 02-08 paused at Task 3 (checkpoint:human-action)"
-last_updated: "2026-07-04T23:55:00.000Z"
+stopped_at: "Wave 4: 02-05 + 02-06 complete; 02-08 still paused at Task 3 (checkpoint:human-action)"
+last_updated: "2026-07-04T23:59:00.000Z"
 last_activity: 2026-07-04
-last_activity_desc: "Wave 3 merged (02-04 complete, 02-08 checkpoint pending)"
+last_activity_desc: "Wave 4 merged (02-05 Servicios + 02-06 Profesionales complete)"
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 13
-  completed_plans: 9
-  percent: 69
+  completed_plans: 11
+  percent: 85
 ---
 
 # Project State
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-07-03)
 ## Current Position
 
 Phase: 02 (dashboard-y-datos-del-negocio) — EXECUTING
-Plan: 5 of 8 — COMPLETED (02-01 migración, 02-02 base dashboard, 02-03 auth, 02-04 shell+perfil). 02-08 (panel superadmin) Tasks 1-2 done, PAUSADO en Task 3 (checkpoint:human-action — bootstrap del superadmin necesita credenciales live). Pendientes sin empezar: 02-05 (Servicios), 02-06 (Profesionales), 02-07 (Horarios+precios).
+Plan: 6 of 8 — COMPLETED (02-01 migración, 02-02 base dashboard, 02-03 auth, 02-04 shell+perfil, 02-05 Servicios, 02-06 Profesionales base). 02-08 (panel superadmin) Tasks 1-2 done, PAUSADO en Task 3 (checkpoint:human-action — bootstrap del superadmin necesita credenciales live). Pendiente sin empezar: 02-07 (Horarios+precios, depende de 02-05 y 02-06, ya desbloqueado).
 Status: Executing Phase 02 — awaiting human action for 02-08 Task 3
-Last activity: 2026-07-04 — Wave 3 merged (02-04 complete, 02-08 checkpoint pending)
+Last activity: 2026-07-04 — Wave 4 merged (02-05 Servicios + 02-06 Profesionales complete)
 
-Progress: [███████░░░] 69%
+Progress: [████████░░] 85%
 
 ## Performance Metrics
 
