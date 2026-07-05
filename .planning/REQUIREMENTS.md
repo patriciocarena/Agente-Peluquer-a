@@ -42,8 +42,8 @@ Requisitos para el release inicial. Cada uno mapea a una fase del roadmap.
 
 ### Motor de disponibilidad (AVAIL)
 
-- [ ] **AVAIL-01**: El sistema calcula slots libres cruzando horario de trabajo − bloqueos manuales − turnos confirmados/pendientes
-- [ ] **AVAIL-02**: El cálculo soporta turnos multi-servicio sumando las duraciones en un solo bloque contiguo
+- [x] **AVAIL-01**: El sistema calcula slots libres cruzando horario de trabajo − bloqueos manuales − turnos confirmados/pendientes
+- [x] **AVAIL-02**: El cálculo soporta turnos multi-servicio sumando las duraciones en un solo bloque contiguo
 - [ ] **AVAIL-03**: Al agendar, el sistema congela nombre, precio y duración de cada servicio en ese momento
 - [x] **AVAIL-04**: El motor es un módulo único compartido: el bot y la grilla del dashboard nunca discrepan sobre qué está libre
 - [ ] **AVAIL-05**: Cuando el cliente no tiene preferencia de profesional, el sistema auto-asigna el primer profesional disponible para el horario pedido
@@ -147,8 +147,8 @@ Qué fases cubren qué requisitos.
 | SADMIN-01 | Phase 2 | Pending |
 | SADMIN-02 | Phase 2 | Pending |
 | SADMIN-03 | Phase 2 | Pending |
-| AVAIL-01 | Phase 3 | Pending |
-| AVAIL-02 | Phase 3 | Pending |
+| AVAIL-01 | Phase 3 | Complete |
+| AVAIL-02 | Phase 3 | Complete |
 | AVAIL-03 | Phase 3 | Pending |
 | AVAIL-04 | Phase 3 | Complete |
 | AVAIL-05 | Phase 3 | Pending |
