@@ -2,19 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 02
-current_phase_name: dashboard-y-datos-del-negocio
 status: executing
-stopped_at: "Wave 4: 02-05 + 02-06 complete; 02-08 still paused at Task 3 (checkpoint:human-action)"
-last_updated: "2026-07-04T23:59:00.000Z"
-last_activity: 2026-07-04
-last_activity_desc: "Wave 4 merged (02-05 Servicios + 02-06 Profesionales complete)"
+stopped_at: Completed 02-07-PLAN.md
+last_updated: "2026-07-05T02:33:06.985Z"
+last_activity: 2026-07-05
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 13
-  completed_plans: 11
-  percent: 85
+  completed_plans: 12
+  percent: 92
 ---
 
 # Project State
@@ -29,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-03)
 ## Current Position
 
 Phase: 02 (dashboard-y-datos-del-negocio) — EXECUTING
-Plan: 6 of 8 — COMPLETED (02-01 migración, 02-02 base dashboard, 02-03 auth, 02-04 shell+perfil, 02-05 Servicios, 02-06 Profesionales base). 02-08 (panel superadmin) Tasks 1-2 done, PAUSADO en Task 3 (checkpoint:human-action — bootstrap del superadmin necesita credenciales live). Pendiente sin empezar: 02-07 (Horarios+precios, depende de 02-05 y 02-06, ya desbloqueado).
-Status: Executing Phase 02 — awaiting human action for 02-08 Task 3
-Last activity: 2026-07-04 — Wave 4 merged (02-05 Servicios + 02-06 Profesionales complete)
+Plan: 8 of 8 (02-08 paused at checkpoint:human-action — see Blockers)
+Status: Executing Phase 02
+Last activity: 2026-07-05
 
-Progress: [████████░░] 85%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -57,6 +54,7 @@ Progress: [████████░░] 85%
 *Updated after each plan completion*
 | Phase 02 P02 | 35 | 2 tasks | 40 files |
 | Phase 02 P03 | 40min | 3 tasks | 12 files |
+| Phase 02 P07 | 25min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -73,6 +71,7 @@ Recent decisions affecting current work:
 - **[Phase 01 — arm64 re-verify]** ✅ RESOLVED 2026-07-04. The Dockerfile was made pnpm-workspace-aware, closing the `workspace:*` / EUNSUPPORTEDPROTOCOL regression on ROADMAP Success Criteria #5. Re-verified live: installed colima/Docker, arm64 image builds cleanly (`arch=arm64 os=linux`), container `GET /health` → HTTP 200, `docker compose up -d` healthcheck `healthy`. Phase 01 is now 5/5 Success Criteria verified — VERIFICATION.md status flipped to `passed`. Phase 01 ready to close.
 - [Phase ?]: [Phase 02-02] Tailwind v4 CSS-first + shadcn base radix: base neutral con acento azul aislado, Inter self-hosted, next-themes class strategy; vitest runner
 - [Phase 02-03]: Clientes Supabase dual (server/browser/admin server-only) + middleware con getUser() para el gate owner/superadmin + require-role.ts como capa de defensa en profundidad; login/logout via Server Actions + zod — Cierra AUTH-01..04 y el borde de seguridad dual (RLS owner / service_role aislado admin); zod@4.4.3 y server-only@0.0.1 agregados y verificados contra el registry sin necesitar checkpoint bloqueante (paquetes canonicos ya pre-aprobados en el tech-stack del proyecto)
+- [Phase 02]: [Phase 02-07]: Horario semanal multi-bloque (delete+insert por profesional) + matriz de servicios/precio custom (upsert onConflict profesional_id,servicio_id); profesional-editar-form.tsx orquesta 3 Server Actions secuenciales tras un unico 'Guardar cambios' — Cierra PRO-02/03/04
 
 ### Blockers/Concerns
 
@@ -97,8 +96,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-04T22:23:34.531Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-07-05T02:33:06.982Z
+Stopped at: Completed 02-07-PLAN.md
 Resume file: None
 
 Last activity: 2026-07-04 - Completed quick task 260704-jb5: Terminar de actualizar 02-UI-SPEC.md y 02-RESEARCH.md de la Fase 2 (dashboard-y-datos-del-negocio) reflejando el cambio de modelo Tenant->Negocio(s), y commitear

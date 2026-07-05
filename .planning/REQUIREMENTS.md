@@ -25,9 +25,9 @@ Requisitos para el release inicial. Cada uno mapea a una fase del roadmap.
 ### Gestión de profesionales (PRO)
 
 - [ ] **PRO-01**: El dueño puede crear, editar, activar/desactivar (soft delete) y listar profesionales
-- [ ] **PRO-02**: El dueño puede definir el horario semanal recurrente de cada profesional (múltiples bloques por día)
-- [ ] **PRO-03**: El dueño puede asignar a cada profesional los servicios que realiza (no todos hacen todo)
-- [ ] **PRO-04**: El dueño puede fijar un precio custom de un servicio para un profesional (pisa el precio base)
+- [x] **PRO-02**: El dueño puede definir el horario semanal recurrente de cada profesional (múltiples bloques por día)
+- [x] **PRO-03**: El dueño puede asignar a cada profesional los servicios que realiza (no todos hacen todo)
+- [x] **PRO-04**: El dueño puede fijar un precio custom de un servicio para un profesional (pisa el precio base)
 
 ### Servicios y precios (SVC)
 
@@ -136,9 +136,9 @@ Qué fases cubren qué requisitos.
 | AUTH-03 | Phase 2 | Complete |
 | AUTH-04 | Phase 2 | Complete |
 | PRO-01 | Phase 2 | Pending |
-| PRO-02 | Phase 2 | Pending |
-| PRO-03 | Phase 2 | Pending |
-| PRO-04 | Phase 2 | Pending |
+| PRO-02 | Phase 2 | Complete |
+| PRO-03 | Phase 2 | Complete |
+| PRO-04 | Phase 2 | Complete |
 | SVC-01 | Phase 2 | Pending |
 | SVC-02 | Phase 2 | Pending |
 | BIZ-01 | Phase 2 | Pending |

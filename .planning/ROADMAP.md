@@ -79,7 +79,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 02-07-PLAN.md — Horario semanal multi-bloque + matriz de servicios/precio custom (PRO-02/03/04)
+- [x] 02-07-PLAN.md — Horario semanal multi-bloque + matriz de servicios/precio custom (PRO-02/03/04)
 
 **UI hint**: yes
 
@@ -164,7 +164,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Fundación multitenant | 0/5 | Not started | - |
-| 2. Dashboard y datos del negocio | 7/8 | In Progress|  |
+| 2. Dashboard y datos del negocio | 7/8 | In Progress (02-08 paused at checkpoint:human-action) | - |
 | 3. Motor de disponibilidad | 0/TBD | Not started | - |
 | 4. Grilla y turnos del dashboard | 0/TBD | Not started | - |
 | 5. Integración WhatsApp Cloud API | 0/TBD | Not started | - |
