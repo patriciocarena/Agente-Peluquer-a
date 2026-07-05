@@ -2,16 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
+current_phase: 02
+current_phase_name: dashboard-y-datos-del-negocio
 status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-07-04T22:25:26.556Z"
+stopped_at: "Wave 3: 02-04 complete; 02-08 paused at Task 3 (checkpoint:human-action)"
+last_updated: "2026-07-04T23:55:00.000Z"
 last_activity: 2026-07-04
+last_activity_desc: "Wave 3 merged (02-04 complete, 02-08 checkpoint pending)"
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 13
-  completed_plans: 8
-  percent: 14
+  completed_plans: 9
+  percent: 69
 ---
 
 # Project State
@@ -26,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-07-03)
 ## Current Position
 
 Phase: 02 (dashboard-y-datos-del-negocio) — EXECUTING
-Plan: 5 of 8 — COMPLETED (02-03: capa de autenticación y aislamiento). Plan 01's Task 3 checkpoint (aplicar migración 0003 live) ya fue resuelto por el orquestador (ver 02-01-SUMMARY.md).
-Status: Ready to execute
-Last activity: 2026-07-04
+Plan: 5 of 8 — COMPLETED (02-01 migración, 02-02 base dashboard, 02-03 auth, 02-04 shell+perfil). 02-08 (panel superadmin) Tasks 1-2 done, PAUSADO en Task 3 (checkpoint:human-action — bootstrap del superadmin necesita credenciales live). Pendientes sin empezar: 02-05 (Servicios), 02-06 (Profesionales), 02-07 (Horarios+precios).
+Status: Executing Phase 02 — awaiting human action for 02-08 Task 3
+Last activity: 2026-07-04 — Wave 3 merged (02-04 complete, 02-08 checkpoint pending)
 
-Progress: [██████░░░░] 62%
+Progress: [███████░░░] 69%
 
 ## Performance Metrics
 
@@ -75,7 +78,8 @@ Recent decisions affecting current work:
 
 - La verificación de Meta Business/Tech Provider puede tardar 2-7+ días hábiles — no debe bloquear el desarrollo de fases no relacionadas con WhatsApp (Fases 1-4 pueden avanzar en paralelo a ese trámite).
 - Confirmar límites de rate del tier gratuito de Gemini 2.5 Flash-Lite en Google AI Studio antes de planificar capacidad para Phase 6.
-- Plan 02-01 pausado en Task 3 (checkpoint:human-action, gate=blocking-human): migracion 0003 y seeds escritas + verificadas estructuralmente en el repo (commits 7507533, 750b50c), pero NO aplicadas a bdgufnitakelyialjoqg. Requiere credenciales live (.env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ACCESS_TOKEN) para aplicar 0003, regenerar packages/db-types, resembrar, y correr scripts/verify-migration-0003.ts.
+- ✅ RESUELTO: Plan 02-01 (migración 0003) fue aplicada en vivo contra bdgufnitakelyialjoqg (ver 02-01-SUMMARY.md) — este blocker quedó obsoleto.
+- **Plan 02-08 pausado en Task 3** (checkpoint:human-action, gate=blocking-human): Tasks 1-2 (Server Actions superadmin + panel /admin completo) commiteadas (`4c60ac9`, `7f6fcb6`, `fbe2b5e`). Falta ejecutar `scripts/bootstrap-superadmin.ts` + `scripts/verify-admin-tenant-lifecycle.ts` contra bdgufnitakelyialjoqg — requiere `.env` (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) + credenciales reales de email/password para el primer superadmin (nunca committear). Ver `02-08-SUMMARY.md` para el detalle exacto de cómo retomar.
 
 ### Quick Tasks Completed
 
