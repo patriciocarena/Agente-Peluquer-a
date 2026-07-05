@@ -62,11 +62,24 @@ import type { Database } from "@turnosbot/db-types";
 // manipulable (BOT-11, Fase 6) con un error claro en el límite del paquete.
 // ---------------------------------------------------------------------------
 
+// Valida la FORMA de un UUID (8-4-4-4-12 hex), no la versión/variante RFC 4122.
+// El tipo `uuid` de Postgres acepta cualquier UUID con esa forma (incluidos los
+// ids de fixtures/seed como `21111111-1111-1111-1111-111111111111`), así que la
+// app NUNCA debe rechazar un id que su propia base guardó — `z.uuid()` estricto
+// (que exige version 1-8 + variante 8/9/a/b) sí lo rechazaría. Sigue cortando
+// input basura (BOT-11, T-03-15) sin descartar ids reales.
+const uuidLike = z
+  .string()
+  .regex(
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
+    "UUID inválido",
+  );
+
 export const bookAppointmentInputSchema = z.object({
-  negocioId: z.uuid(),
-  profesionalId: z.uuid(),
-  clienteId: z.uuid(),
-  serviceIds: z.array(z.uuid()).min(1, "serviceIds no puede estar vacío"),
+  negocioId: uuidLike,
+  profesionalId: uuidLike,
+  clienteId: uuidLike,
+  serviceIds: z.array(uuidLike).min(1, "serviceIds no puede estar vacío"),
   inicio: z.iso.datetime(),
   fin: z.iso.datetime(),
 }) satisfies z.ZodType<BookAppointmentInput, unknown>;
