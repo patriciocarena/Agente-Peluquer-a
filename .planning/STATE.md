@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-04-PLAN.md
-last_updated: "2026-07-05T19:53:33.609Z"
+stopped_at: "03-05 CHECKPOINT: código completo y commiteado, falta ejecutar scripts/verify-availability-engine.ts en vivo (requiere .env real)"
+last_updated: "2026-07-05T21:02:59.712Z"
 last_activity: 2026-07-05
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 18
-  completed_plans: 17
-  percent: 29
+  completed_plans: 18
+  percent: 43
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-03)
 ## Current Position
 
 Phase: 03 (motor-de-disponibilidad) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-07-05
 
-Progress: [█████████░] 94%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [█████████░] 94%
 | Phase 03 P01 | 12min | 3 tasks | 6 files |
 | Phase 03 P03 | 8min | 3 tasks | 6 files |
 | Phase 03 P04 | 10min | 3 tasks | 5 files |
+| Phase 03-motor-de-disponibilidad P05 | 25min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,7 @@ Recent decisions affecting current work:
 - [Phase 03]: [Phase 03-01] Fundación de @turnosbot/availability-engine: vitest+date-fns/@date-fns/tz/zod instalados, constantes de ventana de reserva (60min/30d, D-05) en un único archivo, types.ts con row aliases type-only desde db-types (motor puro, AVAIL-04) y fixtures deterministas — Wave 0 que desbloquea el algoritmo — AVAIL-04: un único paquete puro con contratos únicos que bot y dashboard importan sin drift
 - [Phase ?]: [Phase 03-03] Tres primitivos del motor de intervalos (subtractIntervals half-open, snapToGrid anclado a medianoche-en-zona con gate Pitfall 5, resolveWorkIntervalsForDate via TZDate sin offset -3) con TDD RED-GREEN, 20 tests verdes — AVAIL-01/AVAIL-02
 - [Phase 03]: [Phase 03-04] Orquestación pura de computeSlots (schedule-bloqueos-turnos->grid->ventana->auto-assign) + autoAssign con tie-break estable por professionalId + index.ts como barrel público
+- [Phase 03-05]: bookAppointment congela snapshots de nombre/precio/duracion por servicio (Pitfall 3, AVAIL-03) y traduce el 23P01 de la GiST EXCLUDE en un resultado de dominio slot_taken (CORE-05); cliente Supabase inyectado, sin dependencia runtime de @supabase/supabase-js en el paquete; checkpoint: scripts/verify-availability-engine.ts escrito pero no ejecutado (falta .env real)
 
 ### Blockers/Concerns
 
@@ -86,6 +88,7 @@ Recent decisions affecting current work:
 - Confirmar límites de rate del tier gratuito de Gemini 2.5 Flash-Lite en Google AI Studio antes de planificar capacidad para Phase 6.
 - ✅ RESUELTO: Plan 02-01 (migración 0003) fue aplicada en vivo contra bdgufnitakelyialjoqg (ver 02-01-SUMMARY.md) — este blocker quedó obsoleto.
 - **Plan 02-08 pausado en Task 3** (checkpoint:human-action, gate=blocking-human): Tasks 1-2 (Server Actions superadmin + panel /admin completo) commiteadas (`4c60ac9`, `7f6fcb6`, `fbe2b5e`). Falta ejecutar `scripts/bootstrap-superadmin.ts` + `scripts/verify-admin-tenant-lifecycle.ts` contra bdgufnitakelyialjoqg — requiere `.env` (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) + credenciales reales de email/password para el primer superadmin (nunca committear). Ver `02-08-SUMMARY.md` para el detalle exacto de cómo retomar.
+- 03-05 CHECKPOINT: scripts/verify-availability-engine.ts (smoke test live de bookAppointment) esta escrito y commiteado pero NO ejecutado — requiere un .env real (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY contra bdgufnitakelyialjoqg) que no existe en este entorno (solo .env.example). Correr 'pnpm exec tsx scripts/verify-availability-engine.ts' una vez el .env exista; ver 03-05-SUMMARY.md seccion Checkpoint.
 
 ### Quick Tasks Completed
 
@@ -103,8 +106,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-05T19:53:33.604Z
-Stopped at: Completed 03-04-PLAN.md
-Resume file: None
+Last session: 2026-07-05T21:02:59.707Z
+Stopped at: 03-05 CHECKPOINT: código completo y commiteado, falta ejecutar scripts/verify-availability-engine.ts en vivo (requiere .env real)
+Resume file: 03-05-SUMMARY.md
 
 Last activity: 2026-07-04 - Completed quick task 260704-jb5: Terminar de actualizar 02-UI-SPEC.md y 02-RESEARCH.md de la Fase 2 (dashboard-y-datos-del-negocio) reflejando el cambio de modelo Tenant->Negocio(s), y commitear

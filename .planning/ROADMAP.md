@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Fundación multitenant** - Base de datos, aislamiento por tenant y esqueleto de infraestructura listos y verificados
 - [x] **Phase 2: Dashboard y datos del negocio** - El dueño puede loguearse y cargar profesionales, servicios, precios y perfil del negocio
-- [ ] **Phase 3: Motor de disponibilidad** - El sistema calcula con precisión qué horarios están realmente libres, probado en aislamiento
+- [x] **Phase 3: Motor de disponibilidad** - El sistema calcula con precisión qué horarios están realmente libres, probado en aislamiento (completed 2026-07-05)
 - [ ] **Phase 4: Grilla y turnos del dashboard** - El dueño puede ver, bloquear, crear, cancelar y reagendar turnos desde el dashboard
 - [ ] **Phase 5: Integración WhatsApp Cloud API** - El sistema recibe y envía mensajes de WhatsApp de forma segura, enrutados al tenant correcto
 - [ ] **Phase 6: Agente conversacional de agendamiento** - Un cliente puede agendar, consultar y cancelar/reagendar un turno real conversando por WhatsApp
@@ -113,7 +113,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 4** *(depende de 03-04)*
 
-- [ ] 03-05-PLAN.md — bookAppointment: snapshots congelados + precio_total + manejo 23P01 + verify script live (gated) (AVAIL-03/04)
+- [x] 03-05-PLAN.md — bookAppointment: snapshots congelados + precio_total + manejo 23P01 + verify script live (gated) (AVAIL-03/04)
 
 ### Phase 4: Grilla y turnos del dashboard
 
@@ -182,7 +182,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Fundación multitenant | 5/5 | Complete | 2026-07-04 |
 | 2. Dashboard y datos del negocio | 8/8 | Complete (verified 16/16; solo resta spot-check visual no bloqueante) | 2026-07-04 |
-| 3. Motor de disponibilidad | 4/5 | In Progress|  |
+| 3. Motor de disponibilidad | 5/5 | Complete   | 2026-07-05 |
 | 4. Grilla y turnos del dashboard | 0/TBD | Not started | - |
 | 5. Integración WhatsApp Cloud API | 0/TBD | Not started | - |
 | 6. Agente conversacional de agendamiento | 0/TBD | Not started | - |
