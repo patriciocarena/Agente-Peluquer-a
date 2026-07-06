@@ -165,7 +165,25 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. El sistema envía mensajes salientes al cliente dentro de la ventana de 24 horas y registra cuando esa ventana se cierra
   5. Toda conversación y mensaje queda persistido, con el estado del bot guardado en `context` para poder auditar/depurar
 
-**Plans**: TBD
+**Plans**: 6 plans
+
+**Wave 1** *(fundación — sin deps)*
+
+- [ ] 05-01-PLAN.md — Wave 0: deps (pg-boss/helmet/rate-limit/zod/vitest) + vitest.config + env WhatsApp vars + negocioScoped write accessors + dedup constraint (WA-03)
+
+**Wave 2** *(paralelas — dependen de 05-01, sin overlap de archivos)*
+
+- [ ] 05-02-PLAN.md — Firma X-Hub-Signature-256 (timing-safe, length-guard) + zod del payload de Meta (WA-01)
+- [ ] 05-03-PLAN.md — Salida: getWhatsappToken (choke point D-04) + graphClient con gate WHATSAPP_LIVE (WA-04)
+- [ ] 05-04-PLAN.md — Conversación: findOrCreateCliente (match exacto) + findOrCreateConversacion (ventana 24h) + responder stub (WA-02/05)
+
+**Wave 3** *(depende de 05-02/03/04)*
+
+- [ ] 05-05-PLAN.md — Worker: resolución de tenant + dedup durable + gate ventana 24h + pg-boss session-mode 5432 (WA-02/03/04/05)
+
+**Wave 4** *(depende de 05-02/05)*
+
+- [ ] 05-06-PLAN.md — Webhook Fastify (GET handshake + POST verify-then-enqueue-then-200) + server wiring (helmet/rate-limit/raw-body) + script de verificación local firmado (WA-01/03)
 
 ### Phase 6: Agente conversacional de agendamiento
 
@@ -206,7 +224,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Dashboard y datos del negocio | 8/8 | Complete (verified 16/16; solo resta spot-check visual no bloqueante) | 2026-07-04 |
 | 3. Motor de disponibilidad | 5/5 | Complete   | 2026-07-05 |
 | 4. Grilla y turnos del dashboard | 7/7 | Complete   | 2026-07-06 |
-| 5. Integración WhatsApp Cloud API | 0/TBD | Not started | - |
+| 5. Integración WhatsApp Cloud API | 0/6 | Planned | - |
 | 6. Agente conversacional de agendamiento | 0/TBD | Not started | - |
 | 7. Hardening y listo para producción | 0/TBD | Not started | - |
 
