@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-04-PLAN.md
-last_updated: "2026-07-06T01:58:56.928Z"
+stopped_at: Completed 04-06-PLAN.md
+last_updated: "2026-07-06T02:08:13.477Z"
 last_activity: 2026-07-06
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 25
-  completed_plans: 22
+  completed_plans: 23
   percent: 43
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-03)
 ## Current Position
 
 Phase: 04 (grilla-y-turnos-del-dashboard) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-07-06
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -63,6 +63,7 @@ Progress: [█████████░] 88%
 | Phase 04 P01 | 15min | 2 tasks | 6 files |
 | Phase 04 P03 | 12min | 3 tasks | 3 files |
 | Phase 04 P04 | 20min | 2 tasks | 3 files |
+| Phase 04 P06 | 15min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 04-04]: crearTurnoManual delega en bookAppointment(skipBookingWindow:true) + UPDATE solo-de-estado a confirmado; cancelarTurno hace UPDATE estado=cancelado (nunca DELETE); reagendarTurno delega en rescheduleAppointment con serviceIds via fetchTurnoServicios -- cierra APPT-04/05/06 en el dashboard
 - [Phase ?]: [Phase 04-04]: profesionalesElegibles exige elegibilidad de un profesional para TODOS los serviceIds pedidos (Set + every), cerrando Pitfall 6/Open Question 3 de 04-RESEARCH.md
 - [Phase ?]: [Phase 04-04]: Rule 3 fix -- BookAppointmentDeps/BookAppointmentResult exportados desde el barrel de @turnosbot/availability-engine (faltaban pese a que bookAppointment/rescheduleAppointment ya los devolvian/recibian)
+- [Phase 04-06]: Offset fijo -03:00 (Argentina, sin DST desde 2009) hardcodeado en bloqueo-form-dialog.tsx para convertir hora local a UTC sin agregar @date-fns/tz al dashboard
+- [Phase 04-06]: granularidadMin agregada como prop opcional (default 30) en BloqueoFormDialog para la duracion del bloqueo, resolviendo la guia del plan sin romper el contrato minimo de props
 
 ### Blockers/Concerns
 
@@ -115,8 +118,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-06T01:58:56.922Z
-Stopped at: Completed 04-04-PLAN.md
+Last session: 2026-07-06T02:08:13.471Z
+Stopped at: Completed 04-06-PLAN.md
 Resume file: None
 
 **HANDOFF NOTE (2026-07-05):** Phase 4 has 7 plans planned across 5 waves (see 04-*-PLAN.md). Wave 1 = 04-01 + 04-02 in parallel worktrees.
