@@ -127,8 +127,30 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. El dueño puede ver el detalle de un turno confirmado (cliente, servicios, precio, horario)
   4. El dueño puede cancelar, reagendar o crear manualmente un turno desde el dashboard (ej: cliente que llama por teléfono)
 
-**Plans**: TBD
+**Plans**: 7 plans
 **UI hint**: yes
+
+**Wave 1** *(paralelas — sin overlap de archivos)*
+
+- [ ] 04-01-PLAN.md — [tdd] Motor: skipBookingWindow (D-08) + rescheduleAppointment (D-14) + tests + verify script (APPT-05/06)
+- [ ] 04-02-PLAN.md — Fundación dashboard: instalar Popover + nav "Turnos" + schemas zod turno/bloqueo/cliente (APPT-01/02/06)
+
+**Wave 2** *(depende de 04-02)*
+
+- [ ] 04-03-PLAN.md — buildAvailabilityData + Server Actions bloqueos (crear/eliminar) + clientes (buscar/crear inline) (APPT-02/06)
+
+**Wave 3** *(paralelas — 04 depende de 04-01/03, 06 depende de 04-02/03)*
+
+- [ ] 04-04-PLAN.md — Server Actions turnos (crear/cancelar/reagendar) + slots (computeSlots + elegibilidad profesional×servicio) (APPT-04/05/06)
+- [ ] 04-06-PLAN.md — UI bloqueo: form-dialog (crear) + popover (motivo/eliminar) (APPT-02)
+
+**Wave 4** *(depende de 04-03/04)*
+
+- [ ] 04-05-PLAN.md — UI turno: cliente-search + slot-selector + turno-form-dialog (alta/reagendar) + turno-detail-sheet (APPT-03/04/05/06)
+
+**Wave 5** *(depende de 04-05/06)*
+
+- [ ] 04-07-PLAN.md — Ensamblaje: slot-popover + grilla-turnos + page.tsx (/turnos) + loading (APPT-01/03)
 
 ### Phase 5: Integración WhatsApp Cloud API
 
@@ -183,7 +205,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Fundación multitenant | 5/5 | Complete | 2026-07-04 |
 | 2. Dashboard y datos del negocio | 8/8 | Complete (verified 16/16; solo resta spot-check visual no bloqueante) | 2026-07-04 |
 | 3. Motor de disponibilidad | 5/5 | Complete   | 2026-07-05 |
-| 4. Grilla y turnos del dashboard | 0/TBD | Not started | - |
+| 4. Grilla y turnos del dashboard | 0/7 | Planned | - |
 | 5. Integración WhatsApp Cloud API | 0/TBD | Not started | - |
 | 6. Agente conversacional de agendamiento | 0/TBD | Not started | - |
 | 7. Hardening y listo para producción | 0/TBD | Not started | - |
