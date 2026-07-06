@@ -1,7 +1,7 @@
 # Handoff — Fase 5: Integración WhatsApp Cloud API
 
 **Para:** quien continúe el desarrollo en su propia computadora, en una sesión nueva de Claude Code.
-**Estado al momento del handoff:** Fase 5 **planificada a medias** — el contexto, la investigación, la estrategia de validación y el mapa de patrones están listos y commiteados. **Falta generar los PLAN.md** (se cortó justo antes de correr el planner) y después ejecutar.
+**Estado al momento de este handoff:** Fase 5 **planificada al 100%** (6 planes, verificados por el plan-checker) y **en ejecución** — Waves 1 y 2 completas y fusionadas a la rama (4/6 planes), Wave 3 (05-05) es el próximo paso. Se frenó acá por límite de tokens de la sesión anterior, no por ningún bloqueante técnico.
 
 ---
 
@@ -14,7 +14,7 @@ git checkout claude-phase-04-uat-fixes   # rama activa — NO está en main toda
 pnpm install
 ```
 
-> ⚠️ **CREDENCIALES (bloqueante):** el archivo `.env` está gitigneado y **no viaja en el repo**. Sin él no funciona nada (Supabase, Gemini, App Secret de WhatsApp). Pedíselo a Augusto (o que te pase las claves) y creá tu propio `.env` en la raíz antes de arrancar. La única base de datos de este proyecto es Supabase **`bdgufnitakelyialjoqg`** — ver reglas de aislamiento abajo.
+> ⚠️ **CREDENCIALES (bloqueante):** el archivo `.env` está gitigneado y **no viaja en el repo**. Pedile las claves a Augusto o Patricio y creá tu propio `.env` en la raíz **y otro en `apps/dashboard/.env`** (Next.js sólo lee `.env` de su propio directorio, no del root del monorepo — ver `.env.example` en la raíz para el formato). La única base de datos de este proyecto es Supabase **`bdgufnitakelyialjoqg`** — ver reglas de aislamiento abajo. Sin esto, `pnpm -r run build` falla en `apps/dashboard` (necesita `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` reales para generar `/admin` en build time).
 
 Después abrí Claude Code dentro de la carpeta del proyecto.
 
@@ -28,64 +28,67 @@ Después abrí Claude Code dentro de la carpeta del proyecto.
 
 ---
 
-## 2. Qué está hecho (commiteado en la rama)
+## 2. Qué está hecho
 
-Todo en `.planning/phases/05-integraci-n-whatsapp-cloud-api/`:
+Todo commiteado en `claude-phase-04-uat-fixes`:
 
-| Archivo | Qué es |
-|---|---|
-| `05-CONTEXT.md` | Decisiones del usuario **D-01..D-12** (casi todas fijadas). Delegadas a Claude con criterio técnico. |
-| `05-RESEARCH.md` | Investigación técnica: firma HMAC sobre body crudo, pg-boss session-mode, payload de Meta, ventana 24h, estrategia de test local sin Meta. |
-| `05-VALIDATION.md` | Estrategia de validación Nyquist (vitest, mapa de verificación por tarea). |
-| `05-PATTERNS.md` | Mapa de patrones: cada archivo nuevo apuntado a un análogo real del repo. |
+- **Planificación completa**: `.planning/phases/05-integraci-n-whatsapp-cloud-api/05-CONTEXT.md`, `05-RESEARCH.md`, `05-VALIDATION.md`, `05-PATTERNS.md`, y los **6 planes** `05-01-PLAN.md` .. `05-06-PLAN.md` (4 waves), todos verificados por el plan-checker sin bloqueantes.
+- **Ejecución — Wave 1** (`05-01`, fusionado): dependencias nuevas (`pg-boss`, `@fastify/rate-limit`, `@fastify/helmet`, `zod`), vitest corriendo en `apps/bot`, variables de entorno de WhatsApp en `env.ts`/`.env.example`, accesores de **escritura** en `negocioScoped` (antes sólo lectura), migración idempotente `0004_mensaje_wa_message_id_unique.sql` (documenta el UNIQUE que ya existía desde `0001`, no rompe nada).
+- **Ejecución — Wave 2** (`05-02`, `05-03`, `05-04`, fusionados, corrieron en paralelo sin conflicto de archivos):
+  - `05-02`: `signature.ts` (verificación HMAC constant-time) + `payload.ts` (zod schema del payload de Meta).
+  - `05-03`: `getWhatsappToken.ts` (choke point D-04) + `graphClient.ts` (envío saliente, gateado por `WHATSAPP_LIVE`).
+  - `05-04`: `findOrCreateCliente.ts` (match exacto por `wa_id`), `findOrCreateConversacion.ts` (ventana 24h), `responder.ts` (stub determinístico, lo reemplaza la Fase 6).
+- **Post-merge gates**: build (`pnpm -r --if-present run build`) y test (`pnpm -r --if-present run test`) en verde después de cada wave. `apps/bot` tiene 24 tests pasando.
+- **Tracking**: `.planning/ROADMAP.md` y `.planning/STATE.md` actualizados y commiteados después de cada wave (`summary_count: 4` de 6).
 
 ---
 
-## 3. El siguiente paso — generar los planes
+## 3. El siguiente paso — Wave 3 y 4
 
 En Claude Code, correr:
 
 ```
-/gsd-plan-phase 5
+/gsd-execute-phase 5
 ```
 
-- Va a **reusar la RESEARCH.md existente** (no vuelve a investigar) y el PATTERNS.md existente.
-- Va a spawnear el **planner** (opus) → crea los `05-*-PLAN.md`, luego el **plan-checker** (sonnet) los verifica.
-- Al terminar: `/gsd-execute-phase 5` para ejecutar los planes.
+Esto va a detectar que `05-01`..`05-04` ya tienen `SUMMARY.md` y arrancar directamente en:
+
+- **Wave 3 — `05-05`** (depende de `05-02/03/04`, ya completos): el worker de pg-boss (`inboundWorker.ts` + `boss.ts`) — tenant resolution estricta por `phone_number_id`, dedup durable, gate de ventana 24h, conexión pg-boss en modo sesión puerto 5432 (nunca el pooler 6543).
+- **Wave 4 — `05-06`** (depende de `05-02` y `05-05`): el webhook de Fastify (handshake GET + POST verificar-encolar-200) + `server.ts` + script de verificación local firmada (sin necesitar cuenta de Meta real).
 
 ---
 
-## 4. Alcance de la Fase 5 (para no desviarse)
+## 4. Detalle técnico para quien ejecute (landmine ya encontrada — no lo repitas)
 
-Es **infraestructura de mensajería, NO el agente de IA** (eso es la Fase 6). Cinco requisitos:
+**Bug en el paso de limpieza de worktrees (Windows):** después de que `gsd_run query worktree.cleanup-wave` mergea exitosamente la rama del executor, el paso final de `git worktree remove` falla con:
+```
+fatal: validation failed, cannot remove working tree: '.../.git' does not exist
+```
+El merge **sí se aplica** (se ve en `git log`), sólo falla el cleanup del directorio. Solución manual que ya funcionó dos veces en esta sesión:
+```bash
+git worktree remove "<path>" --force   # falla igual, ignorar
+git worktree prune
+git branch -D worktree-agent-<id>
+rm -rf "<path>"
+```
+Si el manifest JSON tiene más de una entrada y una ya se limpió a mano, hay que **sacarla del manifest** (editar el JSON) antes de reintentar `cleanup-wave`, porque el comando no tolera re-procesar una entrada cuyo directorio ya no existe.
 
-- **WA-01** — webhook Fastify + verificación de firma `X-Hub-Signature-256` **sobre el body crudo** (HMAC-SHA256 con App Secret, `crypto.timingSafeEqual` con guard de longitud). Firma inválida → 403.
-- **WA-02** — resolver el tenant por `phone_number_id` (query a `negocio`); si no matchea → descartar (log + 200), nunca adivinar tenant.
-- **WA-03** — responder 200 rápido a Meta + procesar async con **pg-boss** (conexión directa/session-mode **5432**, nunca el pooler 6543) + **dedup** por `messages[].id`.
-- **WA-04** — envío saliente por Cloud API dentro de la ventana de 24h, detrás del gate `WHATSAPP_LIVE` (en dev mockea el POST, no pega a Graph API). Respuesta stub determinista (placeholder de Fase 6).
-- **WA-05** — persistir `conversacion`/`mensaje`; estado del bot en `conversacion.context` (jsonb).
+**Otro bug ya corregido en esta sesión:** el executor a veces reporta su **propio último commit** como `expected_base` en el bloque `<worktree_metadata>` de retorno, en vez del commit real donde forkeó el worktree. Si `worktree.cleanup-wave` da `base_mismatch`, verificar con `git merge-base <rama-main> <rama-worktree>` y corregir el campo `expected_base` en el manifest JSON a mano antes de reintentar. En esta sesión, para los agentes de Wave 2 se les pidió explícitamente en el prompt que usaran el valor literal de base pasado por el orquestador (no su propio HEAD), y funcionó bien las 3 veces — recomendado seguir haciendo eso para Waves 3 y 4.
 
-**Fuera de alcance:** UI del superadmin (Fase 2), encriptar token en reposo (Fase 7 / SEC-01 — por ahora choke point `getWhatsappToken`), recordatorios con plantilla HSM y Embedded Signup (backlog).
-
----
-
-## 5. Correcciones clave encontradas (que el planner ya tiene en cuenta)
-
-Descubiertas al mapear patrones — **no propagar los valores viejos**:
-
-1. **`mensaje.wa_message_id` YA tiene UNIQUE** (global) en `supabase/migrations/0001_schema_core.sql`. **No hace falta una migración nueva** para el dedup durable. (Resuelve la "Open Question 2" de la RESEARCH.)
-2. **`mensaje.direccion`** usa valores en español: `CHECK (direccion IN ('entrante','saliente'))` — **no** `'in'`/`'out'`.
-3. **`findOrCreateCliente`** debe usar match exacto `.eq("telefono", waId)` (nunca el `.ilike` de búsqueda parcial del dashboard). `wa_id` viene en formato internacional sólo-dígitos.
-4. **`negocioScoped`** hoy sólo tiene accessors de lectura (`.select("*")`); la Fase 5 es probablemente el **primer escritor** por esa capa.
+**node_modules desincronizado tras cada merge:** cada executor corre su propio `pnpm install` dentro de su worktree aislado; al mergear, el `pnpm-lock.yaml` cambia pero el `node_modules` de la carpeta principal NO se actualiza solo. Correr `pnpm install` en la raíz después de cada wave, antes del build/test gate.
 
 ---
 
-## 6. Testing y el blocker de Meta (D-01)
+## 5. Alcance de la Fase 5 (para no desviarse)
 
-- **No hay cuenta de Meta verificada todavía** (verificación de Meta Business/Tech Provider tarda 2-7+ días — blocker en `STATE.md`). **No debe bloquear el desarrollo.**
-- Toda la Fase 5 se verifica **localmente con payloads de webhook firmados** (un script arma un POST firmado con un App Secret de dev y lo dispara al endpoint local → prueba firma → dedup → persistencia → envío mockeado, sin Meta).
-- El test en vivo real (túnel HTTPS tipo ngrok/cloudflared + WABA + número de prueba + un mensaje ida y vuelta) es una **pasada de verificación posterior**, NO código de esta fase. Se hace cuando Augusto tenga la cuenta Meta lista.
-- `apps/bot` **no tiene infra de test todavía** → la Wave 0 del plan agrega `apps/bot/vitest.config.ts` + script `test` (espejando `packages/availability-engine`).
+Es **infraestructura de mensajería, NO el agente de IA** (eso es la Fase 6). Fuera de alcance: UI del superadmin (Fase 2, ya existe), encriptar token en reposo (Fase 7 / SEC-01), recordatorios con plantilla HSM y Embedded Signup (backlog).
+
+---
+
+## 6. Testing y el blocker de Meta
+
+- **No hay cuenta de Meta verificada todavía.** No debe bloquear el desarrollo.
+- Toda la Fase 5 se verifica **localmente con payloads de webhook firmados** — el script de la Wave 4 (`scripts/verify-whatsapp-webhook.ts`) arma un POST firmado con un App Secret de dev, sin pegarle a Meta.
 
 ---
 
@@ -93,10 +96,10 @@ Descubiertas al mapear patrones — **no propagar los valores viejos**:
 
 - `CLAUDE.md` (raíz) — stack + pitfalls.
 - `.planning/REQUIREMENTS.md` §"Integración WhatsApp Cloud API (WA)" — texto normativo WA-01..05.
-- `.planning/ROADMAP.md` §"Phase 5" — goal + success criteria.
-- `packages/db-types/src/database.types.ts` — tablas existentes (`conversacion`, `mensaje`, columnas de `negocio`). **No crear tablas nuevas.**
-- Docs de Meta: https://developers.facebook.com/docs/whatsapp/cloud-api — verificar contra la versión viva de Graph API (cambia seguido; usar una env var `WHATSAPP_GRAPH_API_VERSION`, no hardcodear).
+- `.planning/ROADMAP.md` §"Phase 5" — goal + success criteria + estado de cada plan.
+- `.planning/phases/05-integraci-n-whatsapp-cloud-api/05-0{1..6}-PLAN.md` — los 6 planes de ejecución.
+- `.planning/phases/05-integraci-n-whatsapp-cloud-api/05-0{1..4}-SUMMARY.md` — resúmenes de lo ya ejecutado.
 
 ---
 
-*Handoff generado el 2026-07-06. Rama: `claude-phase-04-uat-fixes`. Próximo comando: `/gsd-plan-phase 5`.*
+*Handoff actualizado el 2026-07-06. Rama: `claude-phase-04-uat-fixes`. Próximo comando: `/gsd-execute-phase 5`.*
