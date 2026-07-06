@@ -38,6 +38,8 @@
  * without a real listener — same flat registration style server.ts already
  * uses for `/health`.
  */
+import { timingSafeEqual } from "node:crypto";
+
 import type { FastifyInstance } from "fastify";
 import type { PgBoss } from "pg-boss";
 
@@ -45,6 +47,23 @@ import type { BotEnv } from "../config/env.js";
 import { WHATSAPP_INBOUND_QUEUE } from "../queue/boss.js";
 import { extractFirstMessage, whatsappWebhookEventSchema } from "./payload.js";
 import { verifyWhatsappSignature } from "./signature.js";
+
+/**
+ * WR-04: constant-time comparison for the GET handshake's `hub.verify_token`,
+ * mirroring the length-guard + `timingSafeEqual` pattern already established
+ * in signature.ts for the POST route's HMAC check — this attacker-controllable
+ * comparison was the one plain `===` left in the module.
+ */
+function verifyTokenMatches(received: string | undefined, expected: string | undefined): boolean {
+  if (received === undefined || expected === undefined) return false;
+
+  const receivedBuf = Buffer.from(received, "utf8");
+  const expectedBuf = Buffer.from(expected, "utf8");
+
+  if (receivedBuf.length !== expectedBuf.length) return false;
+
+  return timingSafeEqual(receivedBuf, expectedBuf);
+}
 
 export interface RegisterWhatsappWebhookDeps {
   env: Pick<BotEnv, "WHATSAPP_VERIFY_TOKEN" | "WHATSAPP_APP_SECRET">;
@@ -63,7 +82,7 @@ export function registerWhatsappWebhook(
     const token = query["hub.verify_token"];
     const challenge = query["hub.challenge"];
 
-    if (mode === "subscribe" && token !== undefined && token === deps.env.WHATSAPP_VERIFY_TOKEN) {
+    if (mode === "subscribe" && verifyTokenMatches(token, deps.env.WHATSAPP_VERIFY_TOKEN)) {
       return reply.status(200).send(challenge);
     }
     return reply.status(403).send();
