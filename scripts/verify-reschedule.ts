@@ -263,7 +263,16 @@ async function main() {
     await cleanup([turnoAId, turnoBId]);
     process.exit(1);
   }
-  if (turnoATrasIntento.inicio !== turnoAInicio || turnoATrasIntento.fin !== turnoAFin) {
+  // Comparar por INSTANTE, no por string: Postgres/PostgREST devuelve el
+  // timestamptz como "…+00:00" (sin milisegundos), mientras que
+  // `arWallClockToUtcIso` produce el ISO de `Date.toISOString()` ("….000Z").
+  // Ambos representan el mismo momento, así que un `!==` de strings daría un
+  // falso negativo aunque el turno no se haya movido.
+  const mismoInstante = (a: string, b: string) => new Date(a).getTime() === new Date(b).getTime();
+  if (
+    !mismoInstante(turnoATrasIntento.inicio, turnoAInicio) ||
+    !mismoInstante(turnoATrasIntento.fin, turnoAFin)
+  ) {
     console.error(
       `FAIL: turno A cambió de horario pese a que el UPDATE debía fallar. Esperado ${turnoAInicio}-${turnoAFin}, obtenido ${turnoATrasIntento.inicio}-${turnoATrasIntento.fin}.`,
     );
