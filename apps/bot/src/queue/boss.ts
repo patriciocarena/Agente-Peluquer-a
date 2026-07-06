@@ -36,6 +36,10 @@ import { loadEnv } from "../config/env.js";
 import { processInboundWhatsappEvent } from "./inboundWorker.js";
 
 export const WHATSAPP_INBOUND_QUEUE = "whatsapp-inbound";
+// CR-02: dead-letter destination for jobs that exhaust WHATSAPP_INBOUND_QUEUE's
+// retryLimit — makes otherwise-silent permanent failures (Graph API outage,
+// persistent DB error) visible/inspectable instead of just vanishing.
+const WHATSAPP_INBOUND_DEAD_LETTER_QUEUE = "whatsapp-inbound-dlq";
 
 const env = loadEnv();
 
@@ -58,7 +62,14 @@ boss.on("error", (err) => console.error("[pg-boss]", err));
  */
 export async function startQueue(): Promise<void> {
   await boss.start();
-  await boss.createQueue(WHATSAPP_INBOUND_QUEUE);
+  // CR-02: the dead-letter queue must exist before it can be referenced by
+  // name from the main queue's `deadLetter` option below.
+  await boss.createQueue(WHATSAPP_INBOUND_DEAD_LETTER_QUEUE);
+  await boss.createQueue(WHATSAPP_INBOUND_QUEUE, {
+    retryLimit: 5,
+    retryBackoff: true,
+    deadLetter: WHATSAPP_INBOUND_DEAD_LETTER_QUEUE,
+  });
   await boss.work(WHATSAPP_INBOUND_QUEUE, { batchSize: 1 }, async ([job]) => {
     await processInboundWhatsappEvent(job.data as Parameters<typeof processInboundWhatsappEvent>[0]);
   });

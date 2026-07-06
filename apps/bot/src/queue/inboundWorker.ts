@@ -119,27 +119,60 @@ export async function processInboundWhatsappEvent(
     );
   }
 
-  const reply = await deps.responder(conversacion, message.text?.body ?? "");
+  // CR-02: everything from here on (reply generation, outbound send,
+  // outbound persist) can fail transiently — a Graph API 5xx/rate-limit/
+  // timeout (graphClient.ts throws in both its non-2xx and embedded-error
+  // branches), a DB blip. Before this fix, an uncaught throw here propagated
+  // straight out of the pg-boss job handler with no context and (since the
+  // queue previously had no retry policy — see ./boss.ts) was permanently,
+  // silently lost: Meta already got its 200 at enqueue time and never
+  // retries. Logging + rethrowing lets pg-boss's now-configured
+  // retryLimit/deadLetter (./boss.ts) actually get a chance to run.
+  //
+  // Known limitation (documented in 05-REVIEW.md CR-02, not fixed here): a
+  // retry re-enters this function from the top and will hit the 23505
+  // dedup branch above (the inbound insert already succeeded on the first
+  // attempt), returning early WITHOUT re-attempting responder/send. Making
+  // the dedup check independent of "was the reply actually sent" (e.g. by
+  // checking for an existing outbound mensaje row) is a follow-up, not
+  // addressed in this fix.
+  try {
+    const reply = await deps.responder(conversacion, message.text?.body ?? "");
 
-  // Pattern 5 (D-09) — 24h customer-service window gate. `ventana_expira_at`
-  // is nullable at the schema level (though findOrCreateConversacion always
-  // sets it) — treat a null window defensively as already-closed, never as
-  // an open-ended window.
-  const nowMs = deps.now ? deps.now() : Date.now();
-  const ventanaExpiraMs = conversacion.ventana_expira_at
-    ? new Date(conversacion.ventana_expira_at).getTime()
-    : 0;
-  if (nowMs < ventanaExpiraMs) {
-    await deps.sendWhatsappMessage(negocio.id, message.from, reply);
-    await deps.negocioScoped(negocio.id).insertMensaje({
-      conversacion_id: conversacion.id,
-      direccion: "saliente",
-      contenido: { text: { body: reply } },
-    });
-  } else {
+    // Pattern 5 (D-09) — 24h customer-service window gate. `ventana_expira_at`
+    // is nullable at the schema level (though findOrCreateConversacion always
+    // sets it) — treat a null window defensively as already-closed, never as
+    // an open-ended window.
+    const nowMs = deps.now ? deps.now() : Date.now();
+    const ventanaExpiraMs = conversacion.ventana_expira_at
+      ? new Date(conversacion.ventana_expira_at).getTime()
+      : 0;
+    if (nowMs < ventanaExpiraMs) {
+      await deps.sendWhatsappMessage(negocio.id, message.from, reply);
+      // WR-01: check the outbound persist error instead of discarding it —
+      // a failure here after a successful send is a silent audit-trail gap.
+      const { error: outboundError } = await deps.negocioScoped(negocio.id).insertMensaje({
+        conversacion_id: conversacion.id,
+        direccion: "saliente",
+        contenido: { text: { body: reply } },
+      });
+      if (outboundError) {
+        deps.log(
+          { conversacionId: conversacion.id, outboundError },
+          "Sent WhatsApp reply but failed to persist the outbound mensaje record",
+        );
+      }
+    } else {
+      deps.log(
+        { conversacionId: conversacion.id },
+        "24h window closed — skipping outbound send (D-09, REMIND-01 out of scope)",
+      );
+    }
+  } catch (err) {
     deps.log(
-      { conversacionId: conversacion.id },
-      "24h window closed — skipping outbound send (D-09, REMIND-01 out of scope)",
+      { conversacionId: conversacion.id, waMessageId: message.id, err },
+      "Failed generating/sending the WhatsApp reply after the inbound message was already persisted — rethrowing for queue retry",
     );
+    throw err;
   }
 }

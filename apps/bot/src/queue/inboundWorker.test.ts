@@ -181,6 +181,22 @@ describe("processInboundWhatsappEvent", () => {
     expect(spies.sendWhatsappMessage).not.toHaveBeenCalled();
   });
 
+  it("sendWhatsappMessage rejecting: the job rejects loudly instead of silently succeeding (CR-02)", async () => {
+    const { deps, spies } = buildDeps();
+    const sendError = new Error("Graph API 503");
+    spies.sendWhatsappMessage.mockRejectedValueOnce(sendError);
+
+    await expect(processInboundWhatsappEvent(buildEvent(), deps)).rejects.toThrow("Graph API 503");
+
+    expect(spies.log).toHaveBeenCalledWith(
+      expect.objectContaining({ err: sendError }),
+      expect.stringContaining("rethrowing for queue retry"),
+    );
+    // the inbound mensaje was already durably persisted before the send
+    // failure — only the outbound mensaje (never reached) is missing.
+    expect(spies.insertMensaje).toHaveBeenCalledTimes(1);
+  });
+
   it("closed window (ventana_expira_at in the past): send NOT called, no outbound mensaje inserted", async () => {
     const pastConversacion = makeConversacion({
       ventana_expira_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
