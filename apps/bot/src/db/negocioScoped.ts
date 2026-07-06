@@ -34,8 +34,27 @@
  * cross-negocio service_role test suite (SEC-03) is deferred to Phase 7;
  * this file's own smoke test (negocioScoped.test.ts) proves the pattern
  * holds against the two seeded tenants' negocios, live.
+ *
+ * Write accessors (Fase 5, D-11): Phase 5 (integración WhatsApp Cloud API)
+ * is the FIRST writer through this layer — every prior consumer only read.
+ * `insertMensaje`/`insertConversacion`/`updateConversacion`/`insertCliente`
+ * below preserve the same "impossible to forget negocio_id" guarantee as the
+ * read accessors: each bakes `negocio_id` from the scope argument into the
+ * insert row (via `{ ...row, negocio_id: negocioId }`) or into the update
+ * filter (`.eq('negocio_id', negocioId)`), so a caller cannot construct a
+ * negocio-unscoped write through this layer any more than an unscoped read.
+ * Row params are typed against `TablesInsert<T>` with `negocio_id` omitted
+ * (`@turnosbot/db-types`), so TypeScript itself refuses a caller-supplied
+ * `negocio_id` that could silently override the scope argument.
  */
+import type { TablesInsert, TablesUpdate } from "@turnosbot/db-types";
+
 import { supabaseAdmin } from "./client.js";
+
+type MensajeInsert = Omit<TablesInsert<"mensaje">, "negocio_id">;
+type ConversacionInsert = Omit<TablesInsert<"conversacion">, "negocio_id">;
+type ConversacionUpdate = Omit<TablesUpdate<"conversacion">, "negocio_id" | "id">;
+type ClienteInsert = Omit<TablesInsert<"cliente">, "negocio_id">;
 
 export function negocioScoped(negocioId: string) {
   return {
@@ -56,5 +75,27 @@ export function negocioScoped(negocioId: string) {
     mensajes: () => supabaseAdmin.from("mensaje").select("*").eq("negocio_id", negocioId),
     recordatorios: () =>
       supabaseAdmin.from("recordatorio").select("*").eq("negocio_id", negocioId),
+
+    // --- Write accessors (Fase 5, first writer through this layer, D-11) ---
+    insertMensaje: (row: MensajeInsert) =>
+      supabaseAdmin.from("mensaje").insert({ ...row, negocio_id: negocioId }),
+    insertConversacion: (row: ConversacionInsert) =>
+      supabaseAdmin
+        .from("conversacion")
+        .insert({ ...row, negocio_id: negocioId })
+        .select("*")
+        .single(),
+    updateConversacion: (id: string, patch: ConversacionUpdate) =>
+      supabaseAdmin
+        .from("conversacion")
+        .update(patch)
+        .eq("negocio_id", negocioId)
+        .eq("id", id),
+    insertCliente: (row: ClienteInsert) =>
+      supabaseAdmin
+        .from("cliente")
+        .insert({ ...row, negocio_id: negocioId })
+        .select("id")
+        .single(),
   } as const;
 }
