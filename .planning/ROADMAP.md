@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Dashboard y datos del negocio** - El dueño puede loguearse y cargar profesionales, servicios, precios y perfil del negocio
 - [x] **Phase 3: Motor de disponibilidad** - El sistema calcula con precisión qué horarios están realmente libres, probado en aislamiento (completed 2026-07-05)
 - [x] **Phase 4: Grilla y turnos del dashboard** - El dueño puede ver, bloquear, crear, cancelar y reagendar turnos desde el dashboard (completed 2026-07-06)
-- [ ] **Phase 5: Integración WhatsApp Cloud API** - El sistema recibe y envía mensajes de WhatsApp de forma segura, enrutados al tenant correcto
+- [x] **Phase 5: Integración WhatsApp Cloud API** - El sistema recibe y envía mensajes de WhatsApp de forma segura, enrutados al tenant correcto (completed 2026-07-06)
 - [ ] **Phase 6: Agente conversacional de agendamiento** - Un cliente puede agendar, consultar y cancelar/reagendar un turno real conversando por WhatsApp
 - [ ] **Phase 7: Hardening y listo para producción** - El sistema resiste concurrencia, aislamiento cross-tenant y protege credenciales antes del primer tenant real
 
@@ -165,7 +165,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. El sistema envía mensajes salientes al cliente dentro de la ventana de 24 horas y registra cuando esa ventana se cierra
   5. Toda conversación y mensaje queda persistido, con el estado del bot guardado en `context` para poder auditar/depurar
 
-**Plans**: 5/6 plans executed
+**Plans**: 6/6 plans complete
 
 **Wave 1** *(fundación — sin deps)*
 
@@ -183,7 +183,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 4** *(depende de 05-02/05)*
 
-- [ ] 05-06-PLAN.md — Webhook Fastify (GET handshake + POST verify-then-enqueue-then-200) + server wiring (helmet/rate-limit/raw-body) + script de verificación local firmado (WA-01/03)
+- [x] 05-06-PLAN.md — Webhook Fastify (GET handshake + POST verify-then-enqueue-then-200) + server wiring (helmet/rate-limit/raw-body) + script de verificación local firmado (WA-01/03)
 
 ### Phase 6: Agente conversacional de agendamiento
 
@@ -224,7 +224,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Dashboard y datos del negocio | 8/8 | Complete (verified 16/16; solo resta spot-check visual no bloqueante) | 2026-07-04 |
 | 3. Motor de disponibilidad | 5/5 | Complete   | 2026-07-05 |
 | 4. Grilla y turnos del dashboard | 7/7 | Complete   | 2026-07-06 |
-| 5. Integración WhatsApp Cloud API | 5/6 | In Progress|  |
+| 5. Integración WhatsApp Cloud API | 6/6 | Complete   | 2026-07-06 |
 | 6. Agente conversacional de agendamiento | 0/TBD | Not started | - |
 | 7. Hardening y listo para producción | 0/TBD | Not started | - |
 
