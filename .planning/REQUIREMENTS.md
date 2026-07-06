@@ -62,7 +62,7 @@ Requisitos para el release inicial. Cada uno mapea a una fase del roadmap.
 - [ ] **WA-01**: El sistema recibe webhooks de la WhatsApp Cloud API oficial y verifica la firma `X-Hub-Signature-256` sobre el body crudo
 - [ ] **WA-02**: El sistema resuelve el tenant a partir del `phone_number_id` del mensaje entrante
 - [ ] **WA-03**: El sistema procesa los mensajes de forma asíncrona y responde 200 rápido, con deduplicación por `messages[].id`
-- [ ] **WA-04**: El sistema envía mensajes salientes al cliente por la Cloud API dentro de la ventana de servicio de 24h
+- [x] **WA-04**: El sistema envía mensajes salientes al cliente por la Cloud API dentro de la ventana de servicio de 24h
 - [ ] **WA-05**: El sistema persiste conversaciones y mensajes (auditoría/debugging) con el estado del bot en `context` (jsonb)
 
 ### Agente conversacional de agendamiento (BOT)
@@ -161,7 +161,7 @@ Qué fases cubren qué requisitos.
 | WA-01 | Phase 5 | Pending |
 | WA-02 | Phase 5 | Pending |
 | WA-03 | Phase 5 | Pending |
-| WA-04 | Phase 5 | Pending |
+| WA-04 | Phase 5 | Complete |
 | WA-05 | Phase 5 | Pending |
 | BOT-01 | Phase 6 | Pending |
 | BOT-02 | Phase 6 | Pending |
@@ -179,6 +179,7 @@ Qué fases cubren qué requisitos.
 | SEC-03 | Phase 7 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 51 total (nota: el conteo previo de "43" en este documento era incorrecto/desactualizado; el conteo real de REQ-IDs listados arriba es 51)
 - Mapped to phases: 51/51 ✓
 - Unmapped: 0 ✓
