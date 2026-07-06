@@ -50,6 +50,18 @@ if (!env.SUPABASE_DB_URL) {
   );
 }
 
+// WR-03: the presence check above doesn't verify the URL actually points at
+// the direct/session-mode port — a misconfigured .env pointing at the 6543
+// transaction-mode pooler would pass it silently and only surface later as
+// confusing pg-boss failures (the exact failure mode the comment above this
+// guard already warns about). Fail fast here too.
+if (new URL(env.SUPABASE_DB_URL).port === "6543") {
+  throw new Error(
+    "SUPABASE_DB_URL apunta al pooler transaction-mode (puerto 6543) — pg-boss requiere " +
+      "conexión directa/session-mode (puerto 5432). Ver CLAUDE.md / apps/bot/src/queue/boss.ts.",
+  );
+}
+
 export const boss = new PgBoss(env.SUPABASE_DB_URL);
 boss.on("error", (err) => console.error("[pg-boss]", err));
 
