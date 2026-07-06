@@ -2,18 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 04
-current_phase_name: grilla-y-turnos-del-dashboard
 status: executing
-stopped_at: Phase 4 UI-SPEC approved
-last_updated: "2026-07-06T00:41:38.961Z"
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-07-06T01:45:36.945Z"
 last_activity: 2026-07-06
-last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 25
-  completed_plans: 18
+  completed_plans: 20
   percent: 43
 ---
 
@@ -29,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-03)
 ## Current Position
 
 Phase: 04 (grilla-y-turnos-del-dashboard) — EXECUTING
-Plan: 1 of 7
-Status: Executing Phase 04
-Last activity: 2026-07-06 — Phase 04 execution started
+Plan: 2 of 7
+Status: Ready to execute
+Last activity: 2026-07-06
 
-Progress: [██████████] 100%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -63,6 +60,7 @@ Progress: [██████████] 100%
 | Phase 03 P03 | 8min | 3 tasks | 6 files |
 | Phase 03 P04 | 10min | 3 tasks | 5 files |
 | Phase 03-motor-de-disponibilidad P05 | 25min | 3 tasks | 8 files |
+| Phase 04 P01 | 15min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -84,6 +82,7 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 03-03] Tres primitivos del motor de intervalos (subtractIntervals half-open, snapToGrid anclado a medianoche-en-zona con gate Pitfall 5, resolveWorkIntervalsForDate via TZDate sin offset -3) con TDD RED-GREEN, 20 tests verdes — AVAIL-01/AVAIL-02
 - [Phase 03]: [Phase 03-04] Orquestación pura de computeSlots (schedule-bloqueos-turnos->grid->ventana->auto-assign) + autoAssign con tie-break estable por professionalId + index.ts como barrel público
 - [Phase 03-05]: bookAppointment congela snapshots de nombre/precio/duracion por servicio (Pitfall 3, AVAIL-03) y traduce el 23P01 de la GiST EXCLUDE en un resultado de dominio slot_taken (CORE-05); cliente Supabase inyectado, sin dependencia runtime de @supabase/supabase-js en el paquete; checkpoint: scripts/verify-availability-engine.ts escrito pero no ejecutado (falta .env real)
+- [Phase ?]: [Phase 04-01] Extendido @turnosbot/availability-engine con skipBookingWindow (D-08, bypass opt-in de la ventana 60min/30d) y rescheduleAppointment (D-14, UPDATE con self-exclusion + traduccion 23P01->slot_taken) -- Cierra APPT-05/APPT-06 en el motor compartido bot/dashboard
 
 ### Blockers/Concerns
 
@@ -109,15 +108,17 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-05T23:38:48.957Z
-Stopped at: Phase 4 execution — Wave 1 partial (04-02 merged, 04-01 still running unmerged)
-Resume file: .planning/phases/04-grilla-y-turnos-del-dashboard/04-01-PLAN.md
+Last session: 2026-07-06T01:45:36.939Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: None
 
 **HANDOFF NOTE (2026-07-05):** Phase 4 has 7 plans planned across 5 waves (see 04-*-PLAN.md). Wave 1 = 04-01 + 04-02 in parallel worktrees.
+
 - 04-02 (dashboard foundation: popover, sidebar nav, zod schemas) — DONE, merged to main.
 - 04-01 (availability-engine: skipBookingWindow + rescheduleAppointment) — was STILL RUNNING when this session ended (out of tokens). Its worktree branch `worktree-agent-a53d00a653b8bb78d` at `.claude/worktrees/agent-a53d00a653b8bb78d` has 5 commits (both tasks appear code-complete: skipBookingWindow + rescheduleAppointment + gated verify script) but had NOT yet committed 04-01-SUMMARY.md as of handoff.
 
 **Next teammate — before running `/gsd-execute-phase 4`:**
+
 1. `git worktree list` — check if `agent-a53d00a653b8bb78d` still exists.
 2. `git -C .claude/worktrees/agent-a53d00a653b8bb78d log --oneline -3` — if a `docs(04-01): add plan summary` commit is now present, the agent finished on its own: merge it manually first — `git merge --no-ff worktree-agent-a53d00a653b8bb78d -m "chore: merge executor worktree (worktree-agent-a53d00a653b8bb78d)"`, then remove the worktree (`git worktree remove .claude/worktrees/agent-a53d00a653b8bb78d --force`) and delete the branch (`git branch -D worktree-agent-a53d00a653b8bb78d`).
 3. If no SUMMARY commit and the worktree seems stalled (no new commits in a while), it's safe to remove the worktree/branch and let `/gsd-execute-phase 4` redispatch 04-01 fresh.
