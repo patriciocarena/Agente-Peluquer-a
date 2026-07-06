@@ -2,19 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 04
-current_phase_name: grilla-y-turnos-del-dashboard
-status: executing
-stopped_at: Phase 4 UI-SPEC approved
-last_updated: "2026-07-06T00:41:38.961Z"
+status: verified-pending-qa
+stopped_at: Phase 04 executed (7/7 plans) + verified (human_needed — manual QA MQ-1..MQ-4 + live reschedule script pending, gated by .env)
+last_updated: "2026-07-06T02:57:38.901Z"
 last_activity: 2026-07-06
-last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 25
-  completed_plans: 18
-  percent: 43
+  completed_plans: 25
+  percent: 57
 ---
 
 # Project State
@@ -29,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-07-03)
 ## Current Position
 
 Phase: 04 (grilla-y-turnos-del-dashboard) — EXECUTING
-Plan: 1 of 7
-Status: Executing Phase 04
-Last activity: 2026-07-06 — Phase 04 execution started
+Plan: 7 of 7
+Status: Ready to execute
+Last activity: 2026-07-06
 
 Progress: [██████████] 100%
 
@@ -63,6 +60,12 @@ Progress: [██████████] 100%
 | Phase 03 P03 | 8min | 3 tasks | 6 files |
 | Phase 03 P04 | 10min | 3 tasks | 5 files |
 | Phase 03-motor-de-disponibilidad P05 | 25min | 3 tasks | 8 files |
+| Phase 04 P01 | 15min | 2 tasks | 6 files |
+| Phase 04 P03 | 12min | 3 tasks | 3 files |
+| Phase 04 P04 | 20min | 2 tasks | 3 files |
+| Phase 04 P06 | 15min | 2 tasks | 2 files |
+| Phase 04 P05 | 18min | 3 tasks | 4 files |
+| Phase 04 P07 | 55min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -84,6 +87,19 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 03-03] Tres primitivos del motor de intervalos (subtractIntervals half-open, snapToGrid anclado a medianoche-en-zona con gate Pitfall 5, resolveWorkIntervalsForDate via TZDate sin offset -3) con TDD RED-GREEN, 20 tests verdes — AVAIL-01/AVAIL-02
 - [Phase 03]: [Phase 03-04] Orquestación pura de computeSlots (schedule-bloqueos-turnos->grid->ventana->auto-assign) + autoAssign con tie-break estable por professionalId + index.ts como barrel público
 - [Phase 03-05]: bookAppointment congela snapshots de nombre/precio/duracion por servicio (Pitfall 3, AVAIL-03) y traduce el 23P01 de la GiST EXCLUDE en un resultado de dominio slot_taken (CORE-05); cliente Supabase inyectado, sin dependencia runtime de @supabase/supabase-js en el paquete; checkpoint: scripts/verify-availability-engine.ts escrito pero no ejecutado (falta .env real)
+- [Phase ?]: [Phase 04-01] Extendido @turnosbot/availability-engine con skipBookingWindow (D-08, bypass opt-in de la ventana 60min/30d) y rescheduleAppointment (D-14, UPDATE con self-exclusion + traduccion 23P01->slot_taken) -- Cierra APPT-05/APPT-06 en el motor compartido bot/dashboard
+- [Phase 04-03]: buscarClientePorTelefono usa .ilike con match parcial para búsqueda incremental por dígitos (D-09, resuelve A3 de 04-RESEARCH.md)
+- [Phase 04-03]: crearClienteInline no llama revalidatePath — crear un cliente no altera la grilla de turnos; el clienteId se pasa directo al flujo del modal
+- [Phase ?]: [Phase 04-04]: crearTurnoManual delega en bookAppointment(skipBookingWindow:true) + UPDATE solo-de-estado a confirmado; cancelarTurno hace UPDATE estado=cancelado (nunca DELETE); reagendarTurno delega en rescheduleAppointment con serviceIds via fetchTurnoServicios -- cierra APPT-04/05/06 en el dashboard
+- [Phase ?]: [Phase 04-04]: profesionalesElegibles exige elegibilidad de un profesional para TODOS los serviceIds pedidos (Set + every), cerrando Pitfall 6/Open Question 3 de 04-RESEARCH.md
+- [Phase ?]: [Phase 04-04]: Rule 3 fix -- BookAppointmentDeps/BookAppointmentResult exportados desde el barrel de @turnosbot/availability-engine (faltaban pese a que bookAppointment/rescheduleAppointment ya los devolvian/recibian)
+- [Phase 04-06]: Offset fijo -03:00 (Argentina, sin DST desde 2009) hardcodeado en bloqueo-form-dialog.tsx para convertir hora local a UTC sin agregar @date-fns/tz al dashboard
+- [Phase 04-06]: granularidadMin agregada como prop opcional (default 30) en BloqueoFormDialog para la duracion del bloqueo, resolviendo la guia del plan sin romper el contrato minimo de props
+- [Phase 04-05]: TurnoFormDialog agrega prop servicios (Tables<servicio>[]) para las checkboxes del modo alta, requerido por la prosa del Task 2 aunque no listado en el resumen artifacts_produced
+- [Phase 04-05]: slot-selector.tsx reusa el offset fijo -03:00 (Argentina, sin DST) ya establecido por bloqueo-form-dialog.tsx para convertir HH:mm local a ISO, en vez de agregar @date-fns/tz al dashboard
+- [Phase 04-07]: BloqueoPopover gana prop opcional anchor (PopoverAnchor asChild) para resolver el anclaje visual dejado abierto por Plan 06 -- retrocompatible
+- [Phase 04-07]: @turnosbot/availability-engine cambia main/types de src/index.ts a dist/ compilado (prepare: tsc -b) -- Turbopack no resuelve especificadores NodeNext .js internos que tsc/vitest si resuelven; cero cambios al codigo fuente del motor
+- [Phase 04-07]: computeSlots dimensionado con un servicio sintetico local (id grid-slot, nunca persistido) para calcular libre a granularidad de UN slot, en vez de la duracion de un servicio real
 
 ### Blockers/Concerns
 
@@ -109,15 +125,17 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-05T23:38:48.957Z
-Stopped at: Phase 4 execution — Wave 1 partial (04-02 merged, 04-01 still running unmerged)
-Resume file: .planning/phases/04-grilla-y-turnos-del-dashboard/04-01-PLAN.md
+Last session: 2026-07-06T02:57:38.896Z
+Stopped at: Completed 04-07-PLAN.md
+Resume file: None
 
 **HANDOFF NOTE (2026-07-05):** Phase 4 has 7 plans planned across 5 waves (see 04-*-PLAN.md). Wave 1 = 04-01 + 04-02 in parallel worktrees.
+
 - 04-02 (dashboard foundation: popover, sidebar nav, zod schemas) — DONE, merged to main.
 - 04-01 (availability-engine: skipBookingWindow + rescheduleAppointment) — was STILL RUNNING when this session ended (out of tokens). Its worktree branch `worktree-agent-a53d00a653b8bb78d` at `.claude/worktrees/agent-a53d00a653b8bb78d` has 5 commits (both tasks appear code-complete: skipBookingWindow + rescheduleAppointment + gated verify script) but had NOT yet committed 04-01-SUMMARY.md as of handoff.
 
 **Next teammate — before running `/gsd-execute-phase 4`:**
+
 1. `git worktree list` — check if `agent-a53d00a653b8bb78d` still exists.
 2. `git -C .claude/worktrees/agent-a53d00a653b8bb78d log --oneline -3` — if a `docs(04-01): add plan summary` commit is now present, the agent finished on its own: merge it manually first — `git merge --no-ff worktree-agent-a53d00a653b8bb78d -m "chore: merge executor worktree (worktree-agent-a53d00a653b8bb78d)"`, then remove the worktree (`git worktree remove .claude/worktrees/agent-a53d00a653b8bb78d --force`) and delete the branch (`git branch -D worktree-agent-a53d00a653b8bb78d`).
 3. If no SUMMARY commit and the worktree seems stalled (no new commits in a while), it's safe to remove the worktree/branch and let `/gsd-execute-phase 4` redispatch 04-01 fresh.

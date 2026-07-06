@@ -54,6 +54,13 @@ export interface ComputeSlotsInput {
   /** ISO date, YYYY-MM-DD, interpretado en la timezone del negocio
    * (America/Argentina/*). Nunca parsear como UTC-naive (Pitfall 2). */
   date: string;
+  /** D-08 (Fase 4): si es `true`, `computeSlots` NO aplica el filtro de
+   * ventana de reserva `BOOKING_MIN_LEAD_MINUTES`/`BOOKING_MAX_ADVANCE_DAYS`
+   * (D-04/D-05, Fase 3). El default (`undefined`/`false`) preserva el
+   * comportamiento del bot byte-por-byte — SOLO el dashboard (Fase 4) debe
+   * pasar `true` explícito, para que el dueño pueda cargar turnos "para
+   * ahora mismo" o a más de 30 días (D-07). El bot NUNCA debe pasar `true`. */
+  skipBookingWindow?: boolean;
 }
 
 /** Un slot ofrecible al cliente. `start`/`end` en HH:mm hora local del
@@ -114,6 +121,45 @@ export interface BookAppointmentInput {
   inicio: string;
   /** Fin del bloque contiguo (inicio + suma de duraciones), ISO timestamptz. */
   fin: string;
+  /** D-08 (Fase 4): idéntica semántica que `ComputeSlotsInput.skipBookingWindow`
+   * — se propaga a la re-validación de freshness interna contra
+   * `computeSlots`. Default (`undefined`/`false`) preserva el comportamiento
+   * del bot; solo el dashboard pasa `true`. */
+  skipBookingWindow?: boolean;
+}
+
+/**
+ * `RescheduleAppointmentInput` — input de `rescheduleAppointment` (D-14,
+ * Fase 4), hermana de `BookAppointmentInput`. A diferencia de un
+ * cancelar+crear, D-14 hace un UPDATE del MISMO `turno.id` (nunca cancela ni
+ * crea uno nuevo).
+ *
+ * `serviceIds` existe SOLO para dimensionar la duración del bloque contiguo
+ * en la revalidación interna contra `computeSlots` (consistente con
+ * `BookAppointmentInput`); `rescheduleAppointment` NUNCA reescribe
+ * `turno_servicio` — D-14 pisa únicamente `inicio`/`fin`/`profesional_id`
+ * del turno existente (Open Question 1 de 04-RESEARCH.md, resuelta por el
+ * planner).
+ */
+export interface RescheduleAppointmentInput {
+  /** Negocio dueño del turno (scoping — T-03-01). */
+  negocioId: string;
+  /** UUID del turno EXISTENTE a reagendar. Este id se excluye de los turnos
+   * activos que bloquean al revalidar disponibilidad (self-exclusion,
+   * Pitfall 2) y es el mismo id que recibe el UPDATE. */
+  turnoId: string;
+  /** Profesional al que queda asignado el turno tras el reagendado (puede
+   * ser el mismo de antes o uno distinto). */
+  profesionalId: string;
+  /** Servicios del turno — usados SOLO para dimensionar la duración total en
+   * la revalidación; D-14 no reescribe `turno_servicio` con esto. */
+  serviceIds: string[];
+  /** Nuevo inicio del bloque contiguo, ISO timestamptz. */
+  inicio: string;
+  /** Nuevo fin del bloque contiguo, ISO timestamptz. */
+  fin: string;
+  /** D-08: idéntica semántica que `ComputeSlotsInput.skipBookingWindow`. */
+  skipBookingWindow?: boolean;
 }
 
 // ---------------------------------------------------------------------------

@@ -50,12 +50,12 @@ Requisitos para el release inicial. Cada uno mapea a una fase del roadmap.
 
 ### Grilla y administración de turnos (APPT)
 
-- [ ] **APPT-01**: El dueño ve una grilla de turnos por profesional y por día
-- [ ] **APPT-02**: El dueño puede bloquear manualmente slots de un profesional (ej: se va temprano, turno médico)
-- [ ] **APPT-03**: El dueño puede ver el detalle de un turno confirmado (cliente, servicios, precio, horario)
-- [ ] **APPT-04**: El dueño puede cancelar un turno desde el dashboard
-- [ ] **APPT-05**: El dueño puede reagendar un turno desde el dashboard
-- [ ] **APPT-06**: El dueño puede crear un turno manualmente desde el dashboard (cliente que llama/viene)
+- [x] **APPT-01**: El dueño ve una grilla de turnos por profesional y por día
+- [x] **APPT-02**: El dueño puede bloquear manualmente slots de un profesional (ej: se va temprano, turno médico)
+- [x] **APPT-03**: El dueño puede ver el detalle de un turno confirmado (cliente, servicios, precio, horario)
+- [x] **APPT-04**: El dueño puede cancelar un turno desde el dashboard
+- [x] **APPT-05**: El dueño puede reagendar un turno desde el dashboard
+- [x] **APPT-06**: El dueño puede crear un turno manualmente desde el dashboard (cliente que llama/viene)
 
 ### Integración WhatsApp Cloud API (WA)
 
@@ -152,12 +152,12 @@ Qué fases cubren qué requisitos.
 | AVAIL-03 | Phase 3 | Complete |
 | AVAIL-04 | Phase 3 | Complete |
 | AVAIL-05 | Phase 3 | Complete |
-| APPT-01 | Phase 4 | Pending |
-| APPT-02 | Phase 4 | Pending |
-| APPT-03 | Phase 4 | Pending |
-| APPT-04 | Phase 4 | Pending |
-| APPT-05 | Phase 4 | Pending |
-| APPT-06 | Phase 4 | Pending |
+| APPT-01 | Phase 4 | Complete |
+| APPT-02 | Phase 4 | Complete |
+| APPT-03 | Phase 4 | Complete |
+| APPT-04 | Phase 4 | Complete |
+| APPT-05 | Phase 4 | Complete |
+| APPT-06 | Phase 4 | Complete |
 | WA-01 | Phase 5 | Pending |
 | WA-02 | Phase 5 | Pending |
 | WA-03 | Phase 5 | Pending |

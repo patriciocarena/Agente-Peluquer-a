@@ -52,6 +52,7 @@ import type {
   AvailabilityData,
   BookAppointmentInput,
   ComputeSlotsInput,
+  RescheduleAppointmentInput,
   ServicioRow,
 } from "./types.js";
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
@@ -83,6 +84,18 @@ export const bookAppointmentInputSchema = z.object({
   inicio: z.iso.datetime(),
   fin: z.iso.datetime(),
 }) satisfies z.ZodType<BookAppointmentInput, unknown>;
+
+/** Validación de input de `rescheduleAppointment` (V5, T-04-04) — mismo
+ * `uuidLike` que `bookAppointmentInputSchema` corta input LLM-driven
+ * manipulable (turnoId/serviceIds basura) en el borde del paquete. */
+export const rescheduleAppointmentInputSchema = z.object({
+  negocioId: uuidLike,
+  turnoId: uuidLike,
+  profesionalId: uuidLike,
+  serviceIds: z.array(uuidLike).min(1, "serviceIds no puede estar vacío"),
+  inicio: z.iso.datetime(),
+  fin: z.iso.datetime(),
+}) satisfies z.ZodType<RescheduleAppointmentInput, unknown>;
 
 // ---------------------------------------------------------------------------
 // Snapshots congelados (AVAIL-03, Pitfall 3) — funciones PURAS.
@@ -297,4 +310,101 @@ export async function bookAppointment(
   }
 
   return { ok: true, turnoId, precioTotal };
+}
+
+// ---------------------------------------------------------------------------
+// rescheduleAppointment (D-14) — hermana de bookAppointment, UPDATE en vez de
+// INSERT, con self-exclusion del propio turno viejo (Pitfall 2, T-04-01).
+// ---------------------------------------------------------------------------
+
+/**
+ * rescheduleAppointment(rawInput, deps) — mueve un turno EXISTENTE
+ * (`UPDATE turno SET inicio, fin, profesional_id WHERE id = turnoId`, nunca
+ * cancela+crea), tras:
+ *   1. Validar `rawInput` con zod (V5, T-04-04).
+ *   2. Construir `dataExcludingSelf`: `freshData` con el propio `turnoId`
+ *      filtrado de `turnos` — el turno viejo NO debe bloquear su propio
+ *      nuevo horario (self-exclusion, Pitfall 2). Preserva el scoping por
+ *      negocio del `freshData` original (T-04-03): es un spread+filter, no
+ *      un refetch, así que `assertScopedToNegocio` sigue viendo solo filas
+ *      del mismo negocio dentro de `computeSlots`.
+ *   3. Re-validar el nuevo horario contra `computeSlots(dataExcludingSelf)`
+ *      con `skipBookingWindow: true` (D-07: el dueño puede reagendar fuera
+ *      de la ventana de 60min/30d) inmediatamente antes de actualizar
+ *      (anti-cache, mismo patrón que bookAppointment).
+ *   4. Si no está disponible, `{ok:false, reason:"slot_taken"}` SIN tocar la
+ *      DB.
+ *   5. `UPDATE turno SET inicio, fin, profesional_id WHERE id = turnoId AND
+ *      negocio_id = negocioId`; si `23P01` (la GiST EXCLUDE se re-chequea en
+ *      UPDATE, T-04-01), `{ok:false, reason:"slot_taken"}`; cualquier otro
+ *      error, `{ok:false, reason:"insert_error"}`.
+ *   6. Éxito → `{ok:true, turnoId, precioTotal}` (el `precio_total` NO se
+ *      recalcula: D-14 no toca `turno_servicio` ni sus snapshots).
+ */
+export async function rescheduleAppointment(
+  rawInput: RescheduleAppointmentInput,
+  deps: BookAppointmentDeps,
+): Promise<BookAppointmentResult> {
+  const parsed = rescheduleAppointmentInputSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      reason: "validation_error",
+      issues: parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`),
+    };
+  }
+  const input = parsed.data;
+  const { supabase, freshData, now = Date.now() } = deps;
+
+  // --- Self-exclusion (Pitfall 2, T-04-03): el propio turno viejo no debe
+  // bloquear su nuevo horario. Spread+filter preserva el scoping por negocio
+  // del freshData original (no es un refetch cross-negocio). --------------
+  const dataExcludingSelf: AvailabilityData = {
+    ...freshData,
+    turnos: freshData.turnos.filter((t) => t.id !== input.turnoId),
+  };
+
+  // --- Re-validación de freshness (anti-cache, T-04-01) -----------------
+  const date = isoDateInZone(input.inicio, freshData.negocio.timezone);
+  const computeInput: ComputeSlotsInput = {
+    negocioId: input.negocioId,
+    serviceIds: input.serviceIds,
+    professionalId: input.profesionalId,
+    date,
+    skipBookingWindow: true, // D-07: el dueño puede reagendar fuera de ventana.
+  };
+  const freshSlots = await computeSlots(computeInput, dataExcludingSelf, now);
+  const requestedStart = formatHHmmInZone(new Date(input.inicio).getTime(), freshData.negocio.timezone);
+  const stillAvailable = freshSlots.some(
+    (slot) => slot.start === requestedStart && slot.professionalId === input.profesionalId,
+  );
+  if (!stillAvailable) {
+    return { ok: false, reason: "slot_taken" };
+  }
+
+  // --- UPDATE del mismo turno (D-14: nunca cancela+crea) ------------------
+  const { data: turnoRow, error: updateError } = await supabase
+    .from("turno")
+    .update({
+      inicio: input.inicio,
+      fin: input.fin,
+      profesional_id: input.profesionalId,
+    })
+    .eq("id", input.turnoId)
+    .eq("negocio_id", input.negocioId)
+    .select("id")
+    .single();
+
+  if (updateError) {
+    if (isSlotTakenConcurrently(updateError)) {
+      return { ok: false, reason: "slot_taken" };
+    }
+    return { ok: false, reason: "insert_error", message: updateError.message };
+  }
+
+  // precio_total NO se recalcula: D-14 no toca turno_servicio/snapshots.
+  const turnoExistente = freshData.turnos.find((t) => t.id === input.turnoId);
+  const precioTotal = turnoExistente?.precio_total ?? 0;
+
+  return { ok: true, turnoId: turnoRow.id, precioTotal };
 }

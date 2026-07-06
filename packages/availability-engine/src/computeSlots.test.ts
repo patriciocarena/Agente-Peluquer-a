@@ -194,4 +194,68 @@ describe("computeSlots", () => {
     expect(slots.every((s) => s.professionalId === PROFESIONAL_A_ID)).toBe(true);
     expect(slots.map((s) => s.start)).not.toContain("08:00");
   });
+
+  describe("D-08: skipBookingWindow (Fase 4 — bypass de ventana de reserva para el dashboard)", () => {
+    it("skipBookingWindow:true incluye un slot 'ahora mismo' que la ventana de 60min filtraría", async () => {
+      const data = fixtureFor();
+      // now = 09:00 AR del mismo día del horario (09:00-13:00) — sin
+      // skipBookingWindow, D-04 filtraría 09:00/09:30 (menos de 60min de lead).
+      const now = new TZDate(2026, 6, 6, 9, 0, 0, TZ).getTime();
+
+      const slots = await computeSlots(
+        inputFor({ professionalId: PROFESIONAL_A_ID, skipBookingWindow: true }),
+        data,
+        now,
+      );
+      const starts = slots.map((s) => s.start);
+
+      expect(starts).toContain("09:00");
+      expect(starts).toContain("09:30");
+    });
+
+    it("skipBookingWindow:true incluye slots a más de 30 días de 'now'", async () => {
+      const data = fixtureFor();
+      const nowLejano = new TZDate(2026, 5, 1, 9, 0, 0, TZ).getTime(); // 35 días antes de FECHA
+
+      const slots = await computeSlots(
+        inputFor({ professionalId: PROFESIONAL_A_ID, skipBookingWindow: true }),
+        data,
+        nowLejano,
+      );
+
+      expect(slots.map((s) => s.start)).toContain("09:00");
+    });
+
+    it("Pitfall 1 (regression guard): omitir skipBookingWindow preserva el comportamiento actual byte-por-byte", async () => {
+      const data = fixtureFor();
+      const now = new TZDate(2026, 6, 6, 9, 0, 0, TZ).getTime(); // dentro del día, ejercita D-04
+
+      const slotsOmitido = await computeSlots(inputFor({ professionalId: PROFESIONAL_A_ID }), data, now);
+      const slotsSinFlag = await computeSlots(
+        inputFor({ professionalId: PROFESIONAL_A_ID, skipBookingWindow: undefined }),
+        data,
+        now,
+      );
+
+      // Slots fuera de la ventana (09:00/09:30, <60min de lead) siguen
+      // filtrados igual que antes del cambio.
+      expect(slotsOmitido.map((s) => s.start)).not.toContain("09:00");
+      expect(slotsOmitido.map((s) => s.start)).not.toContain("09:30");
+      expect(slotsOmitido).toEqual(slotsSinFlag);
+    });
+
+    it("skipBookingWindow:false explícito === comportamiento omitido (default explícito)", async () => {
+      const data = fixtureFor();
+      const now = new TZDate(2026, 6, 6, 9, 0, 0, TZ).getTime();
+
+      const slotsOmitido = await computeSlots(inputFor({ professionalId: PROFESIONAL_A_ID }), data, now);
+      const slotsFalseExplicito = await computeSlots(
+        inputFor({ professionalId: PROFESIONAL_A_ID, skipBookingWindow: false }),
+        data,
+        now,
+      );
+
+      expect(slotsFalseExplicito).toEqual(slotsOmitido);
+    });
+  });
 });

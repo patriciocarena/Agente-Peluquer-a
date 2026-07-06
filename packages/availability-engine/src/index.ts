@@ -15,9 +15,16 @@
  * único camino de escritura compartido, junto con `isSlotTakenConcurrently`
  * para que el caller (bot/dashboard) pueda branchear su UX sobre el `23P01`
  * (CORE-05) sin reimplementar la detección del código localmente.
+ *
+ * `rescheduleAppointment` (D-14, Fase 4 Plan 01) se agrega debajo — hermana
+ * de `bookAppointment` que hace UPDATE del mismo turno (nunca cancela+crea);
+ * el dashboard (Planes 03-07) y el bot (Fase 6, BOT-10) la importan desde
+ * este mismo barrel para no duplicar el motor (AVAIL-04).
  */
 export * from "./types.js";
 export * from "./constants.js";
 export { computeSlots } from "./computeSlots.js";
 export { bookAppointment } from "./booking.js";
+export type { BookAppointmentDeps, BookAppointmentResult } from "./booking.js";
 export { isSlotTakenConcurrently } from "./booking.js";
+export { rescheduleAppointment } from "./booking.js";

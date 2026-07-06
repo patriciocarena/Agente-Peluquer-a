@@ -132,9 +132,14 @@ export async function computeSlots(
     const slotsIntervalos = snapToGrid(libreTrasTurnos, granularidadMin, totalDurationMin, anchor);
 
     // 4. Ventana de reserva: start >= now+60min y start <= now+30d (D-04/D-05).
-    const slotsEnVentana = slotsIntervalos.filter(
-      (slotInterval) => slotInterval.start >= minStart && slotInterval.start <= maxStart,
-    );
+    //    D-08 (Fase 4): skipBookingWindow:true salta este filtro por completo
+    //    (el dashboard puede cargar turnos "para ahora mismo" o a >30 días,
+    //    D-07). Default falsy preserva el comportamiento del bot intacto.
+    const slotsEnVentana = input.skipBookingWindow
+      ? slotsIntervalos
+      : slotsIntervalos.filter(
+          (slotInterval) => slotInterval.start >= minStart && slotInterval.start <= maxStart,
+        );
 
     // 5. Interval (epoch ms) → AvailableSlot (HH:mm en zona del negocio).
     const availableSlots: AvailableSlot[] = slotsEnVentana.map((slotInterval) => ({
