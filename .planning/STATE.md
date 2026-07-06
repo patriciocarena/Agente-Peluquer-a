@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-07-06T01:45:36.945Z"
+last_updated: "2026-07-06T01:51:20.206Z"
 last_activity: 2026-07-06
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 25
-  completed_plans: 20
+  completed_plans: 21
   percent: 43
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-03)
 ## Current Position
 
 Phase: 04 (grilla-y-turnos-del-dashboard) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-07-06
 
-Progress: [████████░░] 80%
+Progress: [████████░░] 84%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [████████░░] 80%
 | Phase 03 P04 | 10min | 3 tasks | 5 files |
 | Phase 03-motor-de-disponibilidad P05 | 25min | 3 tasks | 8 files |
 | Phase 04 P01 | 15min | 2 tasks | 6 files |
+| Phase 04 P03 | 12min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,8 @@ Recent decisions affecting current work:
 - [Phase 03]: [Phase 03-04] Orquestación pura de computeSlots (schedule-bloqueos-turnos->grid->ventana->auto-assign) + autoAssign con tie-break estable por professionalId + index.ts como barrel público
 - [Phase 03-05]: bookAppointment congela snapshots de nombre/precio/duracion por servicio (Pitfall 3, AVAIL-03) y traduce el 23P01 de la GiST EXCLUDE en un resultado de dominio slot_taken (CORE-05); cliente Supabase inyectado, sin dependencia runtime de @supabase/supabase-js en el paquete; checkpoint: scripts/verify-availability-engine.ts escrito pero no ejecutado (falta .env real)
 - [Phase ?]: [Phase 04-01] Extendido @turnosbot/availability-engine con skipBookingWindow (D-08, bypass opt-in de la ventana 60min/30d) y rescheduleAppointment (D-14, UPDATE con self-exclusion + traduccion 23P01->slot_taken) -- Cierra APPT-05/APPT-06 en el motor compartido bot/dashboard
+- [Phase 04-03]: buscarClientePorTelefono usa .ilike con match parcial para búsqueda incremental por dígitos (D-09, resuelve A3 de 04-RESEARCH.md)
+- [Phase 04-03]: crearClienteInline no llama revalidatePath — crear un cliente no altera la grilla de turnos; el clienteId se pasa directo al flujo del modal
 
 ### Blockers/Concerns
 
@@ -108,7 +111,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-06T01:45:36.939Z
+Last session: 2026-07-06T01:50:40.036Z
 Stopped at: Completed 04-01-PLAN.md
 Resume file: None
 
