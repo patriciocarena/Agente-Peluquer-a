@@ -21,3 +21,6 @@ supabase/.temp/
 # OS / editor
 .DS_Store
 *.log
+
+# Material de marketing suelto (no forma parte del código del repo)
+/Imagenes del Avatar/
