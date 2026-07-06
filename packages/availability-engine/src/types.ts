@@ -54,6 +54,13 @@ export interface ComputeSlotsInput {
   /** ISO date, YYYY-MM-DD, interpretado en la timezone del negocio
    * (America/Argentina/*). Nunca parsear como UTC-naive (Pitfall 2). */
   date: string;
+  /** D-08 (Fase 4): si es `true`, `computeSlots` NO aplica el filtro de
+   * ventana de reserva `BOOKING_MIN_LEAD_MINUTES`/`BOOKING_MAX_ADVANCE_DAYS`
+   * (D-04/D-05, Fase 3). El default (`undefined`/`false`) preserva el
+   * comportamiento del bot byte-por-byte — SOLO el dashboard (Fase 4) debe
+   * pasar `true` explícito, para que el dueño pueda cargar turnos "para
+   * ahora mismo" o a más de 30 días (D-07). El bot NUNCA debe pasar `true`. */
+  skipBookingWindow?: boolean;
 }
 
 /** Un slot ofrecible al cliente. `start`/`end` en HH:mm hora local del
@@ -114,6 +121,11 @@ export interface BookAppointmentInput {
   inicio: string;
   /** Fin del bloque contiguo (inicio + suma de duraciones), ISO timestamptz. */
   fin: string;
+  /** D-08 (Fase 4): idéntica semántica que `ComputeSlotsInput.skipBookingWindow`
+   * — se propaga a la re-validación de freshness interna contra
+   * `computeSlots`. Default (`undefined`/`false`) preserva el comportamiento
+   * del bot; solo el dashboard pasa `true`. */
+  skipBookingWindow?: boolean;
 }
 
 // ---------------------------------------------------------------------------
