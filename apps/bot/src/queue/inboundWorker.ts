@@ -105,9 +105,18 @@ export async function processInboundWhatsappEvent(
     contenido: message,
   });
 
-  if ((insertError as PostgrestError | null)?.code === "23505") {
-    deps.log({ waMessageId: message.id }, "Duplicate wa_message_id — already processed (WA-03)");
-    return;
+  if (insertError) {
+    if ((insertError as PostgrestError).code === "23505") {
+      deps.log({ waMessageId: message.id }, "Duplicate wa_message_id — already processed (WA-03)");
+      return;
+    }
+    deps.log(
+      { waMessageId: message.id, insertError },
+      "Failed to persist inbound mensaje — aborting, no reply sent for an unrecorded message",
+    );
+    throw new Error(
+      `processInboundWhatsappEvent: no se pudo persistir el mensaje entrante (${insertError.message})`,
+    );
   }
 
   const reply = await deps.responder(conversacion, message.text?.body ?? "");
