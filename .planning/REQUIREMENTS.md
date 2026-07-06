@@ -59,9 +59,9 @@ Requisitos para el release inicial. Cada uno mapea a una fase del roadmap.
 
 ### Integración WhatsApp Cloud API (WA)
 
-- [ ] **WA-01**: El sistema recibe webhooks de la WhatsApp Cloud API oficial y verifica la firma `X-Hub-Signature-256` sobre el body crudo
+- [x] **WA-01**: El sistema recibe webhooks de la WhatsApp Cloud API oficial y verifica la firma `X-Hub-Signature-256` sobre el body crudo
 - [ ] **WA-02**: El sistema resuelve el tenant a partir del `phone_number_id` del mensaje entrante
-- [ ] **WA-03**: El sistema procesa los mensajes de forma asíncrona y responde 200 rápido, con deduplicación por `messages[].id`
+- [x] **WA-03**: El sistema procesa los mensajes de forma asíncrona y responde 200 rápido, con deduplicación por `messages[].id`
 - [x] **WA-04**: El sistema envía mensajes salientes al cliente por la Cloud API dentro de la ventana de servicio de 24h
 - [ ] **WA-05**: El sistema persiste conversaciones y mensajes (auditoría/debugging) con el estado del bot en `context` (jsonb)
 
@@ -158,9 +158,9 @@ Qué fases cubren qué requisitos.
 | APPT-04 | Phase 4 | Complete |
 | APPT-05 | Phase 4 | Complete |
 | APPT-06 | Phase 4 | Complete |
-| WA-01 | Phase 5 | Pending |
+| WA-01 | Phase 5 | Complete |
 | WA-02 | Phase 5 | Pending |
-| WA-03 | Phase 5 | Pending |
+| WA-03 | Phase 5 | Complete |
 | WA-04 | Phase 5 | Complete |
 | WA-05 | Phase 5 | Pending |
 | BOT-01 | Phase 6 | Pending |
