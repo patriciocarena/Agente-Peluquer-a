@@ -25,5 +25,6 @@ export * from "./types.js";
 export * from "./constants.js";
 export { computeSlots } from "./computeSlots.js";
 export { bookAppointment } from "./booking.js";
+export type { BookAppointmentDeps, BookAppointmentResult } from "./booking.js";
 export { isSlotTakenConcurrently } from "./booking.js";
 export { rescheduleAppointment } from "./booking.js";
