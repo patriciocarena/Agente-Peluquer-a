@@ -117,3 +117,7 @@ None - no external service configuration required. Both modules are pure functio
 ---
 *Phase: 05-integraci-n-whatsapp-cloud-api*
 *Completed: 2026-07-06*
+
+## Self-Check: PASSED
+
+All four created files (`signature.ts`, `signature.test.ts`, `payload.ts`, `payload.test.ts`) verified present on disk; all task commit hashes (`8f70995`, `f3d4ae9`, `8ba09fe`, `e91b023`) verified present in git log.
