@@ -119,3 +119,7 @@ None - no external service configuration required. `scripts/verify-reschedule.ts
 ---
 *Phase: 04-grilla-y-turnos-del-dashboard*
 *Completed: 2026-07-05*
+
+## Self-Check: PASSED
+
+All created/modified files verified present on disk; all task commits (`f93d1e7`, `e2b59d9`, `9188517`, `e3c4d83`, `14eb7c1`) and the plan-metadata commit (`ba39eea`) verified present in `git log`.
