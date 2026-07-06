@@ -9,10 +9,18 @@
  *
  * Completamente controlado desde afuera (`open`/`onOpenChange`) — lo monta
  * la grilla (Plan 07) sobre la celda de bloqueo clickeada.
+ *
+ * `anchor` (Rule 2, Plan 07): prop opcional que resuelve el anclaje visual
+ * dejado abierto por Plan 06 ("el anclaje visual contra la celda específica
+ * queda a resolver por Plan 07 al montarlo") — sin ella, el `Popover` no
+ * tiene `Trigger`/`Anchor` propio y Radix no puede calcular una posición
+ * relativa a la celda clickeada. Si no se pasa, el comportamiento es
+ * idéntico al de Plan 06 (Popover sin anchor explícito).
  */
 "use client";
 
 import { useState, useTransition } from "react";
+import type { ReactNode } from "react";
 import { toast } from "sonner";
 
 import { eliminarBloqueo } from "@/app/actions/bloqueos";
@@ -26,15 +34,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 
 type Props = {
   bloqueo: { id: string; motivo: string | null };
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Celda de bloqueo que este Popover debe anclar visualmente (Plan 07). */
+  anchor?: ReactNode;
 };
 
-export function BloqueoPopover({ bloqueo, open, onOpenChange }: Props) {
+export function BloqueoPopover({ bloqueo, open, onOpenChange, anchor }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -54,6 +64,7 @@ export function BloqueoPopover({ bloqueo, open, onOpenChange }: Props) {
   return (
     <>
       <Popover open={open} onOpenChange={onOpenChange}>
+        {anchor ? <PopoverAnchor asChild>{anchor}</PopoverAnchor> : null}
         <PopoverContent>
           {bloqueo.motivo ? (
             <p className="text-sm">{bloqueo.motivo}</p>
