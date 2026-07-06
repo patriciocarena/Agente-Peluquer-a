@@ -1,12 +1,23 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { sendWhatsappMessage } from "./graphClient.js";
+// graphClient.ts imports getWhatsappToken.ts for its *default* deps, which in
+// turn imports ../db/client.ts — a module that throws at import time unless
+// real SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY env vars are set (Rule 3 fix:
+// every test below injects its own `deps`, so the real implementation is
+// never called — mock the module to avoid that unrelated import-time throw).
+vi.mock("./getWhatsappToken.js", () => ({
+  getWhatsappToken: vi.fn(),
+  getPhoneNumberId: vi.fn(),
+}));
+
+const { sendWhatsappMessage } = await import("./graphClient.js");
+type SendWhatsappMessageDeps = NonNullable<Parameters<typeof sendWhatsappMessage>[3]>;
 
 const NEGOCIO_ID = "11111111-1111-1111-1111-111111111111";
 
-function buildDeps(fetchImpl: ReturnType<typeof vi.fn>) {
+function buildDeps(fetchImpl: ReturnType<typeof vi.fn>): SendWhatsappMessageDeps {
   return {
-    fetch: fetchImpl,
+    fetch: fetchImpl as unknown as SendWhatsappMessageDeps["fetch"],
     getWhatsappToken: vi.fn().mockResolvedValue("test-token"),
     getPhoneNumberId: vi.fn().mockResolvedValue("123456789"),
     log: vi.fn(),
