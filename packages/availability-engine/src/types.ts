@@ -128,6 +128,40 @@ export interface BookAppointmentInput {
   skipBookingWindow?: boolean;
 }
 
+/**
+ * `RescheduleAppointmentInput` — input de `rescheduleAppointment` (D-14,
+ * Fase 4), hermana de `BookAppointmentInput`. A diferencia de un
+ * cancelar+crear, D-14 hace un UPDATE del MISMO `turno.id` (nunca cancela ni
+ * crea uno nuevo).
+ *
+ * `serviceIds` existe SOLO para dimensionar la duración del bloque contiguo
+ * en la revalidación interna contra `computeSlots` (consistente con
+ * `BookAppointmentInput`); `rescheduleAppointment` NUNCA reescribe
+ * `turno_servicio` — D-14 pisa únicamente `inicio`/`fin`/`profesional_id`
+ * del turno existente (Open Question 1 de 04-RESEARCH.md, resuelta por el
+ * planner).
+ */
+export interface RescheduleAppointmentInput {
+  /** Negocio dueño del turno (scoping — T-03-01). */
+  negocioId: string;
+  /** UUID del turno EXISTENTE a reagendar. Este id se excluye de los turnos
+   * activos que bloquean al revalidar disponibilidad (self-exclusion,
+   * Pitfall 2) y es el mismo id que recibe el UPDATE. */
+  turnoId: string;
+  /** Profesional al que queda asignado el turno tras el reagendado (puede
+   * ser el mismo de antes o uno distinto). */
+  profesionalId: string;
+  /** Servicios del turno — usados SOLO para dimensionar la duración total en
+   * la revalidación; D-14 no reescribe `turno_servicio` con esto. */
+  serviceIds: string[];
+  /** Nuevo inicio del bloque contiguo, ISO timestamptz. */
+  inicio: string;
+  /** Nuevo fin del bloque contiguo, ISO timestamptz. */
+  fin: string;
+  /** D-08: idéntica semántica que `ComputeSlotsInput.skipBookingWindow`. */
+  skipBookingWindow?: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Tipo interno compartido de intervalos.
 // ---------------------------------------------------------------------------
