@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 03
-current_phase_name: motor-de-disponibilidad
+current_phase: 04
+current_phase_name: grilla-y-turnos-del-dashboard
 status: executing
 stopped_at: Phase 4 UI-SPEC approved
-last_updated: "2026-07-06T00:21:29.880Z"
+last_updated: "2026-07-06T00:41:38.961Z"
 last_activity: 2026-07-06
-last_activity_desc: Phase 04 planning complete
+last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 18
+  total_plans: 25
   completed_plans: 18
-  percent: 100
+  percent: 43
 ---
 
 # Project State
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-03)
 
 **Core value:** Un cliente puede agendar un turno real, en un horario realmente disponible, conversando por WhatsApp en lenguaje natural — sin intervención humana de la peluquería.
-**Current focus:** Phase 03 — motor-de-disponibilidad
+**Current focus:** Phase 04 — grilla-y-turnos-del-dashboard
 
 ## Current Position
 
-Phase: 03 (motor-de-disponibilidad) — EXECUTING
-Plan: 5 of 5
-Status: Ready to execute
-Last activity: 2026-07-06 — Phase 04 planning complete
+Phase: 04 (grilla-y-turnos-del-dashboard) — EXECUTING
+Plan: 1 of 7
+Status: Executing Phase 04
+Last activity: 2026-07-06 — Phase 04 execution started
 
 Progress: [██████████] 100%
 
@@ -110,7 +110,17 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-07-05T23:38:48.957Z
-Stopped at: Phase 4 UI-SPEC approved
-Resume file: .planning/phases/04-grilla-y-turnos-del-dashboard/04-UI-SPEC.md
+Stopped at: Phase 4 execution — Wave 1 partial (04-02 merged, 04-01 still running unmerged)
+Resume file: .planning/phases/04-grilla-y-turnos-del-dashboard/04-01-PLAN.md
+
+**HANDOFF NOTE (2026-07-05):** Phase 4 has 7 plans planned across 5 waves (see 04-*-PLAN.md). Wave 1 = 04-01 + 04-02 in parallel worktrees.
+- 04-02 (dashboard foundation: popover, sidebar nav, zod schemas) — DONE, merged to main.
+- 04-01 (availability-engine: skipBookingWindow + rescheduleAppointment) — was STILL RUNNING when this session ended (out of tokens). Its worktree branch `worktree-agent-a53d00a653b8bb78d` at `.claude/worktrees/agent-a53d00a653b8bb78d` has 5 commits (both tasks appear code-complete: skipBookingWindow + rescheduleAppointment + gated verify script) but had NOT yet committed 04-01-SUMMARY.md as of handoff.
+
+**Next teammate — before running `/gsd-execute-phase 4`:**
+1. `git worktree list` — check if `agent-a53d00a653b8bb78d` still exists.
+2. `git -C .claude/worktrees/agent-a53d00a653b8bb78d log --oneline -3` — if a `docs(04-01): add plan summary` commit is now present, the agent finished on its own: merge it manually first — `git merge --no-ff worktree-agent-a53d00a653b8bb78d -m "chore: merge executor worktree (worktree-agent-a53d00a653b8bb78d)"`, then remove the worktree (`git worktree remove .claude/worktrees/agent-a53d00a653b8bb78d --force`) and delete the branch (`git branch -D worktree-agent-a53d00a653b8bb78d`).
+3. If no SUMMARY commit and the worktree seems stalled (no new commits in a while), it's safe to remove the worktree/branch and let `/gsd-execute-phase 4` redispatch 04-01 fresh.
+4. Once 04-01 is merged (or redispatched and complete), run `/gsd-execute-phase 4` — it will detect 04-02 (and 04-01, once merged) as done via their SUMMARY.md files and continue with Wave 2 (plan 04-03) onward.
 
 Last activity: 2026-07-04 - Completed quick task 260704-jb5: Terminar de actualizar 02-UI-SPEC.md y 02-RESEARCH.md de la Fase 2 (dashboard-y-datos-del-negocio) reflejando el cambio de modelo Tenant->Negocio(s), y commitear
