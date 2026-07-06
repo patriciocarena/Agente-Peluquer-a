@@ -156,3 +156,20 @@ None — no requiere configuracion externa nueva. (El gap preexistente de `SUPAB
 ---
 *Phase: 04-grilla-y-turnos-del-dashboard*
 *Completed: 2026-07-06*
+
+## Self-Check: PASSED
+
+- FOUND: apps/dashboard/components/slot-popover.tsx
+- FOUND: apps/dashboard/app/(owner)/turnos/loading.tsx
+- FOUND: apps/dashboard/components/grilla-turnos.tsx
+- FOUND: apps/dashboard/components/bloqueo-popover.tsx
+- FOUND: apps/dashboard/components/dia-picker.tsx
+- FOUND: apps/dashboard/app/(owner)/turnos/page.tsx
+- FOUND: packages/availability-engine/package.json
+- FOUND: apps/dashboard/package.json
+- FOUND: .planning/phases/04-grilla-y-turnos-del-dashboard/deferred-items.md
+- FOUND commit: 7fa46c4
+- FOUND commit: cb8d350
+- FOUND commit: 4ef2a7b
+- FOUND commit: a049e72
+- FOUND commit: ecf3b9e

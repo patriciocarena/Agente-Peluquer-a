@@ -50,7 +50,7 @@ Requisitos para el release inicial. Cada uno mapea a una fase del roadmap.
 
 ### Grilla y administración de turnos (APPT)
 
-- [ ] **APPT-01**: El dueño ve una grilla de turnos por profesional y por día
+- [x] **APPT-01**: El dueño ve una grilla de turnos por profesional y por día
 - [x] **APPT-02**: El dueño puede bloquear manualmente slots de un profesional (ej: se va temprano, turno médico)
 - [x] **APPT-03**: El dueño puede ver el detalle de un turno confirmado (cliente, servicios, precio, horario)
 - [x] **APPT-04**: El dueño puede cancelar un turno desde el dashboard
@@ -152,7 +152,7 @@ Qué fases cubren qué requisitos.
 | AVAIL-03 | Phase 3 | Complete |
 | AVAIL-04 | Phase 3 | Complete |
 | AVAIL-05 | Phase 3 | Complete |
-| APPT-01 | Phase 4 | Pending |
+| APPT-01 | Phase 4 | Complete |
 | APPT-02 | Phase 4 | Complete |
 | APPT-03 | Phase 4 | Complete |
 | APPT-04 | Phase 4 | Complete |
