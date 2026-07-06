@@ -48,6 +48,37 @@ export async function findOrCreateConversacion(
     });
 
     if (error || !created) {
+      // WR-02: check-then-act race — two inbound events for the same new
+      // (negocio, cliente) pair can both see `existing === null` and both
+      // attempt this insert. The DB's `conversacion_unica_por_cliente
+      // UNIQUE (negocio_id, cliente_id)` constraint
+      // (0003_tenant_negocio_split.sql) makes the loser's insert fail with
+      // 23505 instead of creating a duplicate row — re-select and refresh
+      // the window on the winner's row rather than throwing on a race that
+      // isn't actually an error.
+      if (error?.code === "23505") {
+        const { data: winner } = await negocioScoped(negocioId)
+          .conversaciones()
+          .select("*")
+          .eq("cliente_id", clienteId)
+          .maybeSingle();
+
+        if (winner) {
+          const { error: updateError } = await negocioScoped(negocioId).updateConversacion(
+            winner.id,
+            { ventana_expira_at: ventanaExpiraIso },
+          );
+
+          if (updateError) {
+            throw new Error(
+              `findOrCreateConversacion: no se pudo refrescar la ventana tras 23505 (conversacionId=${winner.id}): ${updateError.message}`,
+            );
+          }
+
+          return { ...winner, ventana_expira_at: ventanaExpiraIso };
+        }
+      }
+
       throw new Error(
         `findOrCreateConversacion: no se pudo crear la conversacion (negocioId=${negocioId}, clienteId=${clienteId}): ${error?.message}`,
       );

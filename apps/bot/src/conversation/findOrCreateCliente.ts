@@ -44,6 +44,29 @@ export async function findOrCreateCliente(negocioId: string, waId: string): Prom
   });
 
   if (error || !created) {
+    // WR-02: check-then-act race — two inbound events for the same new waId
+    // can both see `existing === null` and both attempt this insert. The DB's
+    // `cliente_telefono_unico_por_negocio UNIQUE (negocio_id, telefono)`
+    // constraint (0003_tenant_negocio_split.sql) makes the loser's insert
+    // fail with 23505 instead of creating a duplicate row — re-select to
+    // return the winner's id rather than throwing on a race that isn't
+    // actually an error.
+    if (error?.code === "23505") {
+      const { data: winner, error: reselectError } = await negocioScoped(negocioId)
+        .clientes()
+        .select("id")
+        .eq("telefono", waId)
+        .maybeSingle();
+
+      if (winner) {
+        return winner.id;
+      }
+
+      throw new Error(
+        `findOrCreateCliente: 23505 en insertCliente pero no se encontró el cliente al re-consultar (negocioId=${negocioId}, waId=${waId}): ${reselectError?.message}`,
+      );
+    }
+
     throw new Error(
       `findOrCreateCliente: no se pudo crear el cliente (negocioId=${negocioId}, waId=${waId}): ${error?.message}`,
     );
