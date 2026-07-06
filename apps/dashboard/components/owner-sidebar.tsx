@@ -1,19 +1,19 @@
 /**
  * components/owner-sidebar.tsx — sidebar fijo del shell owner (240px vía
- * SidebarProvider en app/(owner)/layout.tsx), tres secciones: Profesionales /
- * Servicios / Negocio (02-UI-SPEC §Layout & Navigation). Item activo con
+ * SidebarProvider en app/(owner)/layout.tsx), cuatro secciones: Turnos /
+ * Profesionales / Servicios / Negocio (04-UI-SPEC.md §Layout & Navigation:
+ * "Turnos" es la pantalla operativa diaria y va PRIMERO). Item activo con
  * acento (SidebarMenuButton isActive ya usa --sidebar-primary/accent).
  *
- * Las rutas /profesionales y /servicios se construyen en 02-05/02-06 (fuera
- * de este plan) — el sidebar ya expone las tres secciones porque es parte
- * del contrato visual de esta fase; hasta que esos planes corran, esos dos
- * links no tienen página propia todavía.
+ * La ruta /turnos se construye en Plan 07 de esta fase (fuera de este plan)
+ * — el sidebar ya la expone porque es parte del contrato visual de la fase;
+ * hasta que ese plan corra, el link no tiene página propia todavía.
  */
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Scissors, Store, Users } from "lucide-react";
+import { CalendarDays, Scissors, Store, Users } from "lucide-react";
 
 import {
   Sidebar,
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const NAV_ITEMS = [
+  { href: "/turnos", label: "Turnos", icon: CalendarDays },
   { href: "/profesionales", label: "Profesionales", icon: Users },
   { href: "/servicios", label: "Servicios", icon: Scissors },
   { href: "/negocio", label: "Negocio", icon: Store },
