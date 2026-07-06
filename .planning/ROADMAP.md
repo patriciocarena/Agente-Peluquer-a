@@ -141,7 +141,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(paralelas — 04 depende de 04-01/03, 06 depende de 04-02/03)*
 
-- [ ] 04-04-PLAN.md — Server Actions turnos (crear/cancelar/reagendar) + slots (computeSlots + elegibilidad profesional×servicio) (APPT-04/05/06)
+- [x] 04-04-PLAN.md — Server Actions turnos (crear/cancelar/reagendar) + slots (computeSlots + elegibilidad profesional×servicio) (APPT-04/05/06)
 - [ ] 04-06-PLAN.md — UI bloqueo: form-dialog (crear) + popover (motivo/eliminar) (APPT-02)
 
 **Wave 4** *(depende de 04-03/04)*
@@ -205,7 +205,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Fundación multitenant | 5/5 | Complete | 2026-07-04 |
 | 2. Dashboard y datos del negocio | 8/8 | Complete (verified 16/16; solo resta spot-check visual no bloqueante) | 2026-07-04 |
 | 3. Motor de disponibilidad | 5/5 | Complete   | 2026-07-05 |
-| 4. Grilla y turnos del dashboard | 3/7 | In Progress|  |
+| 4. Grilla y turnos del dashboard | 4/7 | In Progress|  |
 | 5. Integración WhatsApp Cloud API | 0/TBD | Not started | - |
 | 6. Agente conversacional de agendamiento | 0/TBD | Not started | - |
 | 7. Hardening y listo para producción | 0/TBD | Not started | - |
