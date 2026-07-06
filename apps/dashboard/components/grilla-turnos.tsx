@@ -64,17 +64,38 @@ type Props = {
 
 const CELDA_LIBRE: GrillaCelda = { estado: "libre" };
 
-// D-02: amarillo ámbar tenue puntual (no existe token --warning en el
-// proyecto — ver 04-UI-SPEC.md "Nota sobre el amarillo de Pendiente").
-const PENDIENTE_ESTILO = {
-  backgroundColor: "oklch(0.87 0.15 95 / 0.35)",
-  borderColor: "oklch(0.87 0.15 95 / 0.5)",
+// D-02: 4 estados VISUALMENTE DISTINTOS y glanceables en claro y oscuro.
+// Cada estado ocupado usa un tinte de relleno con opacidad suficiente + una
+// BARRA DE ACENTO sólida a la izquierda (borde izquierdo opaco, que se lee en
+// cualquier tema sin depender de la opacidad del relleno). Hues separados:
+// verde = confirmado, ámbar = pendiente, gris rayado = bloqueo. 'Libre' queda
+// plano (bg-background) como línea de base. Los colores de confirmado/pendiente
+// son puntuales (no hay tokens --success/--warning en el proyecto; --primary es
+// azul, no verde) y funcionan sobre ambos fondos por su lightness/alpha.
+
+// Verde confirmado (D-02: "confirmado" glanceable, convención verde=agendado).
+const CONFIRMADO_ESTILO = {
+  backgroundColor: "oklch(0.72 0.16 150 / 0.30)",
+  borderColor: "oklch(0.72 0.16 150 / 0.55)",
+  borderLeftWidth: "4px",
+  borderLeftColor: "oklch(0.62 0.17 150)",
 };
 
-// D-02: rayado diagonal CSS puro (sin librería) sobre --muted.
+// Ámbar pendiente (más contraste que antes; barra de acento ámbar sólida).
+const PENDIENTE_ESTILO = {
+  backgroundColor: "oklch(0.82 0.15 85 / 0.42)",
+  borderColor: "oklch(0.82 0.15 85 / 0.6)",
+  borderLeftWidth: "4px",
+  borderLeftColor: "oklch(0.70 0.16 75)",
+};
+
+// D-02: rayado diagonal CSS puro (sin librería) sobre --muted, con mayor
+// contraste (32% de foreground, antes 14%) + barra de acento gris a la izq.
 const BLOQUEO_ESTILO = {
   backgroundImage:
-    "repeating-linear-gradient(45deg, var(--muted), var(--muted) 6px, color-mix(in oklch, var(--muted), var(--foreground) 14%) 6px, color-mix(in oklch, var(--muted), var(--foreground) 14%) 12px)",
+    "repeating-linear-gradient(45deg, var(--muted), var(--muted) 5px, color-mix(in oklch, var(--muted), var(--foreground) 32%) 5px, color-mix(in oklch, var(--muted), var(--foreground) 32%) 10px)",
+  borderLeftWidth: "4px",
+  borderLeftColor: "var(--muted-foreground)",
 };
 
 function iniciales(nombre: string): string {
@@ -176,17 +197,19 @@ export function GrillaTurnos({
                 "flex h-10 w-full items-center px-1.5 text-left",
                 fusionaConSiguiente ? "border-x border-b-0" : "border",
                 celda.estado === "libre" && "cursor-pointer border-border bg-background hover:bg-muted",
-                celda.estado === "confirmado" && "cursor-pointer border-primary/40 bg-primary/12",
-                celda.estado === "pendiente" && "cursor-pointer",
+                celda.estado === "confirmado" && "cursor-pointer font-medium",
+                celda.estado === "pendiente" && "cursor-pointer font-medium",
                 celda.estado === "bloqueo" && "cursor-pointer border-border text-muted-foreground",
               );
 
               const estiloEstado =
-                celda.estado === "pendiente"
-                  ? PENDIENTE_ESTILO
-                  : celda.estado === "bloqueo"
-                    ? BLOQUEO_ESTILO
-                    : undefined;
+                celda.estado === "confirmado"
+                  ? CONFIRMADO_ESTILO
+                  : celda.estado === "pendiente"
+                    ? PENDIENTE_ESTILO
+                    : celda.estado === "bloqueo"
+                      ? BLOQUEO_ESTILO
+                      : undefined;
 
               const contenido =
                 esInicio && etiqueta ? (
