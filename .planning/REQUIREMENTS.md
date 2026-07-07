@@ -75,7 +75,7 @@ Requisitos para el release inicial. Cada uno mapea a una fase del roadmap.
 - [ ] **BOT-06**: El bot responde los horarios de trabajo de cada profesional
 - [ ] **BOT-07**: El bot responde la disponibilidad en tiempo real de un profesional
 - [ ] **BOT-08**: El bot responde el estado/confirmación de un turno existente del cliente
-- [ ] **BOT-09**: El cliente puede cancelar un turno por WhatsApp (misma lógica de dominio que el dashboard)
+- [x] **BOT-09**: El cliente puede cancelar un turno por WhatsApp (misma lógica de dominio que el dashboard)
 - [ ] **BOT-10**: El cliente puede reagendar un turno por WhatsApp (misma lógica de dominio que el dashboard)
 - [ ] **BOT-11**: El bot resiste intentos de prompt-injection y no expone datos de otros clientes/tenants
 
@@ -171,7 +171,7 @@ Qué fases cubren qué requisitos.
 | BOT-06 | Phase 6 | Pending |
 | BOT-07 | Phase 6 | Pending |
 | BOT-08 | Phase 6 | Pending |
-| BOT-09 | Phase 6 | Pending |
+| BOT-09 | Phase 6 | Complete |
 | BOT-10 | Phase 6 | Pending |
 | BOT-11 | Phase 6 | Pending |
 | SEC-01 | Phase 7 | Pending |

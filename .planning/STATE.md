@@ -3,13 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-07-07T20:00:10.650Z"
-last_activity: 2026-07-07 -- Phase 6 planning complete
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-07-07T21:01:32.020Z"
+last_activity: 2026-07-07
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 37
-  completed_plans: 31
+  completed_plans: 32
   percent: 71
 ---
 
@@ -20,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-03)
 
 **Core value:** Un cliente puede agendar un turno real, en un horario realmente disponible, conversando por WhatsApp en lenguaje natural — sin intervención humana de la peluquería.
-**Current focus:** Phase 5 — Integración WhatsApp Cloud API
+**Current focus:** Phase 06 — agente-conversacional-de-agendamiento
 
 ## Current Position
 
-Phase: 6 — Agente conversacional de agendamiento
-Plan: Not started
+Phase: 06 (agente-conversacional-de-agendamiento) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-07-07 -- Phase 6 planning complete
+Last activity: 2026-07-07
 
-Progress: [██████████] 100%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
@@ -66,6 +67,7 @@ Progress: [██████████] 100%
 | Phase 04 P06 | 15min | 2 tasks | 2 files |
 | Phase 04 P05 | 18min | 3 tasks | 4 files |
 | Phase 04 P07 | 55min | 3 tasks | 9 files |
+| Phase 06 P01 | 12min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -100,6 +102,7 @@ Recent decisions affecting current work:
 - [Phase 04-07]: BloqueoPopover gana prop opcional anchor (PopoverAnchor asChild) para resolver el anclaje visual dejado abierto por Plan 06 -- retrocompatible
 - [Phase 04-07]: @turnosbot/availability-engine cambia main/types de src/index.ts a dist/ compilado (prepare: tsc -b) -- Turbopack no resuelve especificadores NodeNext .js internos que tsc/vitest si resuelven; cero cambios al codigo fuente del motor
 - [Phase 04-07]: computeSlots dimensionado con un servicio sintetico local (id grid-slot, nunca persistido) para calcular libre a granularidad de UN slot, en vez de la duracion de un servicio real
+- [Phase 06-01]: cancelAppointment agregado a @turnosbot/availability-engine como tercer camino de escritura compartido (BOT-09); already_cancelled tratado como estado benigno idempotente (success), no error, en el dashboard, misma semantica que debera adoptar la tool del bot en 06-04
 
 ### Blockers/Concerns
 
@@ -125,9 +128,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-07T01:59:37.817Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-agente-conversacional-de-agendamiento/06-CONTEXT.md
+Last session: 2026-07-07T21:01:32.014Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: None
 
 **HANDOFF NOTE (2026-07-05):** Phase 4 has 7 plans planned across 5 waves (see 04-*-PLAN.md). Wave 1 = 04-01 + 04-02 in parallel worktrees.
 
