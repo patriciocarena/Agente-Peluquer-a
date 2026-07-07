@@ -18,6 +18,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   bookAppointmentInputSchema,
   buildTurnoServicioSnapshots,
+  cancelAppointment,
   isSlotTakenConcurrently,
   rescheduleAppointment,
   sumPrecioTotal,
@@ -305,5 +306,141 @@ describe("rescheduleAppointment (D-14)", () => {
 
     const calledTables = fromSpy.mock.calls.map((call) => call[0]);
     expect(calledTables).not.toContain("turno_servicio");
+  });
+});
+
+describe("cancelAppointment (BOT-09)", () => {
+  const TURNO_ID = "00000000-0000-4000-8000-000000005001";
+
+  /** Mock supabase con las dos posibles llamadas a `.from("turno")` que hace
+   * cancelAppointment: (1) el UPDATE con `.select("id")` encadenado y (2),
+   * SOLO si el UPDATE no afectó filas, un segundo SELECT de existencia
+   * (`.select("id").eq().eq().maybeSingle()`) para distinguir not_found de
+   * already_cancelled. `deleteSpy` existe para probar que NUNCA se llama
+   * (T-06-02: cancelar jamás hace DELETE). */
+  function makeMockSupabase(opts: {
+    updateResult: { data: unknown; error: PostgrestError | null };
+    existsResult?: { data: unknown; error: PostgrestError | null };
+  }): {
+    client: SupabaseClient<Database>;
+    updateSpy: ReturnType<typeof vi.fn>;
+    selectSpy: ReturnType<typeof vi.fn>;
+    deleteSpy: ReturnType<typeof vi.fn>;
+    fromSpy: ReturnType<typeof vi.fn>;
+  } {
+    // Cadena del UPDATE: .update().eq().eq().neq().select() -> Promise<result>
+    const updateSelect = vi.fn().mockResolvedValue(opts.updateResult);
+    const updateNeq = vi.fn().mockReturnValue({ select: updateSelect });
+    const updateEq2 = vi.fn().mockReturnValue({ neq: updateNeq });
+    const updateEq1 = vi.fn().mockReturnValue({ eq: updateEq2 });
+    const updateSpy = vi.fn().mockReturnValue({ eq: updateEq1 });
+
+    // Cadena del SELECT de existencia: .select().eq().eq().maybeSingle() -> Promise<result>
+    const maybeSingle = vi
+      .fn()
+      .mockResolvedValue(opts.existsResult ?? { data: null, error: null });
+    const selectEq2 = vi.fn().mockReturnValue({ maybeSingle });
+    const selectEq1 = vi.fn().mockReturnValue({ eq: selectEq2 });
+    const selectSpy = vi.fn().mockReturnValue({ eq: selectEq1 });
+
+    const deleteSpy = vi.fn();
+    const fromSpy = vi
+      .fn()
+      .mockReturnValue({ update: updateSpy, select: selectSpy, delete: deleteSpy });
+    return {
+      client: { from: fromSpy } as unknown as SupabaseClient<Database>,
+      updateSpy,
+      selectSpy,
+      deleteSpy,
+      fromSpy,
+    };
+  }
+
+  it("turno existente y estado != 'cancelado' -> ok:true, UPDATE filtrado por id Y negocio_id", async () => {
+    const { client, updateSpy, deleteSpy } = makeMockSupabase({
+      updateResult: { data: [{ id: TURNO_ID }], error: null },
+    });
+
+    const result = await cancelAppointment(
+      { negocioId: NEGOCIO_ID, turnoId: TURNO_ID },
+      { supabase: client },
+    );
+
+    expect(result).toEqual({ ok: true, turnoId: TURNO_ID });
+    expect(updateSpy).toHaveBeenCalledWith({ estado: "cancelado" });
+    expect(deleteSpy).not.toHaveBeenCalled();
+  });
+
+  it("UPDATE devuelve 0 filas y el turno no existe para ese negocio -> not_found", async () => {
+    const { client } = makeMockSupabase({
+      updateResult: { data: [], error: null },
+      existsResult: { data: null, error: null },
+    });
+
+    const result = await cancelAppointment(
+      { negocioId: NEGOCIO_ID, turnoId: TURNO_ID },
+      { supabase: client },
+    );
+
+    expect(result).toEqual({ ok: false, reason: "not_found" });
+  });
+
+  it("turno ya estaba cancelado (guard neq no matchea) -> already_cancelled", async () => {
+    const { client } = makeMockSupabase({
+      updateResult: { data: [], error: null },
+      existsResult: { data: { id: TURNO_ID }, error: null },
+    });
+
+    const result = await cancelAppointment(
+      { negocioId: NEGOCIO_ID, turnoId: TURNO_ID },
+      { supabase: client },
+    );
+
+    expect(result).toEqual({ ok: false, reason: "already_cancelled" });
+  });
+
+  it("PostgrestError inesperado en el UPDATE -> update_error con message", async () => {
+    const { client } = makeMockSupabase({
+      updateResult: {
+        data: null,
+        error: { code: "42501", message: "permission denied" } as PostgrestError,
+      },
+    });
+
+    const result = await cancelAppointment(
+      { negocioId: NEGOCIO_ID, turnoId: TURNO_ID },
+      { supabase: client },
+    );
+
+    expect(result).toEqual({ ok: false, reason: "update_error", message: "permission denied" });
+  });
+
+  it("turnoId/negocioId no-UUID-like -> validation_error sin tocar la DB", async () => {
+    const { client, fromSpy } = makeMockSupabase({
+      updateResult: { data: [{ id: TURNO_ID }], error: null },
+    });
+
+    const result = await cancelAppointment(
+      { negocioId: NEGOCIO_ID, turnoId: "no-es-un-uuid" },
+      { supabase: client },
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe("validation_error");
+      expect((result as { issues: string[] }).issues.length).toBeGreaterThan(0);
+    }
+    expect(fromSpy).not.toHaveBeenCalled();
+  });
+
+  it("NUNCA ejecuta un .delete() sobre turno", async () => {
+    const { client, deleteSpy } = makeMockSupabase({
+      updateResult: { data: [], error: null },
+      existsResult: { data: { id: TURNO_ID }, error: null },
+    });
+
+    await cancelAppointment({ negocioId: NEGOCIO_ID, turnoId: TURNO_ID }, { supabase: client });
+
+    expect(deleteSpy).not.toHaveBeenCalled();
   });
 });

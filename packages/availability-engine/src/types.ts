@@ -162,6 +162,20 @@ export interface RescheduleAppointmentInput {
   skipBookingWindow?: boolean;
 }
 
+/**
+ * `CancelAppointmentInput` — input de `cancelAppointment` (BOT-09, Fase 6
+ * Plan 01), hermana estructural de `RescheduleAppointmentInput` pero SIN
+ * `serviceIds`/`inicio`/`fin`/`profesionalId`: cancelar no re-valida
+ * disponibilidad ni recalcula el bloque contiguo, solo marca el turno
+ * existente como `estado='cancelado'` (nunca DELETE, historial intacto).
+ */
+export interface CancelAppointmentInput {
+  /** Negocio dueño del turno (scoping — T-03-01, T-06-01). */
+  negocioId: string;
+  /** UUID del turno EXISTENTE a cancelar. */
+  turnoId: string;
+}
+
 // ---------------------------------------------------------------------------
 // Tipo interno compartido de intervalos.
 // ---------------------------------------------------------------------------

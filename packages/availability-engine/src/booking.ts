@@ -51,6 +51,7 @@ import { computeSlots } from "./computeSlots.js";
 import type {
   AvailabilityData,
   BookAppointmentInput,
+  CancelAppointmentInput,
   ComputeSlotsInput,
   RescheduleAppointmentInput,
   ServicioRow,
@@ -69,7 +70,11 @@ import type { Database } from "@turnosbot/db-types";
 // app NUNCA debe rechazar un id que su propia base guardó — `z.uuid()` estricto
 // (que exige version 1-8 + variante 8/9/a/b) sí lo rechazaría. Sigue cortando
 // input basura (BOT-11, T-03-15) sin descartar ids reales.
-const uuidLike = z
+//
+// Exportado (Fase 6 Plan 01, T-06-03) para que las tools del bot (planes
+// 06-03/06-04) reusen la MISMA validación de forma de UUID en vez de
+// redeclarar un regex paralelo — reexportado desde el barrel en index.ts.
+export const uuidLike = z
   .string()
   .regex(
     /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
@@ -96,6 +101,14 @@ export const rescheduleAppointmentInputSchema = z.object({
   inicio: z.iso.datetime(),
   fin: z.iso.datetime(),
 }) satisfies z.ZodType<RescheduleAppointmentInput, unknown>;
+
+/** Validación de input de `cancelAppointment` (V5, BOT-09/T-06-03) — mismo
+ * `uuidLike` que las otras funciones del motor; sin `serviceIds`/`inicio`/
+ * `fin`/`profesionalId` porque cancelar no re-valida disponibilidad. */
+export const cancelAppointmentInputSchema = z.object({
+  negocioId: uuidLike,
+  turnoId: uuidLike,
+}) satisfies z.ZodType<CancelAppointmentInput, unknown>;
 
 // ---------------------------------------------------------------------------
 // Snapshots congelados (AVAIL-03, Pitfall 3) — funciones PURAS.
@@ -407,4 +420,89 @@ export async function rescheduleAppointment(
   const precioTotal = turnoExistente?.precio_total ?? 0;
 
   return { ok: true, turnoId: turnoRow.id, precioTotal };
+}
+
+// ---------------------------------------------------------------------------
+// cancelAppointment (BOT-09) — hermana estructural de rescheduleAppointment,
+// UPDATE estado='cancelado' en vez de reagendar/insertar. NUNCA hace DELETE
+// (historial preservado, T-06-02).
+// ---------------------------------------------------------------------------
+
+/** Resultado discriminado de `cancelAppointment` — sin `precioTotal` (cancelar
+ * no toca snapshots) y sin re-validación de slot (no llama a `computeSlots`).
+ * `already_cancelled` es un estado BENIGNO idempotente (already-done), no un
+ * hard error: el dashboard (Task 2) y la tool del bot (plan 06-04) DEBEN
+ * mapearlo a un resultado de éxito/mensaje benigno, nunca a un error duro. */
+export type CancelAppointmentResult =
+  | { ok: true; turnoId: string }
+  | { ok: false; reason: "not_found" }
+  | { ok: false; reason: "already_cancelled" }
+  | { ok: false; reason: "update_error"; message: string }
+  | { ok: false; reason: "validation_error"; issues: string[] };
+
+/**
+ * cancelAppointment(rawInput, deps) — marca un turno EXISTENTE como
+ * `estado='cancelado'` (UPDATE, nunca DELETE — T-06-02), tras:
+ *   1. Validar `rawInput` con zod (V5, `cancelAppointmentInputSchema`) —
+ *      corta un `turnoId`/`negocioId` no-UUID-like antes de tocar la DB
+ *      (T-06-03).
+ *   2. `UPDATE turno SET estado='cancelado' WHERE id=turnoId AND
+ *      negocio_id=negocioId AND estado <> 'cancelado' RETURNING id` — el
+ *      doble scoping por `id` Y `negocio_id` es defensa en profundidad sobre
+ *      RLS (T-06-01: un `turnoId` de otro negocio nunca matchea) y el guard
+ *      `neq('estado','cancelado')` evita re-cancelar en silencio (T-06-02).
+ *   3. Si el UPDATE devuelve un error de Postgrest → `{ok:false,
+ *      reason:"update_error", message}`.
+ *   4. Si el UPDATE no afecta ninguna fila (0 filas devueltas por el
+ *      `.select("id")` encadenado), un segundo `SELECT` de EXISTENCIA
+ *      (scopeado igual, por `id` + `negocio_id`) distingue el motivo:
+ *      existe pero ya estaba cancelado → `already_cancelled`; no existe para
+ *      ese negocio → `not_found`.
+ *   5. Éxito → `{ok:true, turnoId}`.
+ */
+export async function cancelAppointment(
+  rawInput: CancelAppointmentInput,
+  deps: { supabase: SupabaseClient<Database> },
+): Promise<CancelAppointmentResult> {
+  const parsed = cancelAppointmentInputSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      reason: "validation_error",
+      issues: parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`),
+    };
+  }
+  const input = parsed.data;
+  const { supabase } = deps;
+
+  const { data: updatedRows, error: updateError } = await supabase
+    .from("turno")
+    .update({ estado: "cancelado" })
+    .eq("id", input.turnoId)
+    .eq("negocio_id", input.negocioId)
+    .neq("estado", "cancelado")
+    .select("id");
+
+  if (updateError) {
+    return { ok: false, reason: "update_error", message: updateError.message };
+  }
+
+  if (updatedRows && updatedRows.length > 0) {
+    return { ok: true, turnoId: updatedRows[0].id };
+  }
+
+  // 0 filas afectadas: distinguir not_found (no existe para este negocio) de
+  // already_cancelled (existe, pero el guard neq("estado","cancelado") no
+  // matcheó porque ya estaba cancelado) con un segundo SELECT de existencia.
+  const { data: existingTurno } = await supabase
+    .from("turno")
+    .select("id")
+    .eq("id", input.turnoId)
+    .eq("negocio_id", input.negocioId)
+    .maybeSingle();
+
+  if (existingTurno) {
+    return { ok: false, reason: "already_cancelled" };
+  }
+  return { ok: false, reason: "not_found" };
 }
