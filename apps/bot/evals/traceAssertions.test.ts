@@ -21,7 +21,7 @@ const TURNO_ID_REAL = "00000000-0000-4000-8000-000000000123";
 
 function stepConToolResult(toolName: string, output: unknown, scope?: string): EvalTraceResult["steps"][number] {
   return {
-    toolResults: [{ type: "tool-result", toolCallId: "call_1", toolName, input: {}, output, scope }],
+    toolResults: [{ toolName, output, scope }],
   };
 }
 
