@@ -34,6 +34,7 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@turnosbot/db-types";
 
+import { parseConversationContext as realParseConversationContext } from "../conversation/conversationState.js";
 import { findOrCreateCliente as realFindOrCreateCliente } from "../conversation/findOrCreateCliente.js";
 import { findOrCreateConversacion as realFindOrCreateConversacion } from "../conversation/findOrCreateConversacion.js";
 import { responder as realResponder } from "../conversation/responder.js";
@@ -53,6 +54,10 @@ export interface ProcessInboundWhatsappEventDeps {
   responder: typeof realResponder;
   sendWhatsappMessage: typeof realSendWhatsappMessage;
   negocioScoped: typeof realNegocioScoped;
+  /** D-11: parsea `conversacion.context` para leer el flag `needsHuman` ANTES
+   * de invocar al agente — el skip por handoff vive acá, fuera del control
+   * del modelo, nunca como una decisión que el LLM tome. */
+  parseConversationContext: typeof realParseConversationContext;
   log: (obj: unknown, msg: string) => void;
   /** Reloj inyectable para tests determinísticos del gate de 24h (Pattern 5). */
   now?: () => number;
@@ -63,6 +68,7 @@ const defaultDeps: ProcessInboundWhatsappEventDeps = {
   findOrCreateCliente: realFindOrCreateCliente,
   findOrCreateConversacion: realFindOrCreateConversacion,
   responder: realResponder,
+  parseConversationContext: realParseConversationContext,
   sendWhatsappMessage: realSendWhatsappMessage,
   negocioScoped: realNegocioScoped,
   log: (obj, msg) => console.log(msg, obj),
@@ -117,6 +123,19 @@ export async function processInboundWhatsappEvent(
     throw new Error(
       `processInboundWhatsappEvent: no se pudo persistir el mensaje entrante (${insertError.message})`,
     );
+  }
+
+  // D-11: el handoff a humano vive FUERA del control del modelo — se lee
+  // ANTES de invocar al agente, nunca lo decide el LLM. El mensaje entrante
+  // ya quedó persistido arriba (insertMensaje), así que el historial queda
+  // disponible para el humano aunque el bot se quede en pausa.
+  const { needsHuman } = deps.parseConversationContext(conversacion.context);
+  if (needsHuman) {
+    deps.log(
+      { conversacionId: conversacion.id },
+      "conversación derivada a humano — bot en pausa (D-11)",
+    );
+    return;
   }
 
   // CR-02: everything from here on (reply generation, outbound send,

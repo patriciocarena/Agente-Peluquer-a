@@ -88,6 +88,7 @@ interface BuildDepsOptions {
   negocioResult?: { data: unknown; error: null };
   insertMensajeResult?: { data: unknown; error: { code: string; message: string } | null };
   conversacion?: Tables<"conversacion">;
+  needsHuman?: boolean;
 }
 
 function buildDeps(options: BuildDepsOptions = {}) {
@@ -98,6 +99,7 @@ function buildDeps(options: BuildDepsOptions = {}) {
     },
     insertMensajeResult = { data: null, error: null },
     conversacion = makeConversacion(),
+    needsHuman = false,
   } = options;
 
   const supabaseAdmin = makeMockSupabaseAdmin(negocioResult);
@@ -107,6 +109,7 @@ function buildDeps(options: BuildDepsOptions = {}) {
   const responder = vi.fn().mockResolvedValue("respuesta de prueba");
   const findOrCreateCliente = vi.fn().mockResolvedValue(CLIENTE_ID);
   const findOrCreateConversacion = vi.fn().mockResolvedValue(conversacion);
+  const parseConversationContext = vi.fn().mockReturnValue({ messages: [], needsHuman });
   const log = vi.fn();
 
   const deps: ProcessInboundWhatsappEventDeps = {
@@ -116,6 +119,7 @@ function buildDeps(options: BuildDepsOptions = {}) {
     responder,
     sendWhatsappMessage,
     negocioScoped,
+    parseConversationContext,
     log,
   };
 
@@ -124,6 +128,7 @@ function buildDeps(options: BuildDepsOptions = {}) {
     spies: {
       insertMensaje,
       negocioScoped,
+      parseConversationContext,
       sendWhatsappMessage,
       responder,
       findOrCreateCliente,
@@ -209,5 +214,31 @@ describe("processInboundWhatsappEvent", () => {
     expect(spies.sendWhatsappMessage).not.toHaveBeenCalled();
     // only the inbound insert — the window-closed branch does not insert an outbound mensaje
     expect(spies.insertMensaje).toHaveBeenCalledTimes(1);
+  });
+
+  it("needsHuman === true (D-11): skips responder AND sendWhatsappMessage entirely, logs the skip", async () => {
+    const { deps, spies } = buildDeps({ needsHuman: true });
+
+    await processInboundWhatsappEvent(buildEvent(), deps);
+
+    expect(spies.parseConversationContext).toHaveBeenCalledTimes(1);
+    expect(spies.responder).not.toHaveBeenCalled();
+    expect(spies.sendWhatsappMessage).not.toHaveBeenCalled();
+    expect(spies.log).toHaveBeenCalledWith(
+      expect.objectContaining({ conversacionId: expect.any(String) }),
+      expect.stringContaining("D-11"),
+    );
+    // the inbound message was already durably persisted before the needsHuman check
+    expect(spies.insertMensaje).toHaveBeenCalledTimes(1);
+  });
+
+  it("needsHuman === false: preserves the current flow — responder and sendWhatsappMessage (within window) still run", async () => {
+    const { deps, spies } = buildDeps({ needsHuman: false });
+
+    await processInboundWhatsappEvent(buildEvent(), deps);
+
+    expect(spies.parseConversationContext).toHaveBeenCalledTimes(1);
+    expect(spies.responder).toHaveBeenCalledTimes(1);
+    expect(spies.sendWhatsappMessage).toHaveBeenCalledTimes(1);
   });
 });
