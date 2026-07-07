@@ -69,12 +69,12 @@ Requisitos para el release inicial. Cada uno mapea a una fase del roadmap.
 
 - [x] **BOT-01**: El bot identifica en lenguaje natural qué servicio(s) quiere el cliente
 - [x] **BOT-02**: El bot pregunta y registra con qué profesional lo quiere (o gestiona "sin preferencia")
-- [ ] **BOT-03**: El bot negocia día y horario proponiendo slots reales del motor de disponibilidad
+- [x] **BOT-03**: El bot negocia día y horario proponiendo slots reales del motor de disponibilidad
 - [ ] **BOT-04**: El bot confirma el turno con un resumen y lo agenda, con el mensaje de confirmación atado a un `turno_id` real (nunca inventado)
-- [ ] **BOT-05**: El bot responde consultas de precios de cada servicio
-- [ ] **BOT-06**: El bot responde los horarios de trabajo de cada profesional
-- [ ] **BOT-07**: El bot responde la disponibilidad en tiempo real de un profesional
-- [ ] **BOT-08**: El bot responde el estado/confirmación de un turno existente del cliente
+- [x] **BOT-05**: El bot responde consultas de precios de cada servicio
+- [x] **BOT-06**: El bot responde los horarios de trabajo de cada profesional
+- [x] **BOT-07**: El bot responde la disponibilidad en tiempo real de un profesional
+- [x] **BOT-08**: El bot responde el estado/confirmación de un turno existente del cliente
 - [x] **BOT-09**: El cliente puede cancelar un turno por WhatsApp (misma lógica de dominio que el dashboard)
 - [ ] **BOT-10**: El cliente puede reagendar un turno por WhatsApp (misma lógica de dominio que el dashboard)
 - [x] **BOT-11**: El bot resiste intentos de prompt-injection y no expone datos de otros clientes/tenants
@@ -165,12 +165,12 @@ Qué fases cubren qué requisitos.
 | WA-05 | Phase 5 | Complete |
 | BOT-01 | Phase 6 | Complete |
 | BOT-02 | Phase 6 | Complete |
-| BOT-03 | Phase 6 | Pending |
+| BOT-03 | Phase 6 | Complete |
 | BOT-04 | Phase 6 | Pending |
-| BOT-05 | Phase 6 | Pending |
-| BOT-06 | Phase 6 | Pending |
-| BOT-07 | Phase 6 | Pending |
-| BOT-08 | Phase 6 | Pending |
+| BOT-05 | Phase 6 | Complete |
+| BOT-06 | Phase 6 | Complete |
+| BOT-07 | Phase 6 | Complete |
+| BOT-08 | Phase 6 | Complete |
 | BOT-09 | Phase 6 | Complete |
 | BOT-10 | Phase 6 | Pending |
 | BOT-11 | Phase 6 | Complete |
