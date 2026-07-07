@@ -20,6 +20,15 @@
  * de `bookAppointment` que hace UPDATE del mismo turno (nunca cancela+crea);
  * el dashboard (Planes 03-07) y el bot (Fase 6, BOT-10) la importan desde
  * este mismo barrel para no duplicar el motor (AVAIL-04).
+ *
+ * `cancelAppointment` (BOT-09, Fase 6 Plan 01) se agrega debajo — el TERCER
+ * camino de escritura compartido (junto a bookAppointment/rescheduleAppointment),
+ * cerrando el gap de cancelación (AVAIL-04 aplicado a cancelar): el dashboard
+ * (Plan 06-01) y la tool del bot (Plan 06-04) importan la MISMA función, sin
+ * un UPDATE inline paralelo que pudiera divergir. `uuidLike` también se
+ * reexporta acá para que las tools del bot (planes 06-03/06-04) validen
+ * turnoId/negocioId/etc con la misma forma de UUID que el motor, sin
+ * redeclarar un regex propio.
  */
 export * from "./types.js";
 export * from "./constants.js";
@@ -28,3 +37,5 @@ export { bookAppointment } from "./booking.js";
 export type { BookAppointmentDeps, BookAppointmentResult } from "./booking.js";
 export { isSlotTakenConcurrently } from "./booking.js";
 export { rescheduleAppointment } from "./booking.js";
+export { cancelAppointment, uuidLike } from "./booking.js";
+export type { CancelAppointmentResult } from "./booking.js";

@@ -1,8 +1,9 @@
 /**
  * app/actions/turnos.ts — Server Actions de turno que SÍ usan el motor
- * compartido (APPT-04/05/06). Único camino de escritura de disponibilidad =
- * `bookAppointment`/`rescheduleAppointment` (D-11/D-14) — nunca un
- * insert/update paralelo de `turno` que compita con el motor.
+ * compartido (APPT-04/05/06, BOT-09). Único camino de escritura de
+ * disponibilidad = `bookAppointment`/`rescheduleAppointment`/
+ * `cancelAppointment` (D-11/D-14/BOT-09) — nunca un insert/update paralelo de
+ * `turno` que compita con el motor.
  *
  * `negocio_id` SIEMPRE se deriva de `getNegocioActivo()` (contexto
  * server-side), NUNCA de un campo del cliente (T-02-13/T-04-12) — ninguna de
@@ -17,6 +18,7 @@ import { revalidatePath } from "next/cache";
 
 import {
   bookAppointment,
+  cancelAppointment,
   rescheduleAppointment,
   type BookAppointmentResult,
 } from "@turnosbot/availability-engine";
@@ -101,9 +103,17 @@ export async function crearTurnoManual(input: TurnoInput): Promise<TurnoActionRe
 }
 
 /**
- * cancelarTurno (APPT-04, D-06/D-12) — marca `estado='cancelado'`. NUNCA
+ * cancelarTurno (APPT-04, BOT-09, D-06/D-12) — delega en `cancelAppointment`
+ * (motor compartido, T-06-01/T-06-02): marca `estado='cancelado'`, NUNCA
  * borra la fila (historial) — `computeSlots` ignora `cancelado` (Pitfall 4),
  * así que la celda vuelve a libre al instante tras `revalidatePath`.
+ *
+ * `already_cancelled` (turno ya estaba cancelado) es un estado BENIGNO
+ * idempotente, NO un error: el turno ya no está activo, que es exactamente
+ * lo que el owner quería — se mapea a éxito. Esta misma semántica DEBE
+ * reflejarse en la tool `cancelarTurno` del bot (plan 06-04): ambos callers
+ * mapean `already_cancelled` como already-done, nunca como fallo duro. Solo
+ * `not_found`/`update_error` (fallas reales) devuelven `{error}`.
  */
 export async function cancelarTurno(turnoId: string): Promise<TurnoActionResult> {
   await requireRole("owner");
@@ -111,18 +121,24 @@ export async function cancelarTurno(turnoId: string): Promise<TurnoActionResult>
   const { negocio } = await getNegocioActivo();
 
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("turno")
-    .update({ estado: "cancelado" })
-    .eq("id", turnoId)
-    .eq("negocio_id", negocio.id); // defensa en profundidad, RLS ya lo scopea
+  const result = await cancelAppointment({ negocioId: negocio.id, turnoId }, { supabase });
 
-  if (error) {
-    return { error: GENERIC_ERROR_COPY };
+  if (result.ok) {
+    revalidatePath("/turnos");
+    return { success: true };
   }
 
-  revalidatePath("/turnos");
-  return { success: true };
+  switch (result.reason) {
+    case "already_cancelled":
+      // Idempotente: el turno ya no está activo (lo que el owner quería).
+      revalidatePath("/turnos");
+      return { success: true };
+    case "not_found":
+    case "update_error":
+    case "validation_error":
+    default:
+      return { error: GENERIC_ERROR_COPY };
+  }
 }
 
 /**
