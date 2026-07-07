@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-04-PLAN.md
-last_updated: "2026-07-07T21:44:29.634Z"
+stopped_at: Completed 06-05-PLAN.md
+last_updated: "2026-07-07T22:01:51.452Z"
 last_activity: 2026-07-07
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 37
-  completed_plans: 35
+  completed_plans: 36
   percent: 71
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-03)
 ## Current Position
 
 Phase: 06 (agente-conversacional-de-agendamiento) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-07-07
 
-Progress: [██████████] 95%
+Progress: [██████████] 97%
 
 ## Performance Metrics
 
@@ -71,6 +71,7 @@ Progress: [██████████] 95%
 | Phase 06-agente-conversacional-de-agendamiento P02 | 22min | 3 tasks | 6 files |
 | Phase 06-agente-conversacional-de-agendamiento P03 | 20min | 2 tasks | 7 files |
 | Phase 06-agente-conversacional-de-agendamiento P04 | 15min | 2 tasks | 6 files |
+| Phase 06-agente-conversacional-de-agendamiento P05 | 15min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,8 @@ Recent decisions affecting current work:
 - [Phase 06-03]: buscarHorarios devuelve TODOS los slots dentro de la ventana de reserva (no trunca a 2-3) — el filtrado de opciones concretas para el cliente queda del lado del prompt/modelo, la tool sigue siendo la unica fuente de verdad sin post-proceso (D-12)
 - [Phase 06-04]: confirmarTurno/reagendarTurno/cancelarTurno envuelven exclusivamente bookAppointment/rescheduleAppointment/cancelAppointment del motor compartido, con negocioId/clienteId closure-captured (D-13) y turnoId real surfaceado en el caso ok (base del gate D-12 de 06-05)
 - [Phase 06-04]: reagendarTurno/cancelarTurno reciben clienteId en la factory solo por paridad de firma (Pattern 1) -- el scoping real de la mutacion lo hace la funcion de dominio via negocioId+turnoId, mismo modelo de confianza que el dashboard
+- [Phase 06-05]: responder.ts ensamblado como tool-loop generateText(stopWhen isStepCount(6)) con las 5 tools de 06-03/06-04; gate D-12 escanea result.steps (nunca result.text) por confirmarTurno/reagendarTurno con turno_id real vía closingLanguage.ts (léxico único, compartido con la eval offline 06-06)
+- [Phase 06-05]: inboundWorker.ts lee needsHuman de conversacion.context ANTES de invocar responder (D-11) — el handoff a humano queda fuera del control del modelo, saltando responder+sendWhatsappMessage sin regresión del dedup 23505 ni del gate de ventana 24h
 
 ### Blockers/Concerns
 
@@ -136,8 +139,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-07T21:44:29.629Z
-Stopped at: Completed 06-04-PLAN.md
+Last session: 2026-07-07T22:01:51.447Z
+Stopped at: Completed 06-05-PLAN.md
 Resume file: None
 
 **HANDOFF NOTE (2026-07-05):** Phase 4 has 7 plans planned across 5 waves (see 04-*-PLAN.md). Wave 1 = 04-01 + 04-02 in parallel worktrees.

@@ -211,7 +211,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 06-05-PLAN.md — ensamblar responder (tool-loop + gate D-12) + inboundWorker needsHuman skip
+- [x] 06-05-PLAN.md — ensamblar responder (tool-loop + gate D-12) + inboundWorker needsHuman skip
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -242,7 +242,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Motor de disponibilidad | 5/5 | Complete   | 2026-07-05 |
 | 4. Grilla y turnos del dashboard | 7/7 | Complete   | 2026-07-06 |
 | 5. Integración WhatsApp Cloud API | 6/6 | Complete    | 2026-07-06 |
-| 6. Agente conversacional de agendamiento | 4/6 | In Progress|  |
+| 6. Agente conversacional de agendamiento | 5/6 | In Progress|  |
 | 7. Hardening y listo para producción | 0/TBD | Not started | - |
 
 ## Research Flags
