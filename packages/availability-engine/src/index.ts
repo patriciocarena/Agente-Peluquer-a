@@ -7,9 +7,12 @@
  * módulos separados (constants.ts, intervals.ts, grid.ts, schedule.ts,
  * computeSlots.ts, autoAssign.ts, types.ts). Superficie pública mínima:
  * `computeSlots` + tipos + constantes. Los primitivos internos
- * (intervals/grid/schedule/autoAssign) NO se re-exportan — no hay
- * consumidor externo que los necesite (AVAIL-04: un único módulo puro
- * compartido, sin drift).
+ * (intervals/grid/schedule) NO se re-exportan — no hay consumidor externo
+ * que los necesite (AVAIL-04: un único módulo puro compartido, sin drift).
+ * `autoAssign` SÍ se reexporta (Fase 6 Plan 03, BOT-02/D-04): la tool
+ * `asignarProfesional` del bot necesita invocar la MISMA función de
+ * desempate que `computeSlots` usa internamente cuando no hay preferencia
+ * de profesional, en vez de reimplementar la heurística.
  *
  * `bookAppointment` (AVAIL-03, Wave 4/Plan 03-05) se agrega debajo —
  * único camino de escritura compartido, junto con `isSlotTakenConcurrently`
@@ -33,6 +36,7 @@
 export * from "./types.js";
 export * from "./constants.js";
 export { computeSlots } from "./computeSlots.js";
+export { autoAssign } from "./autoAssign.js";
 export { bookAppointment } from "./booking.js";
 export type { BookAppointmentDeps, BookAppointmentResult } from "./booking.js";
 export { isSlotTakenConcurrently } from "./booking.js";
