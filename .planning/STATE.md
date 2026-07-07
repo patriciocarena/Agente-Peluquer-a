@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-03-PLAN.md
-last_updated: "2026-07-07T21:33:08.864Z"
+stopped_at: Completed 06-04-PLAN.md
+last_updated: "2026-07-07T21:44:29.634Z"
 last_activity: 2026-07-07
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 37
-  completed_plans: 34
+  completed_plans: 35
   percent: 71
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-03)
 ## Current Position
 
 Phase: 06 (agente-conversacional-de-agendamiento) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-07-07
 
-Progress: [█████████░] 92%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -70,6 +70,7 @@ Progress: [█████████░] 92%
 | Phase 06 P01 | 12min | 2 tasks | 5 files |
 | Phase 06-agente-conversacional-de-agendamiento P02 | 22min | 3 tasks | 6 files |
 | Phase 06-agente-conversacional-de-agendamiento P03 | 20min | 2 tasks | 7 files |
+| Phase 06-agente-conversacional-de-agendamiento P04 | 15min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -108,6 +109,8 @@ Recent decisions affecting current work:
 - [Phase 06-02]: buildBotAvailabilityData toma negocioRes.data?.[0] porque negocioScoped().negocio() filtra por tenant_id (no negocio_id); systemPrompt.ts nunca interpola negocioId ni ids internos (D-13) — Guardrails D-01/05/06/08/12/13 del system prompt implementados con 3 few-shots inline; base pura para tools 06-03/06-04 y responder 06-05
 - [Phase 06-03]: autoAssign se reexporta desde el barrel de @turnosbot/availability-engine (antes solo interno) — asignarProfesionalTool lo importa del barrel per el plan, delegando 100% en el desempate puro sin heuristica propia
 - [Phase 06-03]: buscarHorarios devuelve TODOS los slots dentro de la ventana de reserva (no trunca a 2-3) — el filtrado de opciones concretas para el cliente queda del lado del prompt/modelo, la tool sigue siendo la unica fuente de verdad sin post-proceso (D-12)
+- [Phase 06-04]: confirmarTurno/reagendarTurno/cancelarTurno envuelven exclusivamente bookAppointment/rescheduleAppointment/cancelAppointment del motor compartido, con negocioId/clienteId closure-captured (D-13) y turnoId real surfaceado en el caso ok (base del gate D-12 de 06-05)
+- [Phase 06-04]: reagendarTurno/cancelarTurno reciben clienteId en la factory solo por paridad de firma (Pattern 1) -- el scoping real de la mutacion lo hace la funcion de dominio via negocioId+turnoId, mismo modelo de confianza que el dashboard
 
 ### Blockers/Concerns
 
@@ -133,8 +136,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-07T21:33:08.858Z
-Stopped at: Completed 06-03-PLAN.md
+Last session: 2026-07-07T21:44:29.629Z
+Stopped at: Completed 06-04-PLAN.md
 Resume file: None
 
 **HANDOFF NOTE (2026-07-05):** Phase 4 has 7 plans planned across 5 waves (see 04-*-PLAN.md). Wave 1 = 04-01 + 04-02 in parallel worktrees.
