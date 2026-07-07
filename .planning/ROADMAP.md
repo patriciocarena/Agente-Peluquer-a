@@ -199,11 +199,22 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. El bot resiste intentos de manipulación (prompt injection) y nunca expone datos de otro cliente o de otro tenant
 
 **Plans**: 6 plans
+**Wave 1**
+
 - [ ] 06-01-PLAN.md — extraer cancelAppointment al motor compartido + barrel/types
 - [ ] 06-02-PLAN.md — instalar AI SDK, systemPrompt.ts, conversationState.ts, buildBotAvailabilityData
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 06-03-PLAN.md — tools de lectura: buscarHorarios, asignarProfesional, consultarNegocio
 - [ ] 06-04-PLAN.md — tools de escritura: confirmarTurno, reagendarTurno, cancelarTurno
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 06-05-PLAN.md — ensamblar responder (tool-loop + gate D-12) + inboundWorker needsHuman skip
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 06-06-PLAN.md — evals (dataset 20 casos, traceAssertions, LLM judge, runner, promptfoo) + checkpoint calibracion
 
 ### Phase 7: Hardening y listo para producción
