@@ -11,7 +11,7 @@ import { defineConfig } from "vitest/config"
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "evals/**/*.test.ts"],
     // negocioScoped.test.ts predates this vitest runner (Fase 03 Pitfall 7):
     // it's a manual, live-DB smoke test (top-level `main()` + `process.exit`,
     // gated on a real .env against bdgufnitakelyialjoqg) run via
