@@ -198,7 +198,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Un cliente puede cancelar o reagendar su turno por WhatsApp usando la misma lógica de dominio que el dashboard
   5. El bot resiste intentos de manipulación (prompt injection) y nunca expone datos de otro cliente o de otro tenant
 
-**Plans**: TBD
+**Plans**: 6 plans
+- [ ] 06-01-PLAN.md — extraer cancelAppointment al motor compartido + barrel/types
+- [ ] 06-02-PLAN.md — instalar AI SDK, systemPrompt.ts, conversationState.ts, buildBotAvailabilityData
+- [ ] 06-03-PLAN.md — tools de lectura: buscarHorarios, asignarProfesional, consultarNegocio
+- [ ] 06-04-PLAN.md — tools de escritura: confirmarTurno, reagendarTurno, cancelarTurno
+- [ ] 06-05-PLAN.md — ensamblar responder (tool-loop + gate D-12) + inboundWorker needsHuman skip
+- [ ] 06-06-PLAN.md — evals (dataset 20 casos, traceAssertions, LLM judge, runner, promptfoo) + checkpoint calibracion
 
 ### Phase 7: Hardening y listo para producción
 
