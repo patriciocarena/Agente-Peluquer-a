@@ -67,8 +67,8 @@ Requisitos para el release inicial. Cada uno mapea a una fase del roadmap.
 
 ### Agente conversacional de agendamiento (BOT)
 
-- [ ] **BOT-01**: El bot identifica en lenguaje natural qué servicio(s) quiere el cliente
-- [ ] **BOT-02**: El bot pregunta y registra con qué profesional lo quiere (o gestiona "sin preferencia")
+- [x] **BOT-01**: El bot identifica en lenguaje natural qué servicio(s) quiere el cliente
+- [x] **BOT-02**: El bot pregunta y registra con qué profesional lo quiere (o gestiona "sin preferencia")
 - [ ] **BOT-03**: El bot negocia día y horario proponiendo slots reales del motor de disponibilidad
 - [ ] **BOT-04**: El bot confirma el turno con un resumen y lo agenda, con el mensaje de confirmación atado a un `turno_id` real (nunca inventado)
 - [ ] **BOT-05**: El bot responde consultas de precios de cada servicio
@@ -77,7 +77,7 @@ Requisitos para el release inicial. Cada uno mapea a una fase del roadmap.
 - [ ] **BOT-08**: El bot responde el estado/confirmación de un turno existente del cliente
 - [x] **BOT-09**: El cliente puede cancelar un turno por WhatsApp (misma lógica de dominio que el dashboard)
 - [ ] **BOT-10**: El cliente puede reagendar un turno por WhatsApp (misma lógica de dominio que el dashboard)
-- [ ] **BOT-11**: El bot resiste intentos de prompt-injection y no expone datos de otros clientes/tenants
+- [x] **BOT-11**: El bot resiste intentos de prompt-injection y no expone datos de otros clientes/tenants
 
 ### Superadmin (SADMIN)
 
@@ -163,8 +163,8 @@ Qué fases cubren qué requisitos.
 | WA-03 | Phase 5 | Complete |
 | WA-04 | Phase 5 | Complete |
 | WA-05 | Phase 5 | Complete |
-| BOT-01 | Phase 6 | Pending |
-| BOT-02 | Phase 6 | Pending |
+| BOT-01 | Phase 6 | Complete |
+| BOT-02 | Phase 6 | Complete |
 | BOT-03 | Phase 6 | Pending |
 | BOT-04 | Phase 6 | Pending |
 | BOT-05 | Phase 6 | Pending |
@@ -173,7 +173,7 @@ Qué fases cubren qué requisitos.
 | BOT-08 | Phase 6 | Pending |
 | BOT-09 | Phase 6 | Complete |
 | BOT-10 | Phase 6 | Pending |
-| BOT-11 | Phase 6 | Pending |
+| BOT-11 | Phase 6 | Complete |
 | SEC-01 | Phase 7 | Pending |
 | SEC-02 | Phase 7 | Pending |
 | SEC-03 | Phase 7 | Pending |

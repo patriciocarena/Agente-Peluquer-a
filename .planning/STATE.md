@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-07-07T21:01:32.020Z"
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-07-07T21:15:01.937Z"
 last_activity: 2026-07-07
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 37
-  completed_plans: 32
+  completed_plans: 33
   percent: 71
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-03)
 ## Current Position
 
 Phase: 06 (agente-conversacional-de-agendamiento) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-07-07
 
-Progress: [█████████░] 86%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [█████████░] 86%
 | Phase 04 P05 | 18min | 3 tasks | 4 files |
 | Phase 04 P07 | 55min | 3 tasks | 9 files |
 | Phase 06 P01 | 12min | 2 tasks | 5 files |
+| Phase 06-agente-conversacional-de-agendamiento P02 | 22min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,7 @@ Recent decisions affecting current work:
 - [Phase 04-07]: @turnosbot/availability-engine cambia main/types de src/index.ts a dist/ compilado (prepare: tsc -b) -- Turbopack no resuelve especificadores NodeNext .js internos que tsc/vitest si resuelven; cero cambios al codigo fuente del motor
 - [Phase 04-07]: computeSlots dimensionado con un servicio sintetico local (id grid-slot, nunca persistido) para calcular libre a granularidad de UN slot, en vez de la duracion de un servicio real
 - [Phase 06-01]: cancelAppointment agregado a @turnosbot/availability-engine como tercer camino de escritura compartido (BOT-09); already_cancelled tratado como estado benigno idempotente (success), no error, en el dashboard, misma semantica que debera adoptar la tool del bot en 06-04
+- [Phase 06-02]: buildBotAvailabilityData toma negocioRes.data?.[0] porque negocioScoped().negocio() filtra por tenant_id (no negocio_id); systemPrompt.ts nunca interpola negocioId ni ids internos (D-13) — Guardrails D-01/05/06/08/12/13 del system prompt implementados con 3 few-shots inline; base pura para tools 06-03/06-04 y responder 06-05
 
 ### Blockers/Concerns
 
@@ -128,8 +130,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-07T21:01:32.014Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-07-07T21:15:01.931Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None
 
 **HANDOFF NOTE (2026-07-05):** Phase 4 has 7 plans planned across 5 waves (see 04-*-PLAN.md). Wave 1 = 04-01 + 04-02 in parallel worktrees.
