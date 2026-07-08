@@ -185,6 +185,15 @@ export async function responder(conversacion: Tables<"conversacion">, mensajeEnt
   const clienteId = conversacion.cliente_id;
   const { messages: history } = parseConversationContext(conversacion.context);
 
+  // Gap 1 (memoria multi-turno): única fuente del mensaje del cliente de
+  // ESTE turno, reutilizada en la llamada a generateText Y en los 3 lugares
+  // donde se persiste conversacion.context.messages (camino feliz y de
+  // error) — `result.response.messages` (AI SDK v7) NUNCA incluye un echo
+  // del input, así que sin este objeto el mensaje del cliente se perdía y
+  // el modelo nunca veía turnos previos del cliente (.planning/debug/
+  // responder-history-drops-user-messages.md).
+  const userMessage = { role: "user" as const, content: mensajeEntrante };
+
   const tools = deps.buildTools(negocioId, clienteId);
 
   let result: ResponderGenerateTextResult;
@@ -192,7 +201,7 @@ export async function responder(conversacion: Tables<"conversacion">, mensajeEnt
     result = await deps.generateText({
       model: deps.model,
       system: buildSystemPrompt(),
-      messages: [...history, { role: "user", content: mensajeEntrante }],
+      messages: [...history, userMessage],
       stopWhen: isStepCount(6),
       temperature: 0.3,
       maxOutputTokens: 512,
@@ -217,7 +226,10 @@ export async function responder(conversacion: Tables<"conversacion">, mensajeEnt
       deps.log({ negocioId, conversacionId: conversacion.id, err }, "Error inesperado en generateText");
     }
 
-    const newContext = serializeConversationContext({ messages: history, needsHuman: true });
+    // Gap 1: el mensaje que disparó el error también sobrevive en el
+    // history — de lo contrario el propio input que causó el error se
+    // pierde y el próximo turno el modelo no sabe qué se le pidió.
+    const newContext = serializeConversationContext({ messages: [...history, userMessage], needsHuman: true });
     const { error: persistError } = await deps
       .negocioScoped(negocioId)
       .updateConversacion(conversacion.id, { context: newContext as unknown as Json });
@@ -265,7 +277,9 @@ export async function responder(conversacion: Tables<"conversacion">, mensajeEnt
   }
 
   const newContext = serializeConversationContext({
-    messages: [...history, ...messagesToPersist],
+    // Gap 1: el userMessage queda ENTRE el history previo y lo generado por
+    // el modelo esta llamada — respeta el orden cronológico real del turno.
+    messages: [...history, userMessage, ...messagesToPersist],
     needsHuman,
   });
 
