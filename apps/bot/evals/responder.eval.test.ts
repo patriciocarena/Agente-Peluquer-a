@@ -25,6 +25,7 @@ vi.mock("../src/db/client.js", () => ({ supabaseAdmin: {} }));
 
 import conversations from "./dataset/conversations.json" with { type: "json" };
 import { responder, SAFE_FALLBACK_MESSAGE, type ResponderDeps, type ResponderGenerateTextResult } from "../src/conversation/responder.js";
+import { buildDateContext } from "../src/conversation/dateContext.js";
 import { buildSystemPrompt } from "../src/conversation/systemPrompt.js";
 import {
   assertConfirmBeforeCancel,
@@ -142,12 +143,44 @@ function makeConversacion(): Tables<"conversacion"> {
   } as Tables<"conversacion">;
 }
 
+/** Fecha/timezone fijas (Bug fecha) para que las aserciones sobre
+ * `callArgs.system` sean determinísticas — mismo `now`/timezone en el mock
+ * de `deps` de acá y en `EXPECTED_SYSTEM_PROMPT` de abajo. */
+const FIXED_NOW_MS = new Date("2026-07-10T12:00:00.000Z").getTime();
+const FIXED_TIMEZONE = "America/Argentina/Buenos_Aires";
+const { fechaHoy: FIXED_FECHA_HOY, diaSemanaHoy: FIXED_DIA_SEMANA_HOY } = buildDateContext(
+  FIXED_NOW_MS,
+  FIXED_TIMEZONE,
+);
+// El mock de `clientes()` de abajo devuelve nombre:null, así que el prompt
+// esperado se construye con clienteNombre=null (rama "todavía no sabés el
+// nombre" de buildSystemPrompt).
+const EXPECTED_SYSTEM_PROMPT = buildSystemPrompt(
+  FIXED_FECHA_HOY,
+  FIXED_DIA_SEMANA_HOY,
+  FIXED_TIMEZONE,
+  null,
+);
+
 function buildDeps(result: ResponderGenerateTextResult) {
   const generateText = vi.fn().mockResolvedValue(result);
   const buildTools = vi.fn().mockReturnValue({} as ToolSet);
   const updateConversacion = vi.fn().mockResolvedValue({ data: null, error: null });
-  const negocioScoped = vi.fn().mockReturnValue({ updateConversacion });
+  const negocio = vi
+    .fn()
+    .mockResolvedValue({ data: [{ id: NEGOCIO_ID, timezone: FIXED_TIMEZONE }], error: null });
+  // Gap "nombre": responder lee el nombre del cliente vía
+  // clientes().eq("id", …).maybeSingle(). nombre:null → rama "sin nombre".
+  const clientes = vi
+    .fn()
+    .mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        maybeSingle: vi.fn().mockResolvedValue({ data: { nombre: null }, error: null }),
+      }),
+    });
+  const negocioScoped = vi.fn().mockReturnValue({ updateConversacion, negocio, clientes });
   const log = vi.fn();
+  const now = vi.fn().mockReturnValue(FIXED_NOW_MS);
 
   const deps: ResponderDeps = {
     generateText: generateText as unknown as ResponderDeps["generateText"],
@@ -155,9 +188,10 @@ function buildDeps(result: ResponderGenerateTextResult) {
     buildTools: buildTools as unknown as ResponderDeps["buildTools"],
     negocioScoped: negocioScoped as unknown as ResponderDeps["negocioScoped"],
     log,
+    now,
   };
 
-  return { deps, spies: { generateText, buildTools, updateConversacion, negocioScoped, log } };
+  return { deps, spies: { generateText, buildTools, updateConversacion, negocio, clientes, negocioScoped, log, now } };
 }
 
 /** Dimensiones code-based cubiertas por traceAssertions.ts (Task 2) — E2/E6/
@@ -208,7 +242,7 @@ describe("responder.eval — dataset de 20 conversaciones contra responder() (Ge
 
       const callArgs = spies.generateText.mock.calls[0]?.[0];
       expect(callArgs.messages).toContainEqual({ role: "user", content: mensajeEntrante });
-      expect(callArgs.system).toBe(buildSystemPrompt());
+      expect(callArgs.system).toBe(EXPECTED_SYSTEM_PROMPT);
       expect(callArgs.system).not.toContain(mensajeEntrante);
     });
   });

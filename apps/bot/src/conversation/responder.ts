@@ -41,6 +41,16 @@
  * `InvalidToolInputError` se loguean distinto de un error genérico — un
  * error de tool NUNCA se narra como éxito (Section 3 Key Abstractions,
  * T-06-20).
+ *
+ * Fix Bug fecha (bot-no-agenda-uuid-y-fecha.md, 06-UAT.md Gaps): antes de
+ * armar `system`, se fetchea `negocio.timezone` (mismo patrón que
+ * `buildBotAvailabilityData.ts`/`inboundWorker.ts` — este último ya lee
+ * `negocio.timezone` en cada evento entrante pero lo descartaba, nunca lo
+ * propagaba hasta acá) y se resuelve `fechaHoy`/`diaSemanaHoy` vía
+ * `dateContext.ts` a partir de un reloj inyectable (`deps.now`, mismo
+ * patrón que `ProcessInboundWhatsappEventDeps.now` de `inboundWorker.ts`)
+ * — sin esto el modelo no tenía ningún "hoy" real en contexto y usaba años
+ * inventados al resolver fechas relativas.
  */
 import { google } from "@ai-sdk/google";
 import {
@@ -56,6 +66,7 @@ import type { Json, Tables } from "@turnosbot/db-types";
 import { negocioScoped as realNegocioScoped } from "../db/negocioScoped.js";
 
 import { hasClosingLanguage, hasSuccessfulCancel } from "./closingLanguage.js";
+import { buildDateContext } from "./dateContext.js";
 import { parseConversationContext, serializeConversationContext } from "./conversationState.js";
 import { buildSystemPrompt } from "./systemPrompt.js";
 import { asignarProfesionalTool } from "./tools/asignarProfesional.js";
@@ -63,19 +74,28 @@ import { buscarHorariosTool } from "./tools/buscarHorarios.js";
 import { cancelarTurnoTool } from "./tools/cancelarTurno.js";
 import { confirmarTurnoTool } from "./tools/confirmarTurno.js";
 import { consultarNegocioTool } from "./tools/consultarNegocio.js";
+import { guardarNombreClienteTool } from "./tools/guardarNombreCliente.js";
 import { reagendarTurnoTool } from "./tools/reagendarTurno.js";
 
 /** Mensaje seguro enviado ESTE turno cuando el gate D-12 dispara (Pitfall 3,
  * T-06-16) — nunca un texto de cierre sin turno_id real detrás. */
 export const SAFE_FALLBACK_MESSAGE = "Dame un segundo que verifico y te confirmo 🙌";
 
+/** Fallback si `negocio.timezone` no se pudo leer (fila no encontrada / error
+ * de red) — todos los negocios de este proyecto son argentinos (CLAUDE.md:
+ * "timezones argentinos"), así que degradar a Buenos Aires es más seguro que
+ * dejar la fecha "hoy" sin resolver. NUNCA usarse cuando `negocio.timezone`
+ * sí está disponible — ese valor real siempre tiene prioridad. */
+const DEFAULT_TIMEZONE = "America/Argentina/Buenos_Aires";
+
 /** Nombres de tool que pueden aportar un `turno_id` real al gate D-12 — las
  * únicas dos tools de escritura que crean/mueven un turno (BOT-04/BOT-10). */
 const CONFIRMING_TOOL_NAMES = new Set(["confirmarTurno", "reagendarTurno"]);
 
 /**
- * buildResponderTools(negocioId, clienteId) — cierra las 5 tools de los
- * planes 06-03/06-04 sobre el negocio/cliente de ESTA conversación (D-13),
+ * buildResponderTools(negocioId, clienteId) — cierra las tools de los
+ * planes 06-03/06-04 (+ guardarNombreCliente, 06-UAT.md Gap "nombre") sobre el
+ * negocio/cliente de ESTA conversación (D-13),
  * ANTES de que el modelo sea invocado. Extraído como función standalone (en
  * vez de inline en `responder`) para que el test pueda inyectar un espía en
  * `ResponderDeps.buildTools` y verificar con qué `negocioId`/`clienteId` se
@@ -89,6 +109,7 @@ export function buildResponderTools(negocioId: string, clienteId: string): ToolS
     confirmarTurno: confirmarTurnoTool(negocioId, clienteId),
     reagendarTurno: reagendarTurnoTool(negocioId, clienteId),
     cancelarTurno: cancelarTurnoTool(negocioId, clienteId),
+    guardarNombreCliente: guardarNombreClienteTool(negocioId, clienteId),
   };
 }
 
@@ -102,6 +123,10 @@ export interface ResponderDeps {
   buildTools: typeof buildResponderTools;
   negocioScoped: typeof realNegocioScoped;
   log: (obj: unknown, msg: string) => void;
+  /** Reloj inyectable (Bug fecha) para resolver "hoy" determinísticamente en
+   * tests — mismo patrón que `ProcessInboundWhatsappEventDeps.now` de
+   * `inboundWorker.ts`. */
+  now: () => number;
 }
 
 /** Resultado de `generateText` con los defaults reales de tipo del SDK
@@ -115,6 +140,7 @@ const defaultDeps: ResponderDeps = {
   buildTools: buildResponderTools,
   negocioScoped: realNegocioScoped,
   log: (obj, msg) => console.log(msg, obj),
+  now: () => Date.now(),
 };
 
 /**
@@ -187,11 +213,33 @@ export async function responder(conversacion: Tables<"conversacion">, mensajeEnt
 
   const tools = deps.buildTools(negocioId, clienteId);
 
+  // Bug fecha: resolver "hoy" en la timezone REAL del negocio (nunca UTC-naive
+  // ni un default duro cuando el dato existe) — mismo accessor negocio-scoped
+  // que buildBotAvailabilityData.ts usa, buscando la fila cuyo `id` matchea
+  // exactamente (un negocioScoped().negocio() puede devolver más de una fila
+  // para un tenant multi-location, ver negocioScoped.ts).
+  const { data: negocioRows } = await deps.negocioScoped(negocioId).negocio();
+  const negocio = negocioRows?.find((row) => row.id === negocioId);
+  const timezone = negocio?.timezone ?? DEFAULT_TIMEZONE;
+  const { fechaHoy, diaSemanaHoy } = buildDateContext(deps.now(), timezone);
+
+  // Gap "nombre" (06-UAT.md): el system prompt necesita saber si YA tenemos el
+  // nombre de este cliente para decidir si pedírselo (findOrCreateCliente crea
+  // la fila con nombre:null). Se lee acá — misma capa negocio-scoped — y se
+  // pasa a buildSystemPrompt; si no se pudo leer, se trata como "sin nombre"
+  // (peor caso: el bot lo vuelve a pedir, nunca inventa uno).
+  const { data: clienteRow } = await deps
+    .negocioScoped(negocioId)
+    .clientes()
+    .eq("id", clienteId)
+    .maybeSingle();
+  const clienteNombre = clienteRow?.nombre ?? null;
+
   let result: ResponderGenerateTextResult;
   try {
     result = await deps.generateText({
       model: deps.model,
-      system: buildSystemPrompt(),
+      system: buildSystemPrompt(fechaHoy, diaSemanaHoy, timezone, clienteNombre),
       messages: [...history, { role: "user", content: mensajeEntrante }],
       stopWhen: isStepCount(6),
       temperature: 0.3,

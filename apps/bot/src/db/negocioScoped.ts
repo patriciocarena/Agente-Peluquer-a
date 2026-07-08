@@ -59,6 +59,7 @@ type MensajeInsert = Omit<TablesInsert<"mensaje">, "negocio_id">;
 type ConversacionInsert = Omit<TablesInsert<"conversacion">, "negocio_id">;
 type ConversacionUpdate = Omit<TablesUpdate<"conversacion">, "negocio_id" | "id">;
 type ClienteInsert = Omit<TablesInsert<"cliente">, "negocio_id">;
+type ClienteUpdate = Omit<TablesUpdate<"cliente">, "negocio_id" | "id">;
 
 export function negocioScoped(negocioId: string) {
   return {
@@ -101,5 +102,11 @@ export function negocioScoped(negocioId: string) {
         .insert({ ...row, negocio_id: negocioId })
         .select("id")
         .single(),
+    updateCliente: (id: string, patch: ClienteUpdate) =>
+      supabaseAdmin
+        .from("cliente")
+        .update(patch)
+        .eq("negocio_id", negocioId)
+        .eq("id", id),
   } as const;
 }

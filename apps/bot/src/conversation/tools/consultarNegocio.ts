@@ -18,6 +18,20 @@
  * los `turno_servicio.*_snapshot` congelados al momento de agendar (Pattern
  * 6, AVAIL-03) — NUNCA de un join vivo a `servicio.precio`, que podría
  * reflejar un cambio de precio posterior al turno ya agendado (T-06-10).
+ *
+ * Fix Bug B (bot-no-agenda-uuid-y-fecha.md, 06-UAT.md Gaps): `buscarHorarios`/
+ * `confirmarTurno`/`asignarProfesional` exigen `servicioIds`/`profesionalId`
+ * con forma de UUID real (`uuidLike`) — pero hasta este fix NINGUNA tool le
+ * daba al modelo el `id` real de un servicio o profesional para citarlo, así
+ * que el modelo inventaba un slug ("corte_clasico") que siempre fallaba la
+ * validación zod. `tipo: "precios"` ahora incluye `id` en cada
+ * `PrecioServicioView`, y se agrega `tipo: "profesionales"` (lista
+ * `{id, nombre}` de los profesionales activos) para el caso en que el
+ * cliente pide un profesional puntual por nombre — el caso "sin preferencia"
+ * ya estaba cubierto por `asignarProfesional`, que devuelve su propio
+ * `profesionalId` real. El system prompt (systemPrompt.ts) instruye al
+ * modelo a resolver SIEMPRE estos ids vía `consultarNegocio` antes de llamar
+ * cualquier tool que los exija, en vez de inventarlos.
  */
 import { uuidLike } from "@turnosbot/availability-engine";
 import { tool } from "ai";
@@ -32,13 +46,17 @@ const ESTADOS_QUE_BLOQUEAN_CONSULTA = "cancelado";
  * barrel de `@turnosbot/availability-engine` (Pattern 2), no un regex
  * paralelo propio. */
 export const consultarNegocioInputSchema = z.object({
-  tipo: z.enum(["precios", "horarios_profesional", "estado_turno"]),
+  tipo: z.enum(["precios", "horarios_profesional", "estado_turno", "profesionales"]),
   profesionalId: uuidLike.optional(),
 });
 
 export type ConsultarNegocioInput = z.infer<typeof consultarNegocioInputSchema>;
 
+/** `id` real del servicio (Bug B) — el modelo debe citar este valor tal cual
+ * en `servicioIds` de `buscarHorarios`/`confirmarTurno`/`asignarProfesional`,
+ * nunca inventar un slug a partir de `nombre`. */
 export interface PrecioServicioView {
+  id: string;
   nombre: string;
   precio: number;
   duracionMin: number;
@@ -48,6 +66,16 @@ export interface BloqueHorarioView {
   diaSemana: number;
   horaInicio: string;
   horaFin: string;
+}
+
+/** `id` real del profesional (Bug B, hallazgo adicional) — usado cuando el
+ * cliente pide un profesional puntual por nombre; el modelo debe citar este
+ * `id` tal cual en `profesionalId`, nunca inventarlo. El caso "sin
+ * preferencia" no necesita este listado: `asignarProfesional` ya devuelve su
+ * propio `profesionalId` real. */
+export interface ProfesionalView {
+  id: string;
+  nombre: string;
 }
 
 /** Servicio de un turno EXISTENTE, leído del snapshot congelado (Pattern 6) —
@@ -70,7 +98,8 @@ export interface EstadoTurnoView {
 export type ConsultarNegocioResult =
   | { tipo: "precios"; servicios: PrecioServicioView[] }
   | { tipo: "horarios_profesional"; bloques: BloqueHorarioView[] }
-  | { tipo: "estado_turno"; turnos: EstadoTurnoView[] };
+  | { tipo: "estado_turno"; turnos: EstadoTurnoView[] }
+  | { tipo: "profesionales"; profesionales: ProfesionalView[] };
 
 /** Deps inyectables (Pattern 3/8 de 06-PATTERNS.md): `negocioScoped` real por
  * defecto, sustituible en tests por un fake sin DB real. */
@@ -92,7 +121,7 @@ export function consultarNegocioTool(
 ) {
   return tool({
     description:
-      "Consulta precios de servicios, horarios de trabajo de un profesional, o el estado de los turnos del cliente actual. Todo dato devuelto es real, leído del negocio — nunca inventes un precio, horario o estado de turno que esta herramienta no devolvió.",
+      "Consulta precios de servicios (con su id real), la lista de profesionales (con su id real), horarios de trabajo de un profesional, o el estado de los turnos del cliente actual. Todo dato devuelto es real, leído del negocio — nunca inventes un precio, horario, id o estado de turno que esta herramienta no devolvió. Llamá esta tool con tipo:'precios' (y con tipo:'profesionales' si el cliente pidió un profesional puntual por nombre) ANTES de buscarHorarios/confirmarTurno para obtener los id reales que esas herramientas exigen — nunca inventes un id a partir del nombre de un servicio o profesional.",
     inputSchema: consultarNegocioInputSchema,
     execute: async (input: ConsultarNegocioInput): Promise<ConsultarNegocioResult> => {
       const db = deps.negocioScoped(negocioId);
@@ -102,11 +131,20 @@ export function consultarNegocioTool(
         const servicios = (data ?? [])
           .filter((servicio) => servicio.activo)
           .map((servicio) => ({
+            id: servicio.id,
             nombre: servicio.nombre,
             precio: servicio.precio,
             duracionMin: servicio.duracion_min,
           }));
         return { tipo: "precios", servicios };
+      }
+
+      if (input.tipo === "profesionales") {
+        const { data } = await db.profesionales();
+        const profesionales = (data ?? [])
+          .filter((profesional) => profesional.activo)
+          .map((profesional) => ({ id: profesional.id, nombre: profesional.nombre }));
+        return { tipo: "profesionales", profesionales };
       }
 
       if (input.tipo === "horarios_profesional") {

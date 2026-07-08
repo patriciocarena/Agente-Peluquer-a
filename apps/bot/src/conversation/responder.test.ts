@@ -76,8 +76,17 @@ function buildDeps(options: BuildDepsOptions = {}) {
   const generateText = generateTextImpl ? vi.fn(generateTextImpl) : vi.fn().mockResolvedValue(result);
   const buildTools = vi.fn().mockReturnValue({ fakeTool: {} } as unknown as ToolSet);
   const updateConversacion = vi.fn().mockResolvedValue({ data: null, error: null });
-  const negocioScoped = vi.fn().mockReturnValue({ updateConversacion });
+  const negocio = vi
+    .fn()
+    .mockResolvedValue({ data: [{ id: NEGOCIO_ID, timezone: "America/Argentina/Buenos_Aires" }], error: null });
+  // Gap "nombre": responder lee el nombre del cliente vía
+  // negocioScoped(negocioId).clientes().eq("id", clienteId).maybeSingle().
+  // Por defecto sin nombre (nombre:null) — el caso de un cliente nuevo.
+  const clienteMaybeSingle = vi.fn().mockResolvedValue({ data: { nombre: null }, error: null });
+  const clientes = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ maybeSingle: clienteMaybeSingle }) });
+  const negocioScoped = vi.fn().mockReturnValue({ updateConversacion, negocio, clientes });
   const log = vi.fn();
+  const now = vi.fn().mockReturnValue(new Date("2026-07-10T12:00:00.000Z").getTime());
 
   const deps: ResponderDeps = {
     generateText: generateText as unknown as ResponderDeps["generateText"],
@@ -85,9 +94,10 @@ function buildDeps(options: BuildDepsOptions = {}) {
     buildTools: buildTools as unknown as ResponderDeps["buildTools"],
     negocioScoped: negocioScoped as unknown as ResponderDeps["negocioScoped"],
     log,
+    now,
   };
 
-  return { deps, spies: { generateText, buildTools, updateConversacion, negocioScoped, log } };
+  return { deps, spies: { generateText, buildTools, updateConversacion, negocio, clientes, clienteMaybeSingle, negocioScoped, log, now } };
 }
 
 describe("responder — tool-loop + gate D-12 + persistencia", () => {

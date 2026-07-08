@@ -24,19 +24,19 @@ import { buildSystemPrompt } from "../src/conversation/systemPrompt.js";
 
 describe("promptfooconfig.yaml freshness guard (WR-03)", () => {
   it("cada palabra de CLOSING_LANGUAGE_LEXICON (D-12, fuente única) aparece verbatim en buildSystemPrompt()", () => {
-    const prompt = buildSystemPrompt();
+    const prompt = buildSystemPrompt("2026-07-10", "viernes", "America/Argentina/Buenos_Aires", null);
     for (const word of CLOSING_LANGUAGE_LEXICON) {
       expect(prompt).toContain(word);
     }
   });
 
   it("la frase de framing D-13 (aislamiento de negocio/cliente) sigue presente", () => {
-    const prompt = buildSystemPrompt();
+    const prompt = buildSystemPrompt("2026-07-10", "viernes", "America/Argentina/Buenos_Aires", null);
     expect(prompt).toContain("El negocio de esta conversación es fijo");
   });
 
   it("la regla D-08 (confirmación explícita antes de cancelar) sigue presente", () => {
-    const prompt = buildSystemPrompt();
+    const prompt = buildSystemPrompt("2026-07-10", "viernes", "America/Argentina/Buenos_Aires", null);
     expect(prompt).toMatch(/confirmación explícita/i);
   });
 });

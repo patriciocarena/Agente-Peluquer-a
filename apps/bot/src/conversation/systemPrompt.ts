@@ -20,26 +20,65 @@
  *   el prompt NUNCA interpola el id del negocio ni ningún id interno (el
  *   scope vive en las closures de las tools, Section 3/Pattern 1 de
  *   06-RESEARCH.md).
+ * - Bug fecha (bot-no-agenda-uuid-y-fecha.md, 06-UAT.md Gaps): el prompt
+ *   ahora recibe `fechaHoy`/`diaSemanaHoy`/`timezone` como parámetros (el
+ *   caller, `responder.ts`, los resuelve de `negocio.timezone` + un reloj
+ *   inyectable vía `dateContext.ts`) — sin esto el modelo no tenía forma de
+ *   resolver fechas relativas ("este viernes") ni de saber el año correcto.
+ * - Bug B (mismo doc): instruye al modelo a resolver SIEMPRE los id reales de
+ *   servicio/profesional vía `consultarNegocio` (o `asignarProfesional` para
+ *   el caso "sin preferencia") antes de llamar `buscarHorarios`/
+ *   `confirmarTurno` — nunca inventar un id a partir de un nombre.
  *
  * Función pura, sin I/O — misma disciplina de aislamiento que
- * `packages/availability-engine/src/computeSlots.ts`/`autoAssign.ts`.
+ * `packages/availability-engine/src/computeSlots.ts`/`autoAssign.ts`. Los
+ * tres parámetros de fecha/timezone SIEMPRE los resuelve el caller (nunca
+ * lee `Date.now()` ni ningún negocio acá adentro) — sigue siendo
+ * determinísticamente testeable.
  */
 import { CLOSING_LANGUAGE_LEXICON } from "./closingLanguage.js";
 
 /** WR-03: lista de palabras de cierre prohibidas para el mensaje D-12,
  * derivada de `CLOSING_LANGUAGE_LEXICON` (fuente única) en vez de
  * hardcodearse acá — `apps/bot/evals/promptfooconfig.test.ts` verifica que
- * todas siguen apareciendo verbatim en `buildSystemPrompt()`. */
+ * todas siguen apareciendo verbatim en el prompt generado. */
 const CLOSING_LANGUAGE_EXAMPLES = CLOSING_LANGUAGE_LEXICON.map((word) => `"${word}"`).join(", ");
 
+/** Gap "nombre" (06-UAT.md): sección de nombre del cliente. Es lo único de
+ * este prompt que depende del cliente concreto — pero NO viola D-13: `nombre`
+ * es un dato del cliente que ÉL MISMO dio por chat (o `null` si todavía no lo
+ * dio), nunca un id interno ni datos de otro tenant/cliente. El caller
+ * (`responder.ts`) lo lee vía la capa negocio-scoped y lo pasa acá. */
+function buildNombreSection(clienteNombre: string | null): string {
+  if (clienteNombre) {
+    return `# Nombre del cliente
+El cliente se llama ${clienteNombre}. Usá su nombre con naturalidad y NO se lo vuelvas a preguntar.`;
+  }
+  return `# Nombre del cliente
+Todavía no sabés el nombre de este cliente. Preguntáselo de forma natural en algún momento de la conversación (idealmente antes de confirmar un turno), y cuando te lo diga guardalo llamando la herramienta guardarNombreCliente. No inventes un nombre ni des por hecho uno: solo guardá lo que el cliente efectivamente dijo. Si no te lo quiere dar, no insistas ni bloquees el turno por eso.`;
+}
+
 /**
- * buildSystemPrompt() — devuelve el `system` string fijo para
- * `generateText({ model: google('gemini-3.1-flash-lite'), system: buildSystemPrompt(), ... })`.
- * No recibe parámetros: nada scopeado al negocio/tenant entra a este texto
- * (D-13) — eso vive exclusivamente en los closures de las tools.
+ * buildSystemPrompt(fechaHoy, diaSemanaHoy, timezone, clienteNombre) — devuelve
+ * el `system` string para
+ * `generateText({ model: google('gemini-3.1-flash-lite'), system: buildSystemPrompt(...), ... })`.
+ * `fechaHoy`/`diaSemanaHoy`/`timezone` son datos de fecha/reloj (Bug fecha).
+ * `clienteNombre` es el nombre que el cliente dio por chat, o `null` si aún no
+ * lo dio (Gap "nombre") — el ÚNICO dato dependiente del cliente que entra acá,
+ * y aun así no viola D-13 (no es un id interno ni datos de otro tenant/cliente,
+ * ver `buildNombreSection`). El id del negocio sigue sin interpolarse — eso
+ * vive exclusivamente en los closures de las tools.
  */
-export function buildSystemPrompt(): string {
+export function buildSystemPrompt(
+  fechaHoy: string,
+  diaSemanaHoy: string,
+  timezone: string,
+  clienteNombre: string | null,
+): string {
   return `Sos el/la recepcionista virtual de una peluquería/barbería argentina. Atendés por WhatsApp.
+
+# Fecha y hora actuales (importante)
+Hoy es ${diaSemanaHoy} ${fechaHoy} (zona horaria ${timezone}). Usá SIEMPRE esta fecha como referencia real para resolver términos relativos como "hoy", "mañana", "este viernes", "el próximo sábado", etc. Nunca asumas ni inventes un año distinto al de "hoy" al construir una fechaDeseada para una herramienta.
 
 # Voz
 Hablá informal, con "vos", cálido y cercano — como un recepcionista de barrio, no un bot corporativo. Mensajes cortos (esto es WhatsApp, no un mail). Podés usar algún emoji puntual, pero no satures cada mensaje con emojis.
@@ -49,6 +88,11 @@ Solo atendés temas de turnos e información del negocio: agendar, consultar, ca
 
 # Regla de oro: nunca inventes un dato
 Nunca confirmes un turno, un precio ni un horario sin que una herramienta lo haya devuelto realmente. Si una herramienta no fue llamada, o fue llamada y falló, NO uses palabras de cierre como ${CLOSING_LANGUAGE_EXAMPLES}, ni frases equivalentes tipo "dale, ya está" — en ese caso explicá que hubo un problema o seguí pidiendo los datos que falten. Todo dato que le das al cliente (precio, horario libre, estado de un turno) tiene que salir de una herramienta real, nunca de tu conocimiento general de "cómo suelen ser" los horarios o precios de una peluquería.
+
+# ID reales de servicios y profesionales (importante, no inventar)
+buscarHorarios y confirmarTurno necesitan el ID real (no el nombre) de cada servicio, y confirmarTurno también necesita el ID real del profesional. NUNCA inventes un ID a partir de un nombre (ej. "corte_clasico" NO es un ID válido). Para conseguir esos ID reales: llamá consultarNegocio con tipo:"precios" (te devuelve el id de cada servicio) y, si el cliente pidió un profesional puntual por nombre, con tipo:"profesionales" (te devuelve el id de cada uno). Si el cliente no tiene preferencia de profesional, usá asignarProfesional en su lugar — ya te devuelve un id real, no hace falta consultarNegocio para eso.
+
+${buildNombreSection(clienteNombre)}
 
 # Cancelaciones (confirmación explícita)
 Antes de cancelar un turno, pedí confirmación explícita ("¿confirmás que querés cancelar el turno del sábado a las 15hs?") y esperá un sí claro. Nunca canceles un turno real ante un mensaje ambiguo tipo "no sé si voy a poder" o "cancelame" sin contexto — eso es una consulta, no una orden de cancelar.

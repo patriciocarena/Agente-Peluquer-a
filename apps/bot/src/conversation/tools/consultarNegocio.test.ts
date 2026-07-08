@@ -26,6 +26,7 @@ type ServicioRow = Database["public"]["Tables"]["servicio"]["Row"];
 type HorarioRow = Database["public"]["Tables"]["horario_trabajo"]["Row"];
 type TurnoRow = Database["public"]["Tables"]["turno"]["Row"];
 type TurnoServicioRow = Database["public"]["Tables"]["turno_servicio"]["Row"];
+type ProfesionalRow = Database["public"]["Tables"]["profesional"]["Row"];
 
 const SERVICIOS: ServicioRow[] = [
   {
@@ -118,6 +119,25 @@ const TURNOS: TurnoRow[] = [
   },
 ];
 
+const PROFESIONALES: ProfesionalRow[] = [
+  {
+    id: PROFESIONAL_A_ID,
+    negocio_id: NEGOCIO_ID,
+    nombre: "Marcos",
+    activo: true,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: PROFESIONAL_B_ID,
+    negocio_id: NEGOCIO_ID,
+    nombre: "Ya no trabaja acá",
+    activo: false,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+];
+
 const TURNO_SERVICIOS: TurnoServicioRow[] = [
   {
     id: "ts1",
@@ -149,6 +169,7 @@ function fakeNegocioScoped(_negocioId: string): ReturnType<typeof realNegocioSco
     horariosTrabajo: async () => ({ data: HORARIOS, error: null }),
     turnos: async () => ({ data: TURNOS, error: null }),
     turnoServicios: async () => ({ data: TURNO_SERVICIOS, error: null }),
+    profesionales: async () => ({ data: PROFESIONALES, error: null }),
   } as unknown as ReturnType<typeof realNegocioScoped>;
 }
 
@@ -161,15 +182,30 @@ async function runExecute(
 }
 
 describe("consultarNegocioTool", () => {
-  it('tipo "precios" devuelve solo servicios activos con nombre/precio/duracion', async () => {
+  it('tipo "precios" devuelve solo servicios activos con id/nombre/precio/duracion', async () => {
     const t = consultarNegocioTool(NEGOCIO_ID, CLIENTE_A_ID, { negocioScoped: fakeNegocioScoped });
     const result = (await runExecute(t, { tipo: "precios" })) as {
       tipo: string;
-      servicios: { nombre: string; precio: number; duracionMin: number }[];
+      servicios: { id: string; nombre: string; precio: number; duracionMin: number }[];
     };
 
     expect(result.tipo).toBe("precios");
-    expect(result.servicios).toEqual([{ nombre: "Corte", precio: 6000, duracionMin: 30 }]);
+    // Bug B (bot-no-agenda-uuid-y-fecha.md): `id` real tiene que venir en la
+    // respuesta -- es lo que el modelo debe citar tal cual en servicioIds de
+    // buscarHorarios/confirmarTurno, nunca inventar un slug del nombre.
+    expect(result.servicios).toEqual([{ id: "s1", nombre: "Corte", precio: 6000, duracionMin: 30 }]);
+  });
+
+  it('tipo "profesionales" devuelve solo profesionales activos con id/nombre (Bug B, hallazgo adicional)', async () => {
+    const t = consultarNegocioTool(NEGOCIO_ID, CLIENTE_A_ID, { negocioScoped: fakeNegocioScoped });
+    const result = (await runExecute(t, { tipo: "profesionales" })) as {
+      tipo: string;
+      profesionales: { id: string; nombre: string }[];
+    };
+
+    expect(result.tipo).toBe("profesionales");
+    // PROFESIONAL_B_ID está inactivo en el fixture -- nunca debe aparecer.
+    expect(result.profesionales).toEqual([{ id: PROFESIONAL_A_ID, nombre: "Marcos" }]);
   });
 
   it('tipo "horarios_profesional" devuelve los bloques de ese profesional', async () => {
