@@ -60,7 +60,23 @@ skipped: 0
 
 ## Gaps
 
-[none — el "partial" del test 2 no es un bug: el gate actuó bien ante un slot ocupado; solo falta un re-test sobre slot libre]
+Hallazgos del smoke en vivo (Gemini 3.1 + DB real) — ninguno lo agarraron los 256 unit tests
+porque TODOS mockean negocioScoped y el modelo. Es exactamente lo que el testing en vivo destapa:
+
+- truth: "El bot propone disponibilidad REAL del motor, nunca inventada (D-12/BOT-03)"
+  status: FIXED (commit 3cc8d39)
+  bug: "Bug A — negocioScoped().negocio() filtraba por .eq('tenant_id', negocioId) pero negocioId es el id del negocio. Para todo negocio real (id != tenant_id) devolvía 0 filas → buildBotAvailabilityData tiraba 'no matching row' → buscarHorarios fallaba SIEMPRE. El modelo entonces INVENTABA horarios (alucinación que el gate D-12 no atrapa: solo vigila lenguaje de confirmación, no propuestas de horario). Corregido a .eq('id', negocioId)."
+  severity: blocker
+
+- truth: "El bot agenda un turno real (turno_id) conversando (BOT-01/04 — valor central)"
+  status: OPEN — bloquea el valor central de la fase
+  bug: "Bug B (diseño) — el modelo necesita los UUID reales de los servicios para llamar buscarHorarios/confirmarTurno (inputSchema exige uuidLike), pero NINGUNA tool se los da: consultarNegocio(precios) devuelve {nombre, precio} sin id. El modelo inventa slugs ('corte_clasico') → falla validación UUID → loop hasta stopWhen → no agenda nunca. Requiere decisión de diseño: (a) incluir el id del servicio en la respuesta de consultarNegocio + instruir al modelo a consultarlo primero, o (b) que buscarHorarios/confirmarTurno acepten nombres y resuelvan el id internamente. Interactúa con el dataset de evals y el system prompt."
+  severity: blocker
+
+- truth: "El bot razona sobre fechas relativas ('este viernes') con el 'hoy' correcto (D-02)"
+  status: OPEN (menor pero relacionado)
+  bug: "El modelo usó fechaDeseada '2025-07-25' (año equivocado, hoy es 2026-07) — el system prompt no le inyecta la fecha actual ni el timezone AR. Sin 'hoy' en contexto no puede resolver 'este viernes' correctamente."
+  severity: major
 
 ## Incidente de datos (transparencia)
 
