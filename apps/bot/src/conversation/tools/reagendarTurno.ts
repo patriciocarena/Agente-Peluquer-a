@@ -7,11 +7,18 @@
  *
  * `reagendarTurnoTool(negocioId, clienteId, deps?)` cierra sobre `negocioId`
  * (Pattern 1, D-13): el `inputSchema` de abajo NUNCA incluye `negocioId`.
- * `clienteId` se recibe en la factory para mantener la misma firma que el
- * resto de las tools de escritura (Pattern 1), aunque `reagendarTurno` no lo
- * necesita para scopear el UPDATE (`rescheduleAppointment` ya scopea por
- * `negocioId` + `turnoId` — mismo modelo de confianza que el dashboard, donde
- * el owner tampoco filtra por `cliente_id`).
+ *
+ * CR-03 (cross-client tampering): `rescheduleAppointment` en sí solo scopea
+ * por `negocioId` + `turnoId` (mismo modelo de confianza que el dashboard,
+ * donde el owner autenticado SÍ puede tocar cualquier turno del negocio). El
+ * actor de esta tool es un cliente anónimo de WhatsApp que solo debe poder
+ * tocar SU PROPIO turno — un `turnoId` ajeno no debe poder reagendarse. Por
+ * eso `execute` verifica ownership (`turno.cliente_id === clienteId`) sobre
+ * las filas ya-scopeadas por negocio de `negocioScoped(negocioId).turnos()`
+ * ANTES de llamar al motor, devolviendo el mismo `GENERIC_ERROR_COPY` que un
+ * error real si no existe o pertenece a otro cliente (no distingue los dos
+ * casos en el mensaje — evita confirmar/negar la existencia de turnos
+ * ajenos).
  *
  * `execute` trae los `serviceIds` del turno vía
  * `negocioScoped(negocioId).turnoServicios()` (los servicios NO cambian al
@@ -94,15 +101,27 @@ export function reagendarTurnoTool(
   clienteId: string,
   deps: ReagendarTurnoDeps = defaultDeps,
 ) {
-  void clienteId; // reservado para paridad de firma con las demás tools de escritura (Pattern 1).
   return tool({
     description:
       "Reagenda (mueve) un turno EXISTENTE del cliente actual a un nuevo profesional/horario. Devuelve el mismo turno_id, nunca uno nuevo — un reagendado nunca crea un turno adicional.",
     inputSchema: reagendarTurnoInputSchema,
     execute: async (input: ReagendarTurnoInput): Promise<ReagendarTurnoResult> => {
       const db = deps.negocioScoped(negocioId);
-      const { data: turnoServiciosData } = await db.turnoServicios();
-      const serviceIds = (turnoServiciosData ?? [])
+      const [turnosRes, turnoServiciosRes] = await Promise.all([db.turnos(), db.turnoServicios()]);
+
+      // CR-03: ownership check ANTES de tocar el motor de escritura —
+      // rescheduleAppointment solo scopea por negocioId+turnoId (igual que
+      // el dashboard, cuyo actor SÍ es un owner autenticado); este actor es
+      // un cliente anónimo de WhatsApp que solo puede tocar su propio turno.
+      const turnoPropio = (turnosRes.data ?? []).find(
+        (turno) => turno.id === input.turnoId && turno.cliente_id === clienteId,
+      );
+      if (!turnoPropio) {
+        // No distinguir "no existe" de "no es tuyo" en el mensaje (no leak).
+        return { ok: false, mensaje: GENERIC_ERROR_COPY };
+      }
+
+      const serviceIds = (turnoServiciosRes.data ?? [])
         .filter((ts) => ts.turno_id === input.turnoId)
         .map((ts) => ts.servicio_id);
 

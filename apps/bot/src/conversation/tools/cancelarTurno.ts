@@ -8,19 +8,20 @@
  *
  * `cancelarTurnoTool(negocioId, clienteId, deps?)` cierra sobre `negocioId`
  * (Pattern 1, D-13): el `inputSchema` de abajo NUNCA incluye `negocioId`.
- * `clienteId` se recibe para mantener la misma firma que las demás tools de
- * escritura (Pattern 1); el scoping real de la cancelación lo hace
- * `cancelAppointment` con `negocioId` + `turnoId` (mismo modelo de confianza
- * que `cancelarTurno` del dashboard, T-06-13).
  *
- * La confirmación explícita antes de cancelar (D-08: "¿confirmás que querés
- * cancelar tu turno?") es responsabilidad del system prompt + el gate del
- * responder (plan 06-05) — esta tool SOLO ejecuta la cancelación una vez que
- * el modelo decide llamarla.
- *
- * `already_cancelled` se mapea a un mensaje BENIGNO de éxito (idempotente,
- * consistente con `cancelarTurno` del dashboard, plan 06-01) — NUNCA a un
- * error duro.
+ * CR-03 (cross-client tampering): `cancelAppointment` en sí solo scopea por
+ * `negocioId` + `turnoId` (mismo modelo de confianza que el dashboard, donde
+ * el owner autenticado SÍ puede tocar cualquier turno del negocio). El actor
+ * de esta tool, en cambio, es un cliente anónimo de WhatsApp que solo debe
+ * poder tocar SU PROPIO turno — un `turnoId` ajeno (pegado por el cliente,
+ * o inducido por prompt-injection) no debe poder cancelarse. Por eso, ANTES
+ * de delegar en `cancelAppointment`, esta tool verifica ownership leyendo el
+ * turno vía `negocioScoped(negocioId).turnos()` (mismo patrón de
+ * post-fetch-filter que `consultarNegocio.ts#estado_turno`, T-06-07) y
+ * confirmando `turno.cliente_id === clienteId`. Si no existe o pertenece a
+ * otro cliente, se devuelve el mismo `GENERIC_ERROR_COPY` que un error real
+ * — nunca se distingue "no existe" de "no es tuyo" en el mensaje (evita
+ * confirmar/negar la existencia de turnos ajenos).
  */
 import { cancelAppointment, uuidLike } from "@turnosbot/availability-engine";
 import type { CancelAppointmentResult } from "@turnosbot/availability-engine";
@@ -28,6 +29,7 @@ import { tool } from "ai";
 import { z } from "zod";
 
 import { supabaseAdmin } from "../../db/client.js";
+import { negocioScoped as realNegocioScoped } from "../../db/negocioScoped.js";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@turnosbot/db-types";
@@ -67,34 +69,49 @@ function mapCancelAppointmentResult(result: CancelAppointmentResult): CancelarTu
   }
 }
 
-/** Deps inyectables (Pattern 3): `cancelAppointment` y el cliente Supabase
- * service_role reales por defecto, sustituibles en tests por mocks
- * deterministas sin DB real ni Gemini. */
+/** Deps inyectables (Pattern 3): `cancelAppointment`, `negocioScoped` y el
+ * cliente Supabase service_role reales por defecto, sustituibles en tests
+ * por mocks deterministas sin DB real ni Gemini. */
 export interface CancelarTurnoDeps {
   cancelAppointment: typeof cancelAppointment;
+  negocioScoped: typeof realNegocioScoped;
   supabase: SupabaseClient<Database>;
 }
 
 const defaultDeps: CancelarTurnoDeps = {
   cancelAppointment,
+  negocioScoped: realNegocioScoped,
   supabase: supabaseAdmin,
 };
 
 /**
  * cancelarTurnoTool(negocioId, clienteId, deps?) — factory que devuelve la
- * tool `cancelarTurno` del AI SDK, cerrada sobre `negocioId` (D-13).
+ * tool `cancelarTurno` del AI SDK, cerrada sobre `negocioId` (D-13) Y
+ * `clienteId` (CR-03: ownership check antes de delegar en el motor).
  */
 export function cancelarTurnoTool(
   negocioId: string,
   clienteId: string,
   deps: CancelarTurnoDeps = defaultDeps,
 ) {
-  void clienteId; // reservado para paridad de firma con las demás tools de escritura (Pattern 1).
   return tool({
     description:
       "Cancela un turno EXISTENTE del cliente actual. SOLO llamar después de que el cliente confirmó explícitamente que quiere cancelar — nunca cancelar por una mención ambigua o implícita.",
     inputSchema: cancelarTurnoInputSchema,
     execute: async (input: CancelarTurnoInput): Promise<CancelarTurnoResult> => {
+      // CR-03: ownership check ANTES de tocar el motor de escritura —
+      // cancelAppointment solo scopea por negocioId+turnoId (igual que el
+      // dashboard, cuyo actor SÍ es un owner autenticado); este actor es un
+      // cliente anónimo de WhatsApp que solo puede tocar su propio turno.
+      const { data: turnos } = await deps.negocioScoped(negocioId).turnos();
+      const turnoPropio = (turnos ?? []).find(
+        (turno) => turno.id === input.turnoId && turno.cliente_id === clienteId,
+      );
+      if (!turnoPropio) {
+        // No distinguir "no existe" de "no es tuyo" en el mensaje (no leak).
+        return { ok: false, mensaje: GENERIC_ERROR_COPY };
+      }
+
       // Delegación 100% en la función de dominio compartida (T-06-13):
       // PROHIBIDO un UPDATE inline que marque el turno como cancelado acá.
       const result = await deps.cancelAppointment(
