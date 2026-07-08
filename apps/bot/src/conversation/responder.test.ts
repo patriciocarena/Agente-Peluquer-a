@@ -224,7 +224,7 @@ describe("responder — tool-loop + gate D-12 + persistencia", () => {
     expect((patch as { context: { needsHuman: boolean } }).context.needsHuman).toBe(true);
   });
 
-  it("persiste result.response.messages + needsHuman vía serializeConversationContext/updateConversacion", async () => {
+  it("persiste [...history, userMessage, ...result.response.messages] + needsHuman vía serializeConversationContext/updateConversacion (Gap 1 — memoria multi-turno)", async () => {
     const history = [{ role: "user" as const, content: "hola" }];
     const conversacion = makeConversacion({ context: { messages: history, needsHuman: false } });
     const responseMessages = [{ role: "assistant", content: "¿qué servicio querés?" }];
@@ -235,11 +235,53 @@ describe("responder — tool-loop + gate D-12 + persistencia", () => {
 
     expect(spies.negocioScoped).toHaveBeenCalledWith(NEGOCIO_ID);
     expect(spies.updateConversacion).toHaveBeenCalledWith(CONVERSACION_ID, {
-      context: { messages: [...history, ...responseMessages], needsHuman: false },
+      context: {
+        messages: [...history, { role: "user", content: "hola de nuevo" }, ...responseMessages],
+        needsHuman: false,
+      },
     });
   });
 
-  it("un error de generateText (p.ej. NoSuchToolError) no se narra como éxito — mensaje seguro + needsHuman=true", async () => {
+  it("Gap 1 — round-trip: un mensaje user del turno N sobrevive en el history que recibe generateText en el turno N+1", async () => {
+    // Turno 1: context vacío, el cliente dice algo, el modelo responde.
+    const turno1ResponseMessages = [{ role: "assistant", content: "¿para qué día?" }];
+    const turno1Result = fakeResult({
+      text: "¿para qué día?",
+      steps: [],
+      responseMessages: turno1ResponseMessages,
+    });
+    const { deps: deps1, spies: spies1 } = buildDeps({ result: turno1Result });
+
+    await responder(makeConversacion({ context: {} }), "quiero un corte", deps1);
+
+    const [, patchTurno1] = spies1.updateConversacion.mock.calls[0]!;
+    const persistedContextTurno1 = (patchTurno1 as { context: unknown }).context;
+
+    // Turno 2: se alimenta el context persistido por el turno 1.
+    const turno2ResponseMessages = [{ role: "assistant", content: "dale, ¿y a qué hora?" }];
+    const turno2Result = fakeResult({
+      text: "dale, ¿y a qué hora?",
+      steps: [],
+      responseMessages: turno2ResponseMessages,
+    });
+    const { deps: deps2, spies: spies2 } = buildDeps({ result: turno2Result });
+    const conversacionTurno2 = makeConversacion({ context: persistedContextTurno1 });
+
+    await responder(conversacionTurno2, "mañana", deps2);
+
+    const callArgsTurno2 = spies2.generateText.mock.calls[0]?.[0];
+    // SIN el fix, este history de turno 2 no tiene ningún role:"user" previo
+    // (solo lo que el modelo generó en el turno 1) — el modelo nunca ve lo
+    // que el cliente dijo ("quiero un corte").
+    expect(callArgsTurno2.messages).toContainEqual({ role: "user", content: "quiero un corte" });
+    expect(callArgsTurno2.messages).toEqual([
+      { role: "user", content: "quiero un corte" },
+      ...turno1ResponseMessages,
+      { role: "user", content: "mañana" },
+    ]);
+  });
+
+  it("un error de generateText (p.ej. NoSuchToolError) no se narra como éxito — mensaje seguro + needsHuman=true, y el mensaje del cliente que disparó el error también se persiste", async () => {
     const { NoSuchToolError } = await import("ai");
     const { deps, spies } = buildDeps({
       generateTextImpl: async () => {
@@ -252,6 +294,8 @@ describe("responder — tool-loop + gate D-12 + persistencia", () => {
     expect(reply).toBe(SAFE_FALLBACK_MESSAGE);
     const [, patch] = spies.updateConversacion.mock.calls[0]!;
     expect((patch as { context: { needsHuman: boolean } }).context.needsHuman).toBe(true);
+    const persistedMessages = (patch as { context: { messages: unknown[] } }).context.messages;
+    expect(persistedMessages).toContainEqual({ role: "user", content: "hola" });
     expect(spies.log).toHaveBeenCalledWith(
       expect.objectContaining({ negocioId: NEGOCIO_ID }),
       expect.stringContaining("NoSuchToolError"),
