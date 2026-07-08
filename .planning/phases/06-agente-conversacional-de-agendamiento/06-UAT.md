@@ -8,19 +8,18 @@ updated: 2026-07-08T01:21:06Z
 
 ## Current Test
 
-number: 1
-name: Dashboard — cancelar un turno sigue funcionando
+number: —
+name: (todos verificados)
 expected: |
-  En el dashboard (grilla de turnos), cancelar un turno existente lo pasa a estado
-  "cancelado" sin error. Cancelar uno ya cancelado no rompe (mensaje benigno / idempotente).
-  Esto valida que la migración de cancelarTurno al motor compartido (06-01) no rompió el dashboard.
-awaiting: user response
+  UAT de la Fase 6 COMPLETO — 7/7 tests pass (test 7 con nota de diseño sobre handoff).
+awaiting: nada — fase lista para verificación de goal / cierre.
 
 ## Tests
 
 ### 1. Dashboard — cancelar un turno sigue funcionando
 expected: Cancelar un turno desde la grilla lo pasa a "cancelado" sin error; cancelar uno ya cancelado es idempotente (no rompe).
-result: [pending]
+result: pass
+note: "Verificado EN VIVO en el navegador (2026-07-08, dashboard :5202, owner-norte, Barbería Norte): abrir el turno de las 12:30 (Cliente Norte, Corte clásico) → 'Cancelar turno' → alertdialog de confirmación explícita ('¿Seguro que querés cancelar este turno?') → 'Confirmar' → el turno desaparece de la grilla (slot 12:30 libre), CERO errores de consola. DB confirma f76a0a86 → estado 'cancelado'. Valida que la migración de cancelarTurno al motor compartido (06-01) no rompió el dashboard. Idempotencia: una vez cancelado el turno no se muestra más en la grilla, así que la UI no expone un doble-cancel — la benignidad de re-cancelar está cubierta a nivel dominio (cancelAppointment→already_cancelled) + los 58 tests del dashboard."
 
 ### 2. Bot — agendar un turno real por WhatsApp
 expected: Un cliente escribe en lenguaje natural (ej. "quiero corte y barba el sábado a la tarde"), el bot propone horarios reales, negocia día/hora, y confirma SOLO cuando existe un turno_id real. El turno aparece en la grilla del dashboard.
@@ -55,12 +54,12 @@ note: "Verificado EN VIVO (2026-07-08): ante una queja fuerte ('esto es un desas
 ## Summary
 
 total: 7
-passed: 6
+passed: 7
 partial: 0
 issues: 0
-pending: 1
+pending: 0
 skipped: 0
-note: "Solo resta test 1 (cancelar turno desde la grilla del dashboard) — verificación en navegador, a cargo de Patricio. Tests 2-7 verificados EN VIVO (Gemini 3.1 + DB real). Test 7 pass con nota de diseño (handoff por queja: mensaje D-06 OK; flip de needsHuman deliberadamente fuera del control del modelo, D-11 — limitación conocida para trabajo futuro)."
+note: "UAT Fase 6 COMPLETO — 7/7 pass. Tests 1 (grilla dashboard, navegador) y 2-7 (bot, Gemini 3.1 + DB real) verificados EN VIVO 2026-07-08. Test 7 pass con nota de diseño (handoff por queja: mensaje D-06 OK; flip de needsHuman deliberadamente fuera del control del modelo, D-11 — 'deja de auto-responder ante quejas' es limitación conocida para trabajo futuro, no bug de Fase 6)."
 
 ## Gaps
 
