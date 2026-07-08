@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 06-agente-conversacional-de-agendamiento
 source: [06-01-SUMMARY.md, 06-02-SUMMARY.md, 06-03-SUMMARY.md, 06-04-SUMMARY.md, 06-05-SUMMARY.md, 06-06-SUMMARY.md]
 started: 2026-07-08T16:58:23Z
@@ -156,13 +156,29 @@ blocked: 2
   reason: "responder.ts no persiste los mensajes role:user en conversacion.context.messages — solo persiste result.response.messages (assistant/tool). El modelo nunca ve lo que el cliente dijo en turnos anteriores, entra en loop pidiendo los mismos datos."
   severity: blocker
   test: 2
-  artifacts: ["apps/bot/src/conversation/responder.ts"]
-  missing: ["Incluir { role: \"user\", content: mensajeEntrante } al construir messagesToPersist / newContext.messages antes de persistir"]
+  root_cause: "apps/bot/src/conversation/responder.ts::responder() persiste el historial usando solo result.response.messages (AI SDK v7), que por contrato documentado son SOLO los mensajes generados por el modelo en esa llamada (assistant + tool-call/tool-result) — nunca un echo del input. El mensaje del cliente de este turno ({ role: \"user\", content: mensajeEntrante }, línea ~195) nunca se agrega a lo que se persiste, ni en el camino feliz (líneas 246, 264, 267-270) ni en el camino de error (línea 220). Cada turno futuro el historial solo tiene mensajes assistant/tool pasados + el mensaje actual del cliente — nunca los mensajes pasados del cliente."
+  artifacts:
+    - path: "apps/bot/src/conversation/responder.ts"
+      issue: "Camino feliz (líneas 246, 264, 267-270) y camino de error (línea 220) omiten { role: \"user\", content: mensajeEntrante } al construir messagesToPersist/newContext.messages"
+    - path: "apps/bot/src/conversation/responder.test.ts"
+      issue: "Los tests existentes (línea ~227-240) afirman el contrato con bug como correcto — hay que reescribirlos, no solo re-correrlos"
+  missing:
+    - "Incluir { role: \"user\", content: mensajeEntrante } en el array persistido, en AMBOS caminos (feliz y error), antes de messagesToPersist/result.response.messages"
+    - "Test de round-trip: un mensaje user del turno N debe sobrevivir en el history que recibe generateText en el turno N+1"
+  debug_session: .planning/debug/responder-history-drops-user-messages.md
 
 - truth: "El bot responde con texto al cliente después de usar una herramienta de consulta (ej. precios)."
   status: failed
   reason: "Tras un tool-call exitoso de consultarNegocio, el segundo step de generateText devuelve finishReason:stop con text vacío — el bot obtiene el dato pero no lo comunica. Reproducido 2/2 veces."
   severity: blocker
   test: 3
-  artifacts: ["apps/bot/src/conversation/responder.ts", "apps/bot/src/conversation/systemPrompt.ts"]
-  missing: ["Instrucción explícita en el system prompt para siempre responder en texto tras un tool-call", "Posible ajuste de stopWhen/step handling — requiere diagnóstico adicional"]
+  root_cause: "Causa de dos capas. (1) Externa/no controlable: Gemini 2.5 Flash-Lite tiene un comportamiento documentado y no-determinista donde, tras un function-call exitoso, a veces termina el turno con finishReason:\"stop\" y texto vacío en vez de narrar el resultado — reportado independientemente en el foro de Google AI Developers, Vercel AI SDK, LangChain.js (#8589), Genkit (#3513), Goose (#6293); no es un bug de @ai-sdk/google ni de responder.ts. (2) Agravante bajo control del proyecto: systemPrompt.ts no tiene NINGUNA instrucción positiva tipo \"después de usar una tool de consulta, siempre respondé en texto resumiendo el resultado\" — solo negativos (D-12, qué no inventar). Se descartó explícitamente la hipótesis de thoughtSignature (grep de todo el repo: cero ocurrencias del literal en código o .planning/; además estructuralmente imposible porque el bug ocurre DENTRO de una sola llamada a generateText, antes de cualquier persistencia). Gap secundario: responder.ts no tiene manejo defensivo para \"tool-result exitoso pero result.text vacío\" — hoy ese vacío se envía tal cual al cliente."
+  artifacts:
+    - path: "apps/bot/src/conversation/systemPrompt.ts"
+      issue: "Falta instrucción positiva explícita que exija narración en texto tras un tool-result exitoso de una tool de lectura"
+    - path: "apps/bot/src/conversation/responder.ts"
+      issue: "finalText = result.text se usa sin fallback para el caso tool-result exitoso + texto vacío"
+  missing:
+    - "Agregar regla positiva al system prompt: siempre responder en texto tras un tool-result exitoso de consulta"
+    - "Guard de código en responder.ts para detectar tool-result exitoso + result.text vacío, y no enviar una respuesta en blanco al cliente (reintento acotado o mensaje seguro de fallback)"
+  debug_session: .planning/debug/responder-empty-text-after-tool-call.md
