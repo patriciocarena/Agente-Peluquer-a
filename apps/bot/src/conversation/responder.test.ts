@@ -133,6 +133,54 @@ describe("responder — tool-loop + gate D-12 + persistencia", () => {
     expect((patch as { context: { needsHuman: boolean } }).context.needsHuman).toBe(true);
   });
 
+  it("CR-02: cuando el gate D-12 dispara, el historial persistido guarda finalText, NUNCA el texto fantasma crudo", async () => {
+    const phantomText = `listo, ${CLOSING_LANGUAGE_LEXICON[2]} el sábado`;
+    const result = fakeResult({
+      text: phantomText,
+      steps: [],
+      responseMessages: [
+        { role: "assistant", content: phantomText },
+      ],
+    });
+    const { deps, spies } = buildDeps({ result });
+
+    const reply = await responder(makeConversacion(), "confirmame el turno", deps);
+
+    expect(reply).toBe(SAFE_FALLBACK_MESSAGE);
+    const [, patch] = spies.updateConversacion.mock.calls[0]!;
+    const persistedMessages = (patch as { context: { messages: unknown[] } }).context.messages;
+    // El último mensaje persistido debe llevar el mensaje seguro, no el texto
+    // fantasma crudo del modelo -- si no, el propio contexto del modelo en
+    // el próximo turno afirmaría una confirmación que el gate bloqueó.
+    expect(persistedMessages).toContainEqual({ role: "assistant", content: SAFE_FALLBACK_MESSAGE });
+    expect(persistedMessages).not.toContainEqual({ role: "assistant", content: phantomText });
+  });
+
+  it("CR-02: preserva tool-call/tool-result parts del último mensaje assistant al sustituir el texto (content en forma de array)", async () => {
+    const phantomText = `listo, ${CLOSING_LANGUAGE_LEXICON[2]} el sábado`;
+    const toolCallPart = { type: "tool-call", toolCallId: "call_1", toolName: "confirmarTurno", input: {} };
+    const result = fakeResult({
+      text: phantomText,
+      steps: [],
+      responseMessages: [
+        { role: "assistant", content: [{ type: "text", text: phantomText }, toolCallPart] },
+      ],
+    });
+    const { deps, spies } = buildDeps({ result });
+
+    await responder(makeConversacion(), "confirmame el turno", deps);
+
+    const [, patch] = spies.updateConversacion.mock.calls[0]!;
+    const persistedMessages = (patch as { context: { messages: unknown[] } }).context.messages;
+    const lastMessage = persistedMessages[persistedMessages.length - 1] as {
+      role: string;
+      content: Array<{ type: string; text?: string }>;
+    };
+    expect(lastMessage.content).toContainEqual(toolCallPart);
+    expect(lastMessage.content).toContainEqual({ type: "text", text: SAFE_FALLBACK_MESSAGE });
+    expect(lastMessage.content.some((part) => part.type === "text" && part.text === phantomText)).toBe(false);
+  });
+
   it("gate D-12: lenguaje de cierre CON turno_id real (confirmarTurno ok) -> texto permitido, needsHuman=false", async () => {
     const step = stepWithConfirmarTurno({ ok: true, turnoId: TURNO_ID_REAL, precioTotal: 5000 });
     const result = fakeResult({

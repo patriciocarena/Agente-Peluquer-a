@@ -20,16 +20,22 @@
  *   4. Gate D-12 (en código, Pitfall 3): el léxico de cierre viene de
  *      `closingLanguage.ts` (fuente única, nunca redeclarado acá). Si el
  *      texto del modelo suena a confirmación pero `result.steps` no tiene un
- *      `confirmarTurno`/`reagendarTurno` exitoso con `turno_id` real, se
- *      sustituye por un mensaje seguro Y se marca `needsHuman = true`. El
+ *      `confirmarTurno`/`reagendarTurno` exitoso con `turno_id` real NI un
+ *      `cancelarTurno` exitoso (CR-01 — cancelar no tiene id que alucinar),
+ *      se sustituye por un mensaje seguro Y se marca `needsHuman = true`. El
  *      mensaje seguro se envía ESTE turno (es el `Promise<string>` que este
  *      turno devuelve) — `needsHuman` se persiste para que el PRÓXIMO inbound
  *      de este hilo lo salte (D-11, lo ejecuta `inboundWorker.ts`, plan
  *      06-05 Task 2), nunca para suprimir la respuesta actual.
- *   5. Persistir `{ messages: [...history, ...result.response.messages],
- *      needsHuman }` en `conversacion.context` vía `negocioScoped(negocioId)
+ *   5. Persistir `{ messages: [...history, ...messagesToPersist], needsHuman }`
+ *      en `conversacion.context` vía `negocioScoped(negocioId)
  *      .updateConversacion` — el único colaborador de escritura, inyectable
- *      (Pattern 3 de 06-PATTERNS.md).
+ *      (Pattern 3 de 06-PATTERNS.md). `messagesToPersist` es
+ *      `result.response.messages` SALVO que el gate haya disparado (CR-02):
+ *      en ese caso se sustituye el texto del último mensaje `assistant` por
+ *      el mensaje seguro (`replaceLastAssistantText`) antes de persistir —
+ *      el historial que el modelo lee el PRÓXIMO turno nunca debe afirmar una
+ *      confirmación fantasma que este mismo gate acaba de bloquear.
  *
  * `generateText` se envuelve en try/catch: `NoSuchToolError`/
  * `InvalidToolInputError` se loguean distinto de un error genérico — un
@@ -138,6 +144,42 @@ function extractRealTurnoId(steps: ResponderGenerateTextResult["steps"]): string
   return null;
 }
 
+/**
+ * replaceLastAssistantText(messages, finalText) — CR-02: cuando el gate D-12
+ * dispara, `finalText` (el mensaje seguro) es lo que se envía ESTE turno,
+ * pero `result.response.messages` (crudo del AI SDK) seguía persistiéndose
+ * tal cual en `conversacion.context.messages` — el propio historial que el
+ * modelo lee en el PRÓXIMO turno terminaba afirmando una confirmación
+ * fantasma que el gate acababa de bloquear. Reemplaza el contenido de texto
+ * del ÚLTIMO mensaje `assistant` por `finalText`, preservando intactos
+ * cualquier tool-call/tool-result part (esos SÍ reflejan la realidad —
+ * ok:false o ninguna tool confirmante — y son contexto útil).
+ */
+function replaceLastAssistantText(
+  messages: ResponderGenerateTextResult["response"]["messages"],
+  finalText: string,
+): ResponderGenerateTextResult["response"]["messages"] {
+  let lastAssistantIndex = -1;
+  messages.forEach((message, index) => {
+    if (message.role === "assistant") lastAssistantIndex = index;
+  });
+  if (lastAssistantIndex === -1) return messages;
+
+  return messages.map((message, index) => {
+    if (index !== lastAssistantIndex || message.role !== "assistant") return message;
+
+    if (typeof message.content === "string") {
+      return { ...message, content: finalText };
+    }
+
+    const nonTextParts = message.content.filter((part) => part.type !== "text");
+    return {
+      ...message,
+      content: [{ type: "text" as const, text: finalText }, ...nonTextParts],
+    };
+  });
+}
+
 export async function responder(conversacion: Tables<"conversacion">, mensajeEntrante: string, deps: ResponderDeps = defaultDeps): Promise<string> {
   const negocioId = conversacion.negocio_id;
   const clienteId = conversacion.cliente_id;
@@ -201,6 +243,7 @@ export async function responder(conversacion: Tables<"conversacion">, mensajeEnt
 
   let finalText = result.text;
   let needsHuman = false;
+  let messagesToPersist = result.response.messages;
 
   if (closingLanguageDetected && !turnoIdReal && !cancelacionExitosa) {
     // Gate D-12 (T-06-16): lenguaje de cierre SIN turno_id real Y SIN una
@@ -214,10 +257,15 @@ export async function responder(conversacion: Tables<"conversacion">, mensajeEnt
     );
     finalText = SAFE_FALLBACK_MESSAGE;
     needsHuman = true;
+    // CR-02: el historial persistido (lo que el modelo lee el PRÓXIMO turno)
+    // debe reflejar finalText, NUNCA el texto crudo/fantasma de result.text —
+    // si no, el propio contexto del modelo termina afirmando una
+    // confirmación que el gate acaba de bloquear.
+    messagesToPersist = replaceLastAssistantText(result.response.messages, finalText);
   }
 
   const newContext = serializeConversationContext({
-    messages: [...history, ...result.response.messages],
+    messages: [...history, ...messagesToPersist],
     needsHuman,
   });
 
