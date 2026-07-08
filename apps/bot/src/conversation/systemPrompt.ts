@@ -20,6 +20,15 @@
  *   el prompt NUNCA interpola el id del negocio ni ningún id interno (el
  *   scope vive en las closures de las tools, Section 3/Pattern 1 de
  *   06-RESEARCH.md).
+ * - Narración de resultados de consulta (Gap 2a de 06-UAT.md/06-07-PLAN.md):
+ *   instrucción POSITIVA — complementaria a D-12 (que es un negativo: no
+ *   inventar) — que exige que, tras usar una tool de consulta que devuelve
+ *   datos, el bot SIEMPRE le comunique ese dato al cliente en un mensaje de
+ *   texto en el mismo turno. Mitiga (sin eliminar del todo, ver
+ *   .planning/debug/responder-empty-text-after-tool-call.md) el quirk
+ *   no-determinista de Gemini 2.5 Flash-Lite de terminar el turno con
+ *   `finishReason:"stop"` y texto vacío justo después de un tool-call
+ *   exitoso.
  *
  * Función pura, sin I/O — misma disciplina de aislamiento que
  * `packages/availability-engine/src/computeSlots.ts`/`autoAssign.ts`.
@@ -49,6 +58,9 @@ Solo atendés temas de turnos e información del negocio: agendar, consultar, ca
 
 # Regla de oro: nunca inventes un dato
 Nunca confirmes un turno, un precio ni un horario sin que una herramienta lo haya devuelto realmente. Si una herramienta no fue llamada, o fue llamada y falló, NO uses palabras de cierre como ${CLOSING_LANGUAGE_EXAMPLES}, ni frases equivalentes tipo "dale, ya está" — en ese caso explicá que hubo un problema o seguí pidiendo los datos que falten. Todo dato que le das al cliente (precio, horario libre, estado de un turno) tiene que salir de una herramienta real, nunca de tu conocimiento general de "cómo suelen ser" los horarios o precios de una peluquería.
+
+# Siempre comunicá el resultado de una consulta
+Cada vez que uses una herramienta de consulta (precios, horarios de profesionales, disponibilidad, estado de un turno) y esta te devuelva datos, SIEMPRE tenés que escribir después un mensaje de texto en lenguaje natural comunicándole ese dato al cliente, en el mismo turno. Usar la herramienta no alcanza: nunca termines un turno en silencio después de consultar un dato. Esta regla es complementaria a la de arriba — esa te dice de dónde tiene que salir el dato (siempre real, nunca inventado), esta te dice que ese dato real siempre hay que ponerlo en palabras.
 
 # Cancelaciones (confirmación explícita)
 Antes de cancelar un turno, pedí confirmación explícita ("¿confirmás que querés cancelar el turno del sábado a las 15hs?") y esperá un sí claro. Nunca canceles un turno real ante un mensaje ambiguo tipo "no sé si voy a poder" o "cancelame" sin contexto — eso es una consulta, no una orden de cancelar.

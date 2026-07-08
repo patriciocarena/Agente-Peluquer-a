@@ -144,6 +144,28 @@ function extractRealTurnoId(steps: ResponderGenerateTextResult["steps"]): string
   return null;
 }
 
+/** Gap 2b (texto vacío tras tool-result, T-06-07-04): mensaje sintético de
+ * continuación usado SOLO en el reintento de generateText — nunca se
+ * persiste como si el cliente lo hubiera dicho (se descarta del
+ * `messagesToPersist` final si el reintento produce texto). */
+const EMPTY_TEXT_RETRY_NUDGE = {
+  role: "user" as const,
+  content:
+    "Contame en un mensaje de texto el resultado que la herramienta ya te devolvió, para pasárselo al cliente.",
+};
+
+/**
+ * hadToolResult(steps) — true si algún step de `result.steps` tiene al
+ * menos un `toolResults` no vacío. Dispara ante CUALQUIER tool-result
+ * (consulta o escritura) — el guard de empty-text (Gap 2b) reintenta en
+ * ambos casos, pero el reintento SIEMPRE va con `tools: {}` (ver
+ * T-06-07-04), así que un tool-result de escritura exitosa no puede
+ * derivar en una segunda escritura durante el reintento.
+ */
+function hadToolResult(steps: ResponderGenerateTextResult["steps"]): boolean {
+  return steps.some((step) => (step.toolResults?.length ?? 0) > 0);
+}
+
 /**
  * replaceLastAssistantText(messages, finalText) — CR-02: cuando el gate D-12
  * dispara, `finalText` (el mensaje seguro) es lo que se envía ESTE turno,
@@ -185,6 +207,15 @@ export async function responder(conversacion: Tables<"conversacion">, mensajeEnt
   const clienteId = conversacion.cliente_id;
   const { messages: history } = parseConversationContext(conversacion.context);
 
+  // Gap 1 (memoria multi-turno): única fuente del mensaje del cliente de
+  // ESTE turno, reutilizada en la llamada a generateText Y en los 3 lugares
+  // donde se persiste conversacion.context.messages (camino feliz y de
+  // error) — `result.response.messages` (AI SDK v7) NUNCA incluye un echo
+  // del input, así que sin este objeto el mensaje del cliente se perdía y
+  // el modelo nunca veía turnos previos del cliente (.planning/debug/
+  // responder-history-drops-user-messages.md).
+  const userMessage = { role: "user" as const, content: mensajeEntrante };
+
   const tools = deps.buildTools(negocioId, clienteId);
 
   let result: ResponderGenerateTextResult;
@@ -192,7 +223,7 @@ export async function responder(conversacion: Tables<"conversacion">, mensajeEnt
     result = await deps.generateText({
       model: deps.model,
       system: buildSystemPrompt(),
-      messages: [...history, { role: "user", content: mensajeEntrante }],
+      messages: [...history, userMessage],
       stopWhen: isStepCount(6),
       temperature: 0.3,
       maxOutputTokens: 512,
@@ -217,7 +248,10 @@ export async function responder(conversacion: Tables<"conversacion">, mensajeEnt
       deps.log({ negocioId, conversacionId: conversacion.id, err }, "Error inesperado en generateText");
     }
 
-    const newContext = serializeConversationContext({ messages: history, needsHuman: true });
+    // Gap 1: el mensaje que disparó el error también sobrevive en el
+    // history — de lo contrario el propio input que causó el error se
+    // pierde y el próximo turno el modelo no sabe qué se le pidió.
+    const newContext = serializeConversationContext({ messages: [...history, userMessage], needsHuman: true });
     const { error: persistError } = await deps
       .negocioScoped(negocioId)
       .updateConversacion(conversacion.id, { context: newContext as unknown as Json });
@@ -264,8 +298,56 @@ export async function responder(conversacion: Tables<"conversacion">, mensajeEnt
     messagesToPersist = replaceLastAssistantText(result.response.messages, finalText);
   }
 
+  if (finalText.trim() === "" && hadToolResult(result.steps)) {
+    // Gap 2b (T-06-07-02/04): texto vacío tras un tool-result evade el gate
+    // D-12 (`hasClosingLanguage("")` es falso), así que este camino es real
+    // y alcanzable incluso tras una escritura exitosa. Reintenta UNA vez
+    // priorizando narrar el dato/resultado real ya obtenido, SIEMPRE con
+    // `tools: {}` — el modelo no tiene acceso a NINGUNA tool durante el
+    // reintento, así que es estructuralmente imposible una segunda
+    // ejecución de confirmarTurno/reagendarTurno/cancelarTurno (nada de
+    // doble-booking / reagenda / cancelación duplicada contra la DB real).
+    deps.log(
+      { negocioId, conversacionId: conversacion.id },
+      "Guard de empty-text: result.text vacío tras un tool-result — reintentando una vez con tools:{}",
+    );
+    try {
+      const retry = await deps.generateText({
+        model: deps.model,
+        system: buildSystemPrompt(),
+        messages: [...history, userMessage, ...result.response.messages, EMPTY_TEXT_RETRY_NUDGE],
+        stopWhen: isStepCount(6),
+        temperature: 0.3,
+        maxOutputTokens: 512,
+        maxRetries: 3,
+        tools: {},
+      });
+
+      if (retry.text.trim() !== "") {
+        finalText = retry.text;
+        // El nudge sintético NUNCA se persiste como si el cliente lo
+        // hubiera dicho — solo lo generado por el modelo en ambos intentos.
+        messagesToPersist = [...result.response.messages, ...retry.response.messages];
+      } else {
+        finalText = SAFE_FALLBACK_MESSAGE;
+      }
+    } catch (retryErr) {
+      deps.log(
+        { negocioId, conversacionId: conversacion.id, err: retryErr },
+        "Guard de empty-text: el reintento de generateText falló — degradando a SAFE_FALLBACK_MESSAGE",
+      );
+      finalText = SAFE_FALLBACK_MESSAGE;
+    }
+  } else if (finalText.trim() === "") {
+    // Texto vacío SIN ningún tool-result en result.steps: no hay dato real
+    // que priorizar narrar, así que se degrada directo sin reintento.
+    finalText = SAFE_FALLBACK_MESSAGE;
+  }
+
   const newContext = serializeConversationContext({
-    messages: [...history, ...messagesToPersist],
+    // Gap 1: el userMessage queda ENTRE el history previo y lo generado por
+    // el modelo esta llamada — respeta el orden cronológico real del turno.
+    messages: [...history, userMessage, ...messagesToPersist],
     needsHuman,
   });
 
