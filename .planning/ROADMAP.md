@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Motor de disponibilidad** - El sistema calcula con precisión qué horarios están realmente libres, probado en aislamiento (completed 2026-07-05)
 - [x] **Phase 4: Grilla y turnos del dashboard** - El dueño puede ver, bloquear, crear, cancelar y reagendar turnos desde el dashboard (completed 2026-07-06)
 - [x] **Phase 5: Integración WhatsApp Cloud API** - El sistema recibe y envía mensajes de WhatsApp de forma segura, enrutados al tenant correcto (completed 2026-07-06)
-- [ ] **Phase 6: Agente conversacional de agendamiento** - Un cliente puede agendar, consultar y cancelar/reagendar un turno real conversando por WhatsApp
+- [x] **Phase 6: Agente conversacional de agendamiento** - Un cliente puede agendar, consultar y cancelar/reagendar un turno real conversando por WhatsApp (completed 2026-07-08)
 - [ ] **Phase 7: Hardening y listo para producción** - El sistema resiste concurrencia, aislamiento cross-tenant y protege credenciales antes del primer tenant real
 
 ## Phase Details
@@ -198,7 +198,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Un cliente puede cancelar o reagendar su turno por WhatsApp usando la misma lógica de dominio que el dashboard
   5. El bot resiste intentos de manipulación (prompt injection) y nunca expone datos de otro cliente o de otro tenant
 
-**Plans**: 7 plans (6 + 1 gap closure)
+**Plans**: 7/7 plans complete
 **Wave 1**
 
 - [x] 06-01-PLAN.md — extraer cancelAppointment al motor compartido + barrel/types
@@ -215,11 +215,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 06-06-PLAN.md — evals (dataset 20 casos, traceAssertions, LLM judge, runner, promptfoo) + checkpoint calibracion
+- [x] 06-06-PLAN.md — evals (dataset 20 casos, traceAssertions, LLM judge, runner, promptfoo) + checkpoint calibracion
 
 **Gap closure** *(UAT Tests 2 y 3 — blockers diagnosticados)*
 
-- [ ] 06-07-PLAN.md — fix memoria conversacional (persistir role:user) + guard/prompt para texto vacío tras tool de consulta
+- [x] 06-07-PLAN.md — fix memoria conversacional (persistir role:user) + guard/prompt para texto vacío tras tool de consulta
 
 ### Phase 7: Hardening y listo para producción
 
@@ -246,7 +246,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Motor de disponibilidad | 5/5 | Complete   | 2026-07-05 |
 | 4. Grilla y turnos del dashboard | 7/7 | Complete   | 2026-07-06 |
 | 5. Integración WhatsApp Cloud API | 6/6 | Complete    | 2026-07-06 |
-| 6. Agente conversacional de agendamiento | 5/6 | In Progress|  |
+| 6. Agente conversacional de agendamiento | 7/7 | Complete   | 2026-07-08 |
 | 7. Hardening y listo para producción | 0/TBD | Not started | - |
 
 ## Research Flags
