@@ -27,8 +27,13 @@ export interface BuildBotAvailabilityDataDeps {
  *
  * `negocio()` filtra por `tenant_id` (no `negocio_id` — ver el comentario de
  * cabecera de `negocioScoped.ts`, Pitfall 3) y devuelve potencialmente más
- * de una fila si el tenant tiene varios negocios; acá se toma la primera
- * (`.data?.[0]`) ya que este helper opera sobre un `negocioId` puntual.
+ * de una fila si el tenant tiene varios negocios (multi-location); acá se
+ * busca la fila cuyo `id` matchea EXACTAMENTE el `negocioId` pedido (WR-01)
+ * en vez de tomar `.data?.[0]` a ciegas — para un tenant con más de un
+ * negocio, `.data?.[0]` podía devolver el negocio equivocado en cualquier
+ * orden no garantizado por Postgres, mezclando silenciosamente
+ * timezone/granularidad/nombre de una sucursal distinta en `computeSlots`/
+ * `bookAppointment` y todo lo que consume el resultado de este helper.
  */
 export async function buildBotAvailabilityData(
   negocioId: string,
@@ -44,11 +49,15 @@ export async function buildBotAvailabilityData(
     db.negocio(),
   ]);
 
-  const negocio = negocioRes.data?.[0];
+  // WR-01: matchear por `id` en vez de `.data?.[0]` — un tenant con más de
+  // un negocio puede devolver varias filas acá (ver comentario de arriba);
+  // tomar la primera a ciegas puede colar silenciosamente el negocio
+  // equivocado. Fail loudly en vez de adivinar.
+  const negocio = negocioRes.data?.find((n) => n.id === negocioId);
 
   if (negocioRes.error || !negocio) {
     throw new Error(
-      `buildBotAvailabilityData: no se pudo cargar el negocio (negocioId=${negocioId}): ${negocioRes.error?.message}`,
+      `buildBotAvailabilityData: no se pudo cargar el negocio esperado (negocioId=${negocioId}): ${negocioRes.error?.message ?? "no matching row"}`,
     );
   }
 
