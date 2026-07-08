@@ -99,6 +99,25 @@ async function main() {
   // conocido, único UPDATE acotado — nunca borra filas).
   await negocioScoped(NEGOCIO_ID).updateConversacion(conv.id, { context: {} });
   console.log(`conversación de prueba: ${conv.id} (historial reseteado)\n`);
+
+  // Modo scripted (para UAT automatizado, sin readline): SMOKE_MSGS con los
+  // mensajes del cliente separados por "||". Cada uno es un turno; el context
+  // se persiste en DB entre turnos igual que en producción.
+  const scripted = process.env.SMOKE_MSGS;
+  if (scripted) {
+    const msgs = scripted.split("||").map((s) => s.trim()).filter(Boolean);
+    for (const msg of msgs) {
+      console.log(`\n👤 vos: ${msg}`);
+      const fresh = await findOrCreateConversacion(NEGOCIO_ID, clienteId);
+      lastSteps = [];
+      const reply = await responder(fresh, msg, smokeDeps);
+      console.log(`\n🤖 bot: ${reply}`);
+      printTrace();
+    }
+    console.log("\n=== fin del smoke (scripted) ===");
+    return;
+  }
+
   console.log("Escribí como el cliente. Comandos: /reset · /salir\n");
 
   const rl = createInterface({ input, output });
