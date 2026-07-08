@@ -163,3 +163,7 @@ None - no external service configuration required.
 ---
 *Phase: 06-agente-conversacional-de-agendamiento*
 *Completed: 2026-07-08*
+
+## Self-Check: PASSED
+
+All 4 declared files present on disk (`responder.ts`, `responder.test.ts`, `systemPrompt.ts`, `promptfooconfig.test.ts`), plus this SUMMARY.md. All 8 commits (7 task commits + this metadata commit) verified present in `git log --oneline --all`. Full bot suite: 203/203 tests passing, `tsc --noEmit` clean.
