@@ -271,7 +271,9 @@ describe("responder — tool-loop + gate D-12 + persistencia", () => {
       responseMessages: turno2ResponseMessages,
     });
     const { deps: deps2, spies: spies2 } = buildDeps({ result: turno2Result });
-    const conversacionTurno2 = makeConversacion({ context: persistedContextTurno1 });
+    const conversacionTurno2 = makeConversacion({
+      context: persistedContextTurno1 as Tables<"conversacion">["context"],
+    });
 
     await responder(conversacionTurno2, "mañana", deps2);
 
