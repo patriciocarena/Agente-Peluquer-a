@@ -65,6 +65,12 @@ function stepWithCancelarTurno(output: unknown): ResponderGenerateTextResult["st
   } as unknown as ResponderGenerateTextResult["steps"][number];
 }
 
+function stepWithConsultarNegocio(output: unknown): ResponderGenerateTextResult["steps"][number] {
+  return {
+    toolResults: [{ type: "tool-result", toolCallId: "call_1", toolName: "consultarNegocio", input: {}, output }],
+  } as unknown as ResponderGenerateTextResult["steps"][number];
+}
+
 interface BuildDepsOptions {
   result?: ResponderGenerateTextResult;
   generateTextImpl?: () => Promise<ResponderGenerateTextResult>;
@@ -300,5 +306,120 @@ describe("responder — tool-loop + gate D-12 + persistencia", () => {
       expect.objectContaining({ negocioId: NEGOCIO_ID }),
       expect.stringContaining("NoSuchToolError"),
     );
+  });
+
+  it("Gap 2b: texto vacío tras tool-result de consulta -> reintenta UNA vez con tools:{} y prioriza el texto narrado del reintento", async () => {
+    const firstResponseMessages = [
+      { role: "assistant", content: [{ type: "tool-call", toolCallId: "call_1", toolName: "consultarNegocio", input: {} }] },
+      { role: "tool", content: [{ type: "tool-result", toolCallId: "call_1", toolName: "consultarNegocio", output: {} }] },
+    ];
+    const firstResult = fakeResult({
+      text: "",
+      steps: [stepWithConsultarNegocio({ tipo: "precios", servicios: [{ nombre: "Corte", precio: 6500 }] })],
+      responseMessages: firstResponseMessages,
+    });
+    const retryResponseMessages = [{ role: "assistant", content: "El corte sale $6500" }];
+    const retryResult = fakeResult({ text: "El corte sale $6500", steps: [], responseMessages: retryResponseMessages });
+
+    let call = 0;
+    const { deps, spies } = buildDeps({
+      generateTextImpl: async () => {
+        call += 1;
+        return call === 1 ? firstResult : retryResult;
+      },
+    });
+
+    const reply = await responder(makeConversacion(), "cuanto sale el corte", deps);
+
+    expect(reply).toBe("El corte sale $6500");
+    expect(spies.generateText).toHaveBeenCalledTimes(2);
+    const secondCallArgs = spies.generateText.mock.calls[1]?.[0];
+    expect(secondCallArgs.tools).toEqual({});
+
+    const [, patch] = spies.updateConversacion.mock.calls[0]!;
+    const persistedMessages = (patch as { context: { messages: unknown[] } }).context.messages;
+    // El history persistido no debe incluir el nudge sintético del reintento
+    // (nunca como si el cliente lo hubiera dicho) -- solo lo generado por el
+    // modelo en ambos intentos, precedido por el userMessage real.
+    expect(persistedMessages).toEqual([
+      { role: "user", content: "cuanto sale el corte" },
+      ...firstResponseMessages,
+      ...retryResponseMessages,
+    ]);
+  });
+
+  it("Gap 2b: ambos intentos vacíos -> SAFE_FALLBACK_MESSAGE (nunca cadena vacía)", async () => {
+    const firstResult = fakeResult({ text: "", steps: [stepWithConsultarNegocio({ ok: true })] });
+    const retryResult = fakeResult({ text: "", steps: [] });
+    let call = 0;
+    const { deps, spies } = buildDeps({
+      generateTextImpl: async () => {
+        call += 1;
+        return call === 1 ? firstResult : retryResult;
+      },
+    });
+
+    const reply = await responder(makeConversacion(), "hola", deps);
+
+    expect(reply).toBe(SAFE_FALLBACK_MESSAGE);
+    expect(spies.generateText).toHaveBeenCalledTimes(2);
+  });
+
+  it("Gap 2b: texto vacío SIN ningún tool-result en result.steps -> SAFE_FALLBACK_MESSAGE sin reintento", async () => {
+    const result = fakeResult({ text: "", steps: [] });
+    const { deps, spies } = buildDeps({ result });
+
+    const reply = await responder(makeConversacion(), "hola", deps);
+
+    expect(reply).toBe(SAFE_FALLBACK_MESSAGE);
+    expect(spies.generateText).toHaveBeenCalledTimes(1);
+  });
+
+  it("Gap 2b: texto no vacío -> generateText se llama una sola vez, reply intacto (no regresión del camino sano)", async () => {
+    const result = fakeResult({ text: "todo bien", steps: [] });
+    const { deps, spies } = buildDeps({ result });
+
+    const reply = await responder(makeConversacion(), "hola", deps);
+
+    expect(reply).toBe("todo bien");
+    expect(spies.generateText).toHaveBeenCalledTimes(1);
+  });
+
+  it("Gap 2b (RESTRICCIÓN DE SEGURIDAD DURA): tool-result de ESCRITURA exitosa + texto vacío -> el reintento va con tools:{} (nunca confirmarTurno/reagendarTurno/cancelarTurno), imposibilitando una segunda escritura", async () => {
+    const step = stepWithConfirmarTurno({ ok: true, turnoId: TURNO_ID_REAL, precioTotal: 5000 });
+    const firstResponseMessages = [
+      { role: "assistant", content: [{ type: "tool-call", toolCallId: "call_1", toolName: "confirmarTurno", input: {} }] },
+      {
+        role: "tool",
+        content: [{ type: "tool-result", toolCallId: "call_1", toolName: "confirmarTurno", output: { ok: true, turnoId: TURNO_ID_REAL } }],
+      },
+    ];
+    const firstResult = fakeResult({ text: "", steps: [step], responseMessages: firstResponseMessages });
+    const retryResult = fakeResult({
+      text: "Listo, quedaste confirmado para el sábado a las 15hs",
+      steps: [],
+      responseMessages: [{ role: "assistant", content: "Listo, quedaste confirmado para el sábado a las 15hs" }],
+    });
+
+    let call = 0;
+    const { deps, spies } = buildDeps({
+      generateTextImpl: async () => {
+        call += 1;
+        return call === 1 ? firstResult : retryResult;
+      },
+    });
+
+    const reply = await responder(makeConversacion(), "dale, confirmalo", deps);
+
+    expect(reply).toBe("Listo, quedaste confirmado para el sábado a las 15hs");
+    expect(spies.generateText).toHaveBeenCalledTimes(2);
+    const secondCallArgs = spies.generateText.mock.calls[1]?.[0];
+    // Garantía dura: el reintento NUNCA puede llevar el toolset de escritura
+    // del primer intento -- estructuralmente imposible una segunda
+    // confirmarTurno/reagendarTurno/cancelarTurno durante el reintento.
+    expect(secondCallArgs.tools).toEqual({});
+    expect(secondCallArgs.tools).not.toHaveProperty("confirmarTurno");
+    expect(secondCallArgs.tools).not.toHaveProperty("reagendarTurno");
+    expect(secondCallArgs.tools).not.toHaveProperty("cancelarTurno");
   });
 });
