@@ -24,8 +24,8 @@ result: [pending]
 
 ### 2. Bot — agendar un turno real por WhatsApp
 expected: Un cliente escribe en lenguaje natural (ej. "quiero corte y barba el sábado a la tarde"), el bot propone horarios reales, negocia día/hora, y confirma SOLO cuando existe un turno_id real. El turno aparece en la grilla del dashboard.
-result: partial
-note: "Verificado EN VIVO (Gemini 3.1 + DB reales, Barbería Norte): el bot hace slot-filling correcto (pide día/franja cuando faltan) y PROPONE HORARIOS REALES del motor de disponibilidad (15:00/16:30/18:00 salidos de buscarHorarios→computeSlots, no inventados). La escritura exitosa del turno_id NO se completó en el smoke porque el slot elegido (16:30) ya estaba ocupado → bookAppointment devolvió slot_taken y el gate D-12 bloqueó correctamente. Falta un re-test limpio sobre un slot libre para ver el turno_id real persistido — recomendado dejárselo a Patricio."
+result: pass
+note: "Verificado EN VIVO (Gemini 3.1 + DB reales, Barbería Norte, smoke interactivo 2026-07-08 tras el fix del debug session bot-no-agenda-uuid-y-fecha): el bot resolvió los UUID reales vía consultarNegocio, usó la fecha correcta (año 2026) y AGENDÓ UN TURNO REAL (turno_id persistido) conversando. Resuelve Bug B + Bug fecha que dejaban este test en partial. Pendiente menor: cross-check visual en la grilla del dashboard + el turno de un cliente NUEVO queda sin nombre (ver Gap 'nombre', no bloquea)."
 
 ### 3. Bot — consultar precio / horario / estado por WhatsApp
 expected: El bot responde precios de servicios, horarios de profesionales, disponibilidad en tiempo real y estado de un turno existente del cliente — leyendo datos reales del negocio, nunca inventados.
@@ -52,8 +52,8 @@ result: [pending]
 ## Summary
 
 total: 7
-passed: 2
-partial: 1
+passed: 3
+partial: 0
 issues: 0
 pending: 4
 skipped: 0
@@ -69,14 +69,19 @@ porque TODOS mockean negocioScoped y el modelo. Es exactamente lo que el testing
   severity: blocker
 
 - truth: "El bot agenda un turno real (turno_id) conversando (BOT-01/04 — valor central)"
-  status: OPEN — bloquea el valor central de la fase
-  bug: "Bug B (diseño) — el modelo necesita los UUID reales de los servicios para llamar buscarHorarios/confirmarTurno (inputSchema exige uuidLike), pero NINGUNA tool se los da: consultarNegocio(precios) devuelve {nombre, precio} sin id. El modelo inventa slugs ('corte_clasico') → falla validación UUID → loop hasta stopWhen → no agenda nunca. Requiere decisión de diseño: (a) incluir el id del servicio en la respuesta de consultarNegocio + instruir al modelo a consultarlo primero, o (b) que buscarHorarios/confirmarTurno acepten nombres y resuelvan el id internamente. Interactúa con el dataset de evals y el system prompt."
+  status: FIXED (verificado EN VIVO 2026-07-08 — debug session bot-no-agenda-uuid-y-fecha)
+  bug: "Bug B (diseño) — el modelo necesita los UUID reales de los servicios para llamar buscarHorarios/confirmarTurno (inputSchema exige uuidLike), pero NINGUNA tool se los daba: consultarNegocio(precios) devolvía {nombre, precio} sin id. El modelo inventaba slugs ('corte_clasico') → fallaba validación UUID → loop hasta stopWhen → no agendaba nunca. Fix (opción a): consultarNegocio(precios) ahora incluye el `id` real de cada servicio + nuevo tipo 'profesionales' (id+nombre), y el system prompt instruye al modelo a resolver SIEMPRE los ids vía consultarNegocio antes de buscarHorarios/confirmarTurno. Verificado en vivo: el bot agendó un turno real citando el UUID del servicio."
   severity: blocker
 
 - truth: "El bot razona sobre fechas relativas ('este viernes') con el 'hoy' correcto (D-02)"
-  status: OPEN (menor pero relacionado)
-  bug: "El modelo usó fechaDeseada '2025-07-25' (año equivocado, hoy es 2026-07) — el system prompt no le inyecta la fecha actual ni el timezone AR. Sin 'hoy' en contexto no puede resolver 'este viernes' correctamente."
+  status: FIXED (verificado EN VIVO 2026-07-08 — mismo debug session)
+  bug: "El modelo usó fechaDeseada '2025-07-25' (año equivocado, hoy es 2026-07) — el system prompt no le inyectaba la fecha actual ni el timezone AR. Fix: dateContext.ts (Intl nativo) resuelve fechaHoy/diaSemanaHoy desde negocio.timezone + reloj inyectable; responder.ts los pasa a buildSystemPrompt() que ahora tiene sección '# Fecha y hora actuales'. Verificado en vivo: la fecha agendada fue correcta."
   severity: major
+
+- truth: "El turno de un cliente queda asociado a su nombre, no solo a su teléfono"
+  status: FIXED (opción b, verificado EN VIVO 2026-07-08)
+  bug: "El bot nunca capturaba el nombre del cliente. findOrCreateCliente crea la fila con nombre:null ('filled in later by the conversation flow') pero ese 'later' nunca se implementó. Fix (opción b elegida por el usuario): nueva tool guardarNombreCliente (persiste el nombre vía negocioScoped.updateCliente), wireada en buildResponderTools; responder.ts lee el nombre actual del cliente y lo pasa a buildSystemPrompt, que ahora tiene sección '# Nombre del cliente' con dos ramas (con nombre → lo usa; sin nombre → lo pide y lo guarda con la tool, sin bloquear el turno si el cliente no lo da). Verificado en vivo con un cliente nuevo: ante 'soy Pedro, quiero un corte' el modelo llamó guardarNombreCliente({nombre:'Pedro'}) → ok:true, saludó '¡Hola Pedro!' y el nombre quedó persistido en la fila del cliente. +6 unit tests (guardarNombreCliente.test.ts, systemPrompt.test.ts)."
+  severity: minor
 
 ## Incidente de datos (transparencia)
 
