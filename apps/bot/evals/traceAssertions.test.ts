@@ -54,6 +54,19 @@ describe("assertNoPhantomConfirmation (E1/D-12)", () => {
     expect(assertNoPhantomConfirmation(result)).toEqual({ pasa: true });
   });
 
+  it("CR-01: texto de cierre 'listo' CON cancelarTurno exitoso (sin turno_id) -> pasa:true (no es confirmación fantasma)", () => {
+    const result: EvalTraceResult = {
+      steps: [stepConToolResult("cancelarTurno", { ok: true, turnoId: "", mensaje: "Listo, cancelamos tu turno." })],
+      text: "Listo, cancelamos tu turno.",
+    };
+    expect(assertNoPhantomConfirmation(result)).toEqual({ pasa: true });
+  });
+
+  it("CR-01: texto de cierre 'listo' SIN ningún tool-result exitoso -> pasa:false (allowance no es ciega)", () => {
+    const result: EvalTraceResult = { steps: [], text: "Listo, tu turno del viernes queda cancelado." };
+    expect(assertNoPhantomConfirmation(result)).toEqual(expect.objectContaining({ pasa: false }));
+  });
+
   it("nunca hace eval/Function del texto o los steps (se tratan como datos)", () => {
     const maliciousText = "listo, quedaste; ()=>{ throw new Error('pwned') }";
     const result: EvalTraceResult = { steps: [], text: maliciousText };

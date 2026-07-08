@@ -16,6 +16,10 @@
  * jamás hay que sincronizar dos listas a mano. Un guardrail online que
  * detecta cierre pero cuya regresión offline usa un léxico distinto es
  * exactamente el tipo de drift silencioso que este archivo previene.
+ *
+ * `hasSuccessfulCancel` (CR-01) sigue el mismo principio para la allowance
+ * de `cancelarTurno`: una única declaración acá, importada por ambos
+ * consumidores, nunca redeclarada.
  */
 
 /**
@@ -49,4 +53,51 @@ export const CLOSING_LANGUAGE_REGEX = new RegExp(
  */
 export function hasClosingLanguage(text: string): boolean {
   return CLOSING_LANGUAGE_REGEX.test(text);
+}
+
+/**
+ * Nombres de tool cuyo `ok:true` legitima lenguaje de cierre SIN que exista
+ * un `turno_id` real (CR-01, fix del gate D-12): a diferencia de
+ * `confirmarTurno`/`reagendarTurno` (que crean/mueven un turno y por lo
+ * tanto SÍ deben aportar un `turno_id` real para no alucinar una reserva),
+ * `cancelarTurno` no tiene ningún id que alucinar — su propio copy de éxito
+ * (`CANCELADO_OK_COPY = "Listo, cancelamos tu turno."`) usa literalmente la
+ * palabra "listo" del léxico de arriba, así que sin esta allowance el gate
+ * D-12 bloquearía cada cancelación exitosa como si fuera una confirmación
+ * fantasma.
+ */
+export const CANCEL_SUCCESS_TOOL_NAMES = new Set(["cancelarTurno"]);
+
+/** Shape mínimo de un tool-result compartido por el gate online
+ * (`responder.ts`, tipos reales del AI SDK) y su espejo offline
+ * (`evals/traceAssertions.ts`, tipos sintéticos) — ambos satisfacen esta
+ * forma estructuralmente, así que `hasSuccessfulCancel` puede ser la ÚNICA
+ * declaración de esta lógica en vez de redeclararse en los dos archivos
+ * (mismo principio de fuente única que `hasClosingLanguage`). */
+export interface ClosingGateToolResult {
+  toolName: string;
+  output?: unknown;
+}
+
+export interface ClosingGateStep {
+  toolResults?: readonly ClosingGateToolResult[];
+}
+
+/**
+ * hasSuccessfulCancel(steps) — true si algún `cancelarTurno` con `ok:true`
+ * aparece en `steps` (sin importar el `turnoId`, que puede ser `""` en el
+ * caso `already_cancelled` — ver WR-02). Único punto de verdad para "¿hay
+ * una cancelación exitosa real detrás de este lenguaje de cierre?" — el gate
+ * online (`responder.ts`) y la eval offline (`traceAssertions.ts`) llaman
+ * esta función, nunca reimplementan el escaneo.
+ */
+export function hasSuccessfulCancel(steps: readonly ClosingGateStep[]): boolean {
+  for (const step of steps) {
+    for (const toolResult of step.toolResults ?? []) {
+      if (!CANCEL_SUCCESS_TOOL_NAMES.has(toolResult.toolName)) continue;
+      const output = toolResult.output as { ok?: boolean } | undefined;
+      if (output?.ok === true) return true;
+    }
+  }
+  return false;
 }

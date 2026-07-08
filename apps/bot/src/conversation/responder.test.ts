@@ -59,6 +59,12 @@ function stepWithConfirmarTurno(output: unknown): ResponderGenerateTextResult["s
   } as unknown as ResponderGenerateTextResult["steps"][number];
 }
 
+function stepWithCancelarTurno(output: unknown): ResponderGenerateTextResult["steps"][number] {
+  return {
+    toolResults: [{ type: "tool-result", toolCallId: "call_1", toolName: "cancelarTurno", input: {}, output }],
+  } as unknown as ResponderGenerateTextResult["steps"][number];
+}
+
 interface BuildDepsOptions {
   result?: ResponderGenerateTextResult;
   generateTextImpl?: () => Promise<ResponderGenerateTextResult>;
@@ -141,6 +147,33 @@ describe("responder — tool-loop + gate D-12 + persistencia", () => {
     expect(reply).toBe("listo, quedaste el sábado a las 15hs");
     const [, patch] = spies.updateConversacion.mock.calls[0]!;
     expect((patch as { context: { needsHuman: boolean } }).context.needsHuman).toBe(false);
+  });
+
+  it("CR-01: cancelarTurno exitoso (ok:true, sin turno_id) legitima el lenguaje de cierre 'listo' -- no dispara el gate", async () => {
+    const step = stepWithCancelarTurno({ ok: true, turnoId: "", mensaje: "Listo, cancelamos tu turno." });
+    const result = fakeResult({
+      text: "Listo, cancelamos tu turno.",
+      steps: [step],
+      responseMessages: [{ role: "assistant", content: "Listo, cancelamos tu turno." }],
+    });
+    const { deps, spies } = buildDeps({ result });
+
+    const reply = await responder(makeConversacion(), "si, cancelalo nomas", deps);
+
+    expect(reply).toBe("Listo, cancelamos tu turno.");
+    const [, patch] = spies.updateConversacion.mock.calls[0]!;
+    expect((patch as { context: { needsHuman: boolean } }).context.needsHuman).toBe(false);
+  });
+
+  it("CR-01: lenguaje de cierre 'listo' SIN cancelarTurno exitoso en steps sigue disparando el gate (no una allowance ciega)", async () => {
+    const result = fakeResult({ text: "Listo, tu turno del viernes queda cancelado.", steps: [] });
+    const { deps, spies } = buildDeps({ result });
+
+    const reply = await responder(makeConversacion(), "cancelame el turno", deps);
+
+    expect(reply).toBe(SAFE_FALLBACK_MESSAGE);
+    const [, patch] = spies.updateConversacion.mock.calls[0]!;
+    expect((patch as { context: { needsHuman: boolean } }).context.needsHuman).toBe(true);
   });
 
   it("persiste result.response.messages + needsHuman vía serializeConversationContext/updateConversacion", async () => {

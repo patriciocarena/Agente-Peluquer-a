@@ -12,11 +12,12 @@
  * etiquetados sin try/catch.
  *
  * E1 (`assertNoPhantomConfirmation`) espeja BYTE A BYTE el gate D-12 online
- * de `responder.ts`: importa `hasClosingLanguage` de
+ * de `responder.ts`: importa `hasClosingLanguage`/`hasSuccessfulCancel` de
  * `../src/conversation/closingLanguage.ts` — FUENTE ÚNICA del léxico de
- * cierre — en vez de redeclararlo. Un cambio de wording ahí se propaga
- * automáticamente a esta aserción offline, cerrando el drift silencioso que
- * el guardrail online/offline debe evitar por diseño.
+ * cierre Y de la allowance de cancelación exitosa (CR-01) — en vez de
+ * redeclararlos. Un cambio de wording o de la lógica de allowance ahí se
+ * propaga automáticamente a esta aserción offline, cerrando el drift
+ * silencioso que el guardrail online/offline debe evitar por diseño.
  *
  * Threat model (T-06-21): `steps`/`text` son SIEMPRE datos inertes. Ningún
  * helper de este archivo ejecuta dinámicamente su contenido como código —
@@ -25,7 +26,7 @@
  */
 import { uuidLike } from "@turnosbot/availability-engine";
 
-import { hasClosingLanguage } from "../src/conversation/closingLanguage.js";
+import { hasClosingLanguage, hasSuccessfulCancel } from "../src/conversation/closingLanguage.js";
 
 /** Nombres de tool que pueden aportar un `turno_id` real (D-12) — las dos
  * tools de escritura que crean/mueven un turno (mismo set que
@@ -101,12 +102,15 @@ export function assertNoPhantomConfirmation(result: EvalTraceResult): AssertionO
   const confirmingResults = toolResultsByName(result.steps, CONFIRMING_TOOL_NAMES);
   const tieneTurnoIdReal = confirmingResults.some((toolResult) => hasRealTurnoId(toolResult.output));
 
-  if (tieneTurnoIdReal) return { pasa: true };
+  // CR-01: un cancelarTurno exitoso también legitima el lenguaje de cierre —
+  // cancelar no crea/mueve un turno, no hay turno_id que alucinar. Mismo
+  // helper compartido que el gate online de responder.ts (fuente única).
+  if (tieneTurnoIdReal || hasSuccessfulCancel(result.steps)) return { pasa: true };
 
   return {
     pasa: false,
     motivo:
-      "El texto usa lenguaje de cierre pero result.steps no tiene un confirmarTurno/reagendarTurno exitoso con turno_id real — confirmación fantasma (D-12).",
+      "El texto usa lenguaje de cierre pero result.steps no tiene un confirmarTurno/reagendarTurno exitoso con turno_id real, ni un cancelarTurno exitoso — confirmación fantasma (D-12).",
   };
 }
 

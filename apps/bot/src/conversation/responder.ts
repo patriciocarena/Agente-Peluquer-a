@@ -49,7 +49,7 @@ import type { Json, Tables } from "@turnosbot/db-types";
 
 import { negocioScoped as realNegocioScoped } from "../db/negocioScoped.js";
 
-import { hasClosingLanguage } from "./closingLanguage.js";
+import { hasClosingLanguage, hasSuccessfulCancel } from "./closingLanguage.js";
 import { parseConversationContext, serializeConversationContext } from "./conversationState.js";
 import { buildSystemPrompt } from "./systemPrompt.js";
 import { asignarProfesionalTool } from "./tools/asignarProfesional.js";
@@ -191,18 +191,26 @@ export async function responder(conversacion: Tables<"conversacion">, mensajeEnt
 
   const turnoIdReal = extractRealTurnoId(result.steps);
   const closingLanguageDetected = hasClosingLanguage(result.text);
+  // CR-01: cancelarTurno no crea/mueve un turno, así que no hay ningún
+  // turno_id que pueda alucinar — su propio ok:true (sin turno_id real)
+  // también legitima el lenguaje de cierre (p.ej. su propio
+  // CANCELADO_OK_COPY = "Listo, cancelamos tu turno." usa "listo" del
+  // léxico D-12). Sin esta allowance, toda cancelación exitosa dispararía
+  // el gate como si fuera una confirmación fantasma.
+  const cancelacionExitosa = hasSuccessfulCancel(result.steps);
 
   let finalText = result.text;
   let needsHuman = false;
 
-  if (closingLanguageDetected && !turnoIdReal) {
-    // Gate D-12 (T-06-16): lenguaje de cierre SIN turno_id real detrás —
-    // confirmación fantasma. Se sustituye el texto por el mensaje seguro
-    // (se envía este mismo turno) y se marca needsHuman para que el
-    // PRÓXIMO inbound de este hilo lo salte (D-11, inboundWorker.ts).
+  if (closingLanguageDetected && !turnoIdReal && !cancelacionExitosa) {
+    // Gate D-12 (T-06-16): lenguaje de cierre SIN turno_id real Y SIN una
+    // cancelación exitosa detrás — confirmación fantasma. Se sustituye el
+    // texto por el mensaje seguro (se envía este mismo turno) y se marca
+    // needsHuman para que el PRÓXIMO inbound de este hilo lo salte (D-11,
+    // inboundWorker.ts).
     deps.log(
       { negocioId, conversacionId: conversacion.id, modelText: result.text },
-      "Gate D-12: lenguaje de cierre detectado sin turno_id real en result.steps — bloqueado",
+      "Gate D-12: lenguaje de cierre detectado sin turno_id real ni cancelación exitosa en result.steps — bloqueado",
     );
     finalText = SAFE_FALLBACK_MESSAGE;
     needsHuman = true;

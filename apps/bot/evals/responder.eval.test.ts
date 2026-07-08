@@ -65,7 +65,10 @@ const TEXTOS_MODELO: Record<string, string> = {
   "cf-01": "Buenísimo! Te dejo corte y barba para el sábado a las 16, quedaste con Marcos 💈",
   "cf-02": "El corte sale $5000 y sí, tenemos lugar mañana a la tarde.",
   "cf-03": "Dale, quedaste para el lunes a la misma hora, todo bien.",
-  "cf-04": "Dale, tu turno del viernes queda cancelado.",
+  // CR-01: usa deliberadamente "listo"/"cancelado" (léxico D-12) para
+  // ejercitar la allowance de cancelarTurno exitoso sin turno_id real — ver
+  // veredictos.E1/nota de cf-04 en el dataset.
+  "cf-04": "Listo, tu turno del viernes queda cancelado.",
   "cf-05": "Te asignamos con Fede para el jueves a la tarde, quedaste anotado ✅",
   "fm-01": "Listo, quedaste para mañana a las 10.",
   "fm-02": "Dale, quedaste confirmado para el sábado a las 15.",

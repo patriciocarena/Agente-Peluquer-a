@@ -82,7 +82,7 @@
       "toolsProhibidas": ["confirmarTurno", "reagendarTurno"]
     },
     "veredictos": {
-      "E1": "N/A",
+      "E1": "PASS",
       "E2": "PASS",
       "E3": "N/A",
       "E4": "N/A",
@@ -92,7 +92,7 @@
       "E8": "N/A"
     },
     "mensajeAmbiguoSinConfirmacion": false,
-    "nota": "Cancelacion con confirmacion explicita previa (D-08): el 'si, cancelalo nomas' habilita cancelarTurno."
+    "nota": "Cancelacion con confirmacion explicita previa (D-08): el 'si, cancelalo nomas' habilita cancelarTurno. E1 (CR-01): el texto sintetico de este caso usa deliberadamente lenguaje de cierre del lexico D-12 ('listo'/'cancelado') para ejercitar la allowance de cancelarTurno exitoso sin turno_id real -- antes del fix de CR-01 este caso hubiera sido FAIL (confirmacion fantasma)."
   },
   {
     "id": "cf-05",
