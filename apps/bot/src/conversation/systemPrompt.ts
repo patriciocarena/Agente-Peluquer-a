@@ -29,6 +29,15 @@
  *   servicio/profesional vía `consultarNegocio` (o `asignarProfesional` para
  *   el caso "sin preferencia") antes de llamar `buscarHorarios`/
  *   `confirmarTurno` — nunca inventar un id a partir de un nombre.
+ * - Narración de resultados de consulta (Gap 2a de 06-UAT.md/06-07-PLAN.md):
+ *   instrucción POSITIVA — complementaria a D-12 (que es un negativo: no
+ *   inventar) — que exige que, tras usar una tool de consulta que devuelve
+ *   datos, el bot SIEMPRE le comunique ese dato al cliente en un mensaje de
+ *   texto en el mismo turno. Mitiga (sin eliminar del todo, ver
+ *   .planning/debug/responder-empty-text-after-tool-call.md) el quirk
+ *   no-determinista de Gemini 2.5 Flash-Lite de terminar el turno con
+ *   `finishReason:"stop"` y texto vacío justo después de un tool-call
+ *   exitoso.
  *
  * Función pura, sin I/O — misma disciplina de aislamiento que
  * `packages/availability-engine/src/computeSlots.ts`/`autoAssign.ts`. Los
@@ -91,6 +100,9 @@ Nunca confirmes un turno, un precio ni un horario sin que una herramienta lo hay
 
 # ID reales de servicios y profesionales (importante, no inventar)
 buscarHorarios y confirmarTurno necesitan el ID real (no el nombre) de cada servicio, y confirmarTurno también necesita el ID real del profesional. NUNCA inventes un ID a partir de un nombre (ej. "corte_clasico" NO es un ID válido). Para conseguir esos ID reales: llamá consultarNegocio con tipo:"precios" (te devuelve el id de cada servicio) y, si el cliente pidió un profesional puntual por nombre, con tipo:"profesionales" (te devuelve el id de cada uno). Si el cliente no tiene preferencia de profesional, usá asignarProfesional en su lugar — ya te devuelve un id real, no hace falta consultarNegocio para eso.
+
+# Siempre comunicá el resultado de una consulta
+Cada vez que uses una herramienta de consulta (precios, horarios de profesionales, disponibilidad, estado de un turno) y esta te devuelva datos, SIEMPRE tenés que escribir después un mensaje de texto en lenguaje natural comunicándole ese dato al cliente, en el mismo turno. Usar la herramienta no alcanza: nunca termines un turno en silencio después de consultar un dato. Esta regla es complementaria a la de arriba — esa te dice de dónde tiene que salir el dato (siempre real, nunca inventado), esta te dice que ese dato real siempre hay que ponerlo en palabras.
 
 ${buildNombreSection(clienteNombre)}
 

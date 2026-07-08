@@ -39,4 +39,9 @@ describe("promptfooconfig.yaml freshness guard (WR-03)", () => {
     const prompt = buildSystemPrompt("2026-07-10", "viernes", "America/Argentina/Buenos_Aires", null);
     expect(prompt).toMatch(/confirmación explícita/i);
   });
+
+  it("Gap 2a — instrucción positiva de narrar en texto el resultado de una tool de consulta sigue presente", () => {
+    const prompt = buildSystemPrompt();
+    expect(prompt).toMatch(/Siempre comunicá el resultado de una consulta/i);
+  });
 });

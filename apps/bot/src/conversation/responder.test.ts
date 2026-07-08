@@ -65,6 +65,12 @@ function stepWithCancelarTurno(output: unknown): ResponderGenerateTextResult["st
   } as unknown as ResponderGenerateTextResult["steps"][number];
 }
 
+function stepWithConsultarNegocio(output: unknown): ResponderGenerateTextResult["steps"][number] {
+  return {
+    toolResults: [{ type: "tool-result", toolCallId: "call_1", toolName: "consultarNegocio", input: {}, output }],
+  } as unknown as ResponderGenerateTextResult["steps"][number];
+}
+
 interface BuildDepsOptions {
   result?: ResponderGenerateTextResult;
   generateTextImpl?: () => Promise<ResponderGenerateTextResult>;
@@ -234,7 +240,7 @@ describe("responder — tool-loop + gate D-12 + persistencia", () => {
     expect((patch as { context: { needsHuman: boolean } }).context.needsHuman).toBe(true);
   });
 
-  it("persiste result.response.messages + needsHuman vía serializeConversationContext/updateConversacion", async () => {
+  it("persiste [...history, userMessage, ...result.response.messages] + needsHuman vía serializeConversationContext/updateConversacion (Gap 1 — memoria multi-turno)", async () => {
     const history = [{ role: "user" as const, content: "hola" }];
     const conversacion = makeConversacion({ context: { messages: history, needsHuman: false } });
     const responseMessages = [{ role: "assistant", content: "¿qué servicio querés?" }];
@@ -245,11 +251,55 @@ describe("responder — tool-loop + gate D-12 + persistencia", () => {
 
     expect(spies.negocioScoped).toHaveBeenCalledWith(NEGOCIO_ID);
     expect(spies.updateConversacion).toHaveBeenCalledWith(CONVERSACION_ID, {
-      context: { messages: [...history, ...responseMessages], needsHuman: false },
+      context: {
+        messages: [...history, { role: "user", content: "hola de nuevo" }, ...responseMessages],
+        needsHuman: false,
+      },
     });
   });
 
-  it("un error de generateText (p.ej. NoSuchToolError) no se narra como éxito — mensaje seguro + needsHuman=true", async () => {
+  it("Gap 1 — round-trip: un mensaje user del turno N sobrevive en el history que recibe generateText en el turno N+1", async () => {
+    // Turno 1: context vacío, el cliente dice algo, el modelo responde.
+    const turno1ResponseMessages = [{ role: "assistant", content: "¿para qué día?" }];
+    const turno1Result = fakeResult({
+      text: "¿para qué día?",
+      steps: [],
+      responseMessages: turno1ResponseMessages,
+    });
+    const { deps: deps1, spies: spies1 } = buildDeps({ result: turno1Result });
+
+    await responder(makeConversacion({ context: {} }), "quiero un corte", deps1);
+
+    const [, patchTurno1] = spies1.updateConversacion.mock.calls[0]!;
+    const persistedContextTurno1 = (patchTurno1 as { context: unknown }).context;
+
+    // Turno 2: se alimenta el context persistido por el turno 1.
+    const turno2ResponseMessages = [{ role: "assistant", content: "dale, ¿y a qué hora?" }];
+    const turno2Result = fakeResult({
+      text: "dale, ¿y a qué hora?",
+      steps: [],
+      responseMessages: turno2ResponseMessages,
+    });
+    const { deps: deps2, spies: spies2 } = buildDeps({ result: turno2Result });
+    const conversacionTurno2 = makeConversacion({
+      context: persistedContextTurno1 as Tables<"conversacion">["context"],
+    });
+
+    await responder(conversacionTurno2, "mañana", deps2);
+
+    const callArgsTurno2 = spies2.generateText.mock.calls[0]?.[0];
+    // SIN el fix, este history de turno 2 no tiene ningún role:"user" previo
+    // (solo lo que el modelo generó en el turno 1) — el modelo nunca ve lo
+    // que el cliente dijo ("quiero un corte").
+    expect(callArgsTurno2.messages).toContainEqual({ role: "user", content: "quiero un corte" });
+    expect(callArgsTurno2.messages).toEqual([
+      { role: "user", content: "quiero un corte" },
+      ...turno1ResponseMessages,
+      { role: "user", content: "mañana" },
+    ]);
+  });
+
+  it("un error de generateText (p.ej. NoSuchToolError) no se narra como éxito — mensaje seguro + needsHuman=true, y el mensaje del cliente que disparó el error también se persiste", async () => {
     const { NoSuchToolError } = await import("ai");
     const { deps, spies } = buildDeps({
       generateTextImpl: async () => {
@@ -262,9 +312,126 @@ describe("responder — tool-loop + gate D-12 + persistencia", () => {
     expect(reply).toBe(SAFE_FALLBACK_MESSAGE);
     const [, patch] = spies.updateConversacion.mock.calls[0]!;
     expect((patch as { context: { needsHuman: boolean } }).context.needsHuman).toBe(true);
+    const persistedMessages = (patch as { context: { messages: unknown[] } }).context.messages;
+    expect(persistedMessages).toContainEqual({ role: "user", content: "hola" });
     expect(spies.log).toHaveBeenCalledWith(
       expect.objectContaining({ negocioId: NEGOCIO_ID }),
       expect.stringContaining("NoSuchToolError"),
     );
+  });
+
+  it("Gap 2b: texto vacío tras tool-result de consulta -> reintenta UNA vez con tools:{} y prioriza el texto narrado del reintento", async () => {
+    const firstResponseMessages = [
+      { role: "assistant", content: [{ type: "tool-call", toolCallId: "call_1", toolName: "consultarNegocio", input: {} }] },
+      { role: "tool", content: [{ type: "tool-result", toolCallId: "call_1", toolName: "consultarNegocio", output: {} }] },
+    ];
+    const firstResult = fakeResult({
+      text: "",
+      steps: [stepWithConsultarNegocio({ tipo: "precios", servicios: [{ nombre: "Corte", precio: 6500 }] })],
+      responseMessages: firstResponseMessages,
+    });
+    const retryResponseMessages = [{ role: "assistant", content: "El corte sale $6500" }];
+    const retryResult = fakeResult({ text: "El corte sale $6500", steps: [], responseMessages: retryResponseMessages });
+
+    let call = 0;
+    const { deps, spies } = buildDeps({
+      generateTextImpl: async () => {
+        call += 1;
+        return call === 1 ? firstResult : retryResult;
+      },
+    });
+
+    const reply = await responder(makeConversacion(), "cuanto sale el corte", deps);
+
+    expect(reply).toBe("El corte sale $6500");
+    expect(spies.generateText).toHaveBeenCalledTimes(2);
+    const secondCallArgs = spies.generateText.mock.calls[1]?.[0];
+    expect(secondCallArgs.tools).toEqual({});
+
+    const [, patch] = spies.updateConversacion.mock.calls[0]!;
+    const persistedMessages = (patch as { context: { messages: unknown[] } }).context.messages;
+    // El history persistido no debe incluir el nudge sintético del reintento
+    // (nunca como si el cliente lo hubiera dicho) -- solo lo generado por el
+    // modelo en ambos intentos, precedido por el userMessage real.
+    expect(persistedMessages).toEqual([
+      { role: "user", content: "cuanto sale el corte" },
+      ...firstResponseMessages,
+      ...retryResponseMessages,
+    ]);
+  });
+
+  it("Gap 2b: ambos intentos vacíos -> SAFE_FALLBACK_MESSAGE (nunca cadena vacía)", async () => {
+    const firstResult = fakeResult({ text: "", steps: [stepWithConsultarNegocio({ ok: true })] });
+    const retryResult = fakeResult({ text: "", steps: [] });
+    let call = 0;
+    const { deps, spies } = buildDeps({
+      generateTextImpl: async () => {
+        call += 1;
+        return call === 1 ? firstResult : retryResult;
+      },
+    });
+
+    const reply = await responder(makeConversacion(), "hola", deps);
+
+    expect(reply).toBe(SAFE_FALLBACK_MESSAGE);
+    expect(spies.generateText).toHaveBeenCalledTimes(2);
+  });
+
+  it("Gap 2b: texto vacío SIN ningún tool-result en result.steps -> SAFE_FALLBACK_MESSAGE sin reintento", async () => {
+    const result = fakeResult({ text: "", steps: [] });
+    const { deps, spies } = buildDeps({ result });
+
+    const reply = await responder(makeConversacion(), "hola", deps);
+
+    expect(reply).toBe(SAFE_FALLBACK_MESSAGE);
+    expect(spies.generateText).toHaveBeenCalledTimes(1);
+  });
+
+  it("Gap 2b: texto no vacío -> generateText se llama una sola vez, reply intacto (no regresión del camino sano)", async () => {
+    const result = fakeResult({ text: "todo bien", steps: [] });
+    const { deps, spies } = buildDeps({ result });
+
+    const reply = await responder(makeConversacion(), "hola", deps);
+
+    expect(reply).toBe("todo bien");
+    expect(spies.generateText).toHaveBeenCalledTimes(1);
+  });
+
+  it("Gap 2b (RESTRICCIÓN DE SEGURIDAD DURA): tool-result de ESCRITURA exitosa + texto vacío -> el reintento va con tools:{} (nunca confirmarTurno/reagendarTurno/cancelarTurno), imposibilitando una segunda escritura", async () => {
+    const step = stepWithConfirmarTurno({ ok: true, turnoId: TURNO_ID_REAL, precioTotal: 5000 });
+    const firstResponseMessages = [
+      { role: "assistant", content: [{ type: "tool-call", toolCallId: "call_1", toolName: "confirmarTurno", input: {} }] },
+      {
+        role: "tool",
+        content: [{ type: "tool-result", toolCallId: "call_1", toolName: "confirmarTurno", output: { ok: true, turnoId: TURNO_ID_REAL } }],
+      },
+    ];
+    const firstResult = fakeResult({ text: "", steps: [step], responseMessages: firstResponseMessages });
+    const retryResult = fakeResult({
+      text: "Listo, quedaste confirmado para el sábado a las 15hs",
+      steps: [],
+      responseMessages: [{ role: "assistant", content: "Listo, quedaste confirmado para el sábado a las 15hs" }],
+    });
+
+    let call = 0;
+    const { deps, spies } = buildDeps({
+      generateTextImpl: async () => {
+        call += 1;
+        return call === 1 ? firstResult : retryResult;
+      },
+    });
+
+    const reply = await responder(makeConversacion(), "dale, confirmalo", deps);
+
+    expect(reply).toBe("Listo, quedaste confirmado para el sábado a las 15hs");
+    expect(spies.generateText).toHaveBeenCalledTimes(2);
+    const secondCallArgs = spies.generateText.mock.calls[1]?.[0];
+    // Garantía dura: el reintento NUNCA puede llevar el toolset de escritura
+    // del primer intento -- estructuralmente imposible una segunda
+    // confirmarTurno/reagendarTurno/cancelarTurno durante el reintento.
+    expect(secondCallArgs.tools).toEqual({});
+    expect(secondCallArgs.tools).not.toHaveProperty("confirmarTurno");
+    expect(secondCallArgs.tools).not.toHaveProperty("reagendarTurno");
+    expect(secondCallArgs.tools).not.toHaveProperty("cancelarTurno");
   });
 });
