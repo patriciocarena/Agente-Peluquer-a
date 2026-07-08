@@ -97,6 +97,9 @@ describe("cancelarTurnoTool", () => {
 
     expect(result).toMatchObject({ ok: true });
     expect((result as { mensaje: string }).mensaje).toMatch(/ya figura cancelado/i);
+    // WR-02: sin turnoId sentinel ("") -- el campo se omite por completo en
+    // vez de un placeholder que un futuro consumidor podría tratar como UUID real.
+    expect(result).not.toHaveProperty("turnoId");
   });
 
   it.each(["not_found", "update_error"] as const)(

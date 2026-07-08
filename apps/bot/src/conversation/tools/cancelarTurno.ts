@@ -42,8 +42,12 @@ export const cancelarTurnoInputSchema = z.object({
 
 export type CancelarTurnoInput = z.infer<typeof cancelarTurnoInputSchema>;
 
+/** WR-02: `turnoId` es OPCIONAL en el caso `ok: true` — el branch
+ * `already_cancelled` de `mapCancelAppointmentResult` no tiene un id real
+ * que reportar (nada lo consume hoy, pero un `string` no-opcional invitaba a
+ * un futuro consumidor a tratar `""` como un UUID real por accidente). */
 export type CancelarTurnoResult =
-  | { ok: true; turnoId: string; mensaje: string }
+  | { ok: true; turnoId?: string; mensaje: string }
   | { ok: false; mensaje: string };
 
 const CANCELADO_OK_COPY = "Listo, cancelamos tu turno.";
@@ -60,7 +64,10 @@ function mapCancelAppointmentResult(result: CancelAppointmentResult): CancelarTu
   switch (result.reason) {
     case "already_cancelled":
       // Idempotente: el turno ya no está activo (lo que el cliente quería).
-      return { ok: true, turnoId: "", mensaje: YA_CANCELADO_COPY };
+      // Sin turnoId (WR-02): no hay un id real que reportar acá — omitir el
+      // campo en vez de un sentinel "" evita que un futuro consumidor lo
+      // trate como un UUID real por accidente.
+      return { ok: true, mensaje: YA_CANCELADO_COPY };
     case "not_found":
     case "update_error":
     case "validation_error":
