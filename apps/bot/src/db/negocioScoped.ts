@@ -15,17 +15,21 @@
  * mistake of "just this once, forgot the WHERE" becomes structurally
  * impossible rather than a matter of code-review discipline.
  *
- * NOTE (in-place fix, Fase 03 Pitfall 7): this file/function was originally
- * `tenantScoped(tenantId)` and filtered every accessor by `.eq('tenant_id',
- * tenantId)`. Migration `0003_tenant_negocio_split.sql` (applied live against
- * bdgufnitakelyialjoqg) renamed the tenant column to `negocio_id` on every
- * operational table below — but NOT on `negocio` itself, whose own
- * `tenant_id` column is the legitimate FK to its parent `tenant` row. The
- * `negocio()` accessor below intentionally keeps `.eq('tenant_id', ...)` —
- * do NOT "fix" it to `negocio_id`, that would break it (`negocio` has no
- * `negocio_id` column at all; its own primary key is `id`, and its FK to the
- * parent tenant is `tenant_id`, confirmed live in
- * packages/db-types/src/database.types.ts).
+ * NOTE (in-place fix, Fase 03 Pitfall 7 + Fase 06 hotfix): this file/function
+ * was originally `tenantScoped(tenantId)` and filtered every accessor by
+ * `.eq('tenant_id', tenantId)`. Migration `0003_tenant_negocio_split.sql`
+ * (applied live against bdgufnitakelyialjoqg) renamed the tenant column to
+ * `negocio_id` on every operational table below — but NOT on `negocio`
+ * itself, whose primary key is `id` and whose `tenant_id` column is the FK to
+ * its parent `tenant` row. The `negocio()` accessor is therefore special: it
+ * filters by `.eq('id', negocioId)` — the negocio's OWN primary key — because
+ * `negocioId` here is a negocio id (e.g. a `conversacion.negocio_id`), NOT a
+ * tenant id. It must NOT use `.eq('negocio_id', ...)` (`negocio` has no such
+ * column) NOR `.eq('tenant_id', negocioId)` (that filters by parent-tenant id
+ * and returns zero rows for every real negocio whose id ≠ its tenant_id —
+ * the Fase 06 live smoke caught this: `buildBotAvailabilityData` threw
+ * "no matching row" and `buscarHorarios` failed for every negocio, which is
+ * why the unit tests — all mocking negocioScoped — never surfaced it).
  *
  * Scope note: this layer was first wired in Phase 1 as pattern/structure
  * only. Phase 03 (motor de disponibilidad) is the first real consumer —
@@ -58,7 +62,7 @@ type ClienteInsert = Omit<TablesInsert<"cliente">, "negocio_id">;
 
 export function negocioScoped(negocioId: string) {
   return {
-    negocio: () => supabaseAdmin.from("negocio").select("*").eq("tenant_id", negocioId),
+    negocio: () => supabaseAdmin.from("negocio").select("*").eq("id", negocioId),
     profesionales: () => supabaseAdmin.from("profesional").select("*").eq("negocio_id", negocioId),
     horariosTrabajo: () =>
       supabaseAdmin.from("horario_trabajo").select("*").eq("negocio_id", negocioId),
