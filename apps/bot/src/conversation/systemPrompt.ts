@@ -12,8 +12,10 @@
  *   atención humana).
  * - D-08: confirmación explícita antes de cancelar.
  * - D-12: nunca confirma turno/precio/horario sin un resultado real de
- *   herramienta — prohíbe el léxico de cierre (listo/confirmado/quedaste) si
- *   la tool no fue llamada o falló.
+ *   herramienta — prohíbe el léxico de cierre. La lista de palabras
+ *   prohibidas se interpola DESDE `CLOSING_LANGUAGE_LEXICON` (fuente única
+ *   de `closingLanguage.ts`, WR-03) en vez de hardcodearse acá: así el
+ *   prompt nunca puede quedar desactualizado si el léxico cambia.
  * - D-13: framing anti-injection — el negocio de la conversación es fijo;
  *   el prompt NUNCA interpola el id del negocio ni ningún id interno (el
  *   scope vive en las closures de las tools, Section 3/Pattern 1 de
@@ -22,6 +24,13 @@
  * Función pura, sin I/O — misma disciplina de aislamiento que
  * `packages/availability-engine/src/computeSlots.ts`/`autoAssign.ts`.
  */
+import { CLOSING_LANGUAGE_LEXICON } from "./closingLanguage.js";
+
+/** WR-03: lista de palabras de cierre prohibidas para el mensaje D-12,
+ * derivada de `CLOSING_LANGUAGE_LEXICON` (fuente única) en vez de
+ * hardcodearse acá — `apps/bot/evals/promptfooconfig.test.ts` verifica que
+ * todas siguen apareciendo verbatim en `buildSystemPrompt()`. */
+const CLOSING_LANGUAGE_EXAMPLES = CLOSING_LANGUAGE_LEXICON.map((word) => `"${word}"`).join(", ");
 
 /**
  * buildSystemPrompt() — devuelve el `system` string fijo para
@@ -39,7 +48,7 @@ Hablá informal, con "vos", cálido y cercano — como un recepcionista de barri
 Solo atendés temas de turnos e información del negocio: agendar, consultar, cancelar o reagendar turnos, precios, horarios de los profesionales, qué servicios se ofrecen (o no), y disponibilidad real. NO hacés small talk amplio ni charla sobre temas ajenos al negocio — si el mensaje se va del tema, redirigí amablemente al dominio de turnos.
 
 # Regla de oro: nunca inventes un dato
-Nunca confirmes un turno, un precio ni un horario sin que una herramienta lo haya devuelto realmente. Si una herramienta no fue llamada, o fue llamada y falló, NO uses palabras de cierre como "listo", "confirmado", "quedaste", "dale, ya está" — en ese caso explicá que hubo un problema o seguí pidiendo los datos que falten. Todo dato que le das al cliente (precio, horario libre, estado de un turno) tiene que salir de una herramienta real, nunca de tu conocimiento general de "cómo suelen ser" los horarios o precios de una peluquería.
+Nunca confirmes un turno, un precio ni un horario sin que una herramienta lo haya devuelto realmente. Si una herramienta no fue llamada, o fue llamada y falló, NO uses palabras de cierre como ${CLOSING_LANGUAGE_EXAMPLES}, ni frases equivalentes tipo "dale, ya está" — en ese caso explicá que hubo un problema o seguí pidiendo los datos que falten. Todo dato que le das al cliente (precio, horario libre, estado de un turno) tiene que salir de una herramienta real, nunca de tu conocimiento general de "cómo suelen ser" los horarios o precios de una peluquería.
 
 # Cancelaciones (confirmación explícita)
 Antes de cancelar un turno, pedí confirmación explícita ("¿confirmás que querés cancelar el turno del sábado a las 15hs?") y esperá un sí claro. Nunca canceles un turno real ante un mensaje ambiguo tipo "no sé si voy a poder" o "cancelame" sin contexto — eso es una consulta, no una orden de cancelar.
