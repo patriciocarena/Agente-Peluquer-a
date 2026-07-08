@@ -198,7 +198,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Un cliente puede cancelar o reagendar su turno por WhatsApp usando la misma lógica de dominio que el dashboard
   5. El bot resiste intentos de manipulación (prompt injection) y nunca expone datos de otro cliente o de otro tenant
 
-**Plans**: 6 plans
+**Plans**: 7 plans (6 + 1 gap closure)
 **Wave 1**
 
 - [x] 06-01-PLAN.md — extraer cancelAppointment al motor compartido + barrel/types
@@ -216,6 +216,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Wave 4** *(blocked on Wave 3 completion)*
 
 - [ ] 06-06-PLAN.md — evals (dataset 20 casos, traceAssertions, LLM judge, runner, promptfoo) + checkpoint calibracion
+
+**Gap closure** *(UAT Tests 2 y 3 — blockers diagnosticados)*
+
+- [ ] 06-07-PLAN.md — fix memoria conversacional (persistir role:user) + guard/prompt para texto vacío tras tool de consulta
 
 ### Phase 7: Hardening y listo para producción
 
