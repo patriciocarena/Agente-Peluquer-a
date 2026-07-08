@@ -34,7 +34,7 @@ const CLOSING_LANGUAGE_EXAMPLES = CLOSING_LANGUAGE_LEXICON.map((word) => `"${wor
 
 /**
  * buildSystemPrompt() — devuelve el `system` string fijo para
- * `generateText({ model: google('gemini-2.5-flash-lite'), system: buildSystemPrompt(), ... })`.
+ * `generateText({ model: google('gemini-3.1-flash-lite'), system: buildSystemPrompt(), ... })`.
  * No recibe parámetros: nada scopeado al negocio/tenant entra a este texto
  * (D-13) — eso vive exclusivamente en los closures de las tools.
  */

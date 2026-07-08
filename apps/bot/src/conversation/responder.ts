@@ -111,7 +111,7 @@ export type ResponderGenerateTextResult = Awaited<ReturnType<typeof aiGenerateTe
 
 const defaultDeps: ResponderDeps = {
   generateText: aiGenerateText,
-  model: google("gemini-2.5-flash-lite"),
+  model: google("gemini-3.1-flash-lite"),
   buildTools: buildResponderTools,
   negocioScoped: realNegocioScoped,
   log: (obj, msg) => console.log(msg, obj),
