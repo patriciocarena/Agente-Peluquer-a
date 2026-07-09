@@ -257,7 +257,7 @@ export type Database = {
           updated_at: string
           waba_id: string | null
           whatsapp_phone_number_id: string | null
-          whatsapp_token: string | null
+          whatsapp_token_secret_id: string | null
         }
         Insert: {
           activo?: boolean
@@ -274,7 +274,7 @@ export type Database = {
           updated_at?: string
           waba_id?: string | null
           whatsapp_phone_number_id?: string | null
-          whatsapp_token?: string | null
+          whatsapp_token_secret_id?: string | null
         }
         Update: {
           activo?: boolean
@@ -291,7 +291,7 @@ export type Database = {
           updated_at?: string
           waba_id?: string | null
           whatsapp_phone_number_id?: string | null
-          whatsapp_token?: string | null
+          whatsapp_token_secret_id?: string | null
         }
         Relationships: [
           {
@@ -664,6 +664,14 @@ export type Database = {
     Functions: {
       auth_negocio_ids: { Args: never; Returns: string[] }
       auth_tenant_id: { Args: never; Returns: string }
+      get_whatsapp_token: {
+        Args: { p_negocio_id: string }
+        Returns: string
+      }
+      set_whatsapp_token_secret: {
+        Args: { p_name: string; p_negocio_id: string; p_token: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
