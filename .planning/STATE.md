@@ -2,14 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-last_updated: "2026-07-09T14:22:10.121Z"
-last_activity: 2026-07-09 — Fase 6 cerrada de verdad; bug de timezone del agendamiento arreglado
+current_phase: 07
+current_phase_name: hardening-y-listo-para-produccion
+status: executing
+stopped_at: Phase 7 context gathered
+last_updated: "2026-07-09T21:09:26.155Z"
+last_activity: 2026-07-09
+last_activity_desc: Phase 07 execution started
 progress:
   total_phases: 7
   completed_phases: 6
-  total_plans: 38
-  completed_plans: 38
+  total_plans: 43
+  completed_plans: 39
   percent: 86
 ---
 
@@ -20,13 +24,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-03)
 
 **Core value:** Un cliente puede agendar un turno real, en un horario realmente disponible, conversando por WhatsApp en lenguaje natural — sin intervención humana de la peluquería.
-**Current focus:** Phase 07 — hardening-y-listo-para-produccion (lista para planificar)
+**Current focus:** Phase 07 — hardening-y-listo-para-produccion
 
 ## Current Position
 
-Phase: 07 (hardening-y-listo-para-produccion) — READY TO PLAN
-Status: Fase 06 completa (UAT 7/7, seguridad 26/26). El agendamiento en vivo agenda un turno real en la hora correcta (bug de timezone resuelto y verificado). Próximo: /gsd-plan-phase 7.
-Last activity: 2026-07-09 — Fase 6 cerrada de verdad; bug de timezone del agendamiento arreglado
+Phase: 07 (hardening-y-listo-para-produccion) — EXECUTING
+Status: Executing Phase 07
+Last activity: 2026-07-09 — Phase 07 execution started
 
 Progress: [█████████░] 86%
 
@@ -70,6 +74,7 @@ Progress: [█████████░] 86%
 | Phase 06-agente-conversacional-de-agendamiento P03 | 20min | 2 tasks | 7 files |
 | Phase 06-agente-conversacional-de-agendamiento P04 | 15min | 2 tasks | 6 files |
 | Phase 06-agente-conversacional-de-agendamiento P05 | 15min | 3 tasks | 6 files |
+| Phase 07 P04 | 20min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -112,6 +117,7 @@ Recent decisions affecting current work:
 - [Phase 06-04]: reagendarTurno/cancelarTurno reciben clienteId en la factory solo por paridad de firma (Pattern 1) -- el scoping real de la mutacion lo hace la funcion de dominio via negocioId+turnoId, mismo modelo de confianza que el dashboard
 - [Phase 06-05]: responder.ts ensamblado como tool-loop generateText(stopWhen isStepCount(6)) con las 5 tools de 06-03/06-04; gate D-12 escanea result.steps (nunca result.text) por confirmarTurno/reagendarTurno con turno_id real vía closingLanguage.ts (léxico único, compartido con la eval offline 06-06)
 - [Phase 06-05]: inboundWorker.ts lee needsHuman de conversacion.context ANTES de invocar responder (D-11) — el handoff a humano queda fuera del control del modelo, saltando responder+sendWhatsappMessage sin regresión del dedup 23505 ni del gate de ventana 24h
+- [Phase 07]: [Phase 07-04]: verify-concurrent-booking.ts probo en vivo SEC-02 Success Criterion #2 -- 3/3 corridas deterministas, exactamente 1 exito y N-1 slot_taken via bookAppointment (GiST EXCLUDE, no chequeo en memoria)
 
 ### Blockers/Concerns
 
@@ -137,7 +143,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-09T14:22:10.117Z
+Last session: 2026-07-09T21:08:27.168Z
 Stopped at: Phase 7 context gathered
 Resume file: .planning/phases/07-hardening-y-listo-para-produccion/07-CONTEXT.md
 

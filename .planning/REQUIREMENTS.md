@@ -88,7 +88,7 @@ Requisitos para el release inicial. Cada uno mapea a una fase del roadmap.
 ### Hardening / launch readiness (SEC)
 
 - [ ] **SEC-01**: Los tokens de acceso de WhatsApp por tenant se almacenan encriptados en reposo (Supabase Vault o AES-GCM)
-- [ ] **SEC-02**: Existe un test de carga concurrente que prueba que la constraint anti-doble-reserva se sostiene
+- [x] **SEC-02**: Existe un test de carga concurrente que prueba que la constraint anti-doble-reserva se sostiene
 - [ ] **SEC-03**: Existe un test de aislamiento cross-tenant sobre las queries service_role del bot
 
 ## v2 Requirements
@@ -175,7 +175,7 @@ Qué fases cubren qué requisitos.
 | BOT-10 | Phase 6 | Complete |
 | BOT-11 | Phase 6 | Complete |
 | SEC-01 | Phase 7 | Pending |
-| SEC-02 | Phase 7 | Pending |
+| SEC-02 | Phase 7 | Complete |
 | SEC-03 | Phase 7 | Pending |
 
 **Coverage:**
