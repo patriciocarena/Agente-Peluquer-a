@@ -64,13 +64,25 @@ export interface ComputeSlotsInput {
 }
 
 /** Un slot ofrecible al cliente. `start`/`end` en HH:mm hora local del
- * negocio; `professionalId` indica a quién quedaría asignado el turno
- * (incluye el resultado de la auto-asignación cuando no hubo preferencia). */
+ * negocio (para MOSTRARLE la hora al cliente); `startIso`/`endIso` son el
+ * MISMO instante como ISO-8601 UTC completo (para PASARLO a
+ * `bookAppointment`/`confirmarTurno` sin que el caller/modelo tenga que
+ * reconstruir el timestamp ni hacer aritmética de timezone — bug real
+ * hallado en el smoke en vivo: el modelo le pegaba "Z" a la hora local y
+ * `confirmarTurno` recibía el instante equivocado → slot_taken). `professionalId`
+ * indica a quién quedaría asignado el turno (incluye el resultado de la
+ * auto-asignación cuando no hubo preferencia). */
 export interface AvailableSlot {
-  /** ISO time, HH:mm, hora local del negocio. */
+  /** HH:mm, hora local del negocio — SOLO para mostrarle al cliente. */
   start: string;
-  /** ISO time, HH:mm, hora local del negocio. */
+  /** HH:mm, hora local del negocio — SOLO para mostrarle al cliente. */
   end: string;
+  /** ISO-8601 UTC completo del mismo instante que `start` — el valor que se
+   * pasa tal cual a `bookAppointment.inicio`/`confirmarTurno.slotInicio`. */
+  startIso: string;
+  /** ISO-8601 UTC completo del mismo instante que `end` — el valor que se
+   * pasa tal cual a `bookAppointment.fin`/`confirmarTurno.slotFin`. */
+  endIso: string;
   professionalId: string;
 }
 

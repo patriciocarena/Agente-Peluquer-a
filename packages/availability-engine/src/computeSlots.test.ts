@@ -95,6 +95,25 @@ describe("computeSlots", () => {
     expect(starts).toContain("09:30");
   });
 
+  it("startIso/endIso: cada slot expone el instante UTC exacto (fix booking timezone — no 'HH:mmZ')", async () => {
+    const data = fixtureFor(); // 09:00-13:00 AR, servicio Corte 30 min, sin bloqueos/turnos
+    const slots = await computeSlots(inputFor({ professionalId: PROFESIONAL_A_ID }), data, SAFE_NOW);
+
+    const slot0900 = slots.find((s) => s.start === "09:00");
+    expect(slot0900).toBeDefined();
+    // 09:00 AR (UTC-3) = 12:00 UTC. El ISO es el instante REAL, nunca "2026-07-06T09:00:00Z"
+    // (ese era el bug: el modelo le pegaba "Z" a la hora local -> confirmarTurno recibía
+    // 09:00 UTC = 06:00 AR, fuera del horario -> slot_taken).
+    expect(slot0900!.startIso).toBe("2026-07-06T12:00:00.000Z");
+    expect(slot0900!.endIso).toBe("2026-07-06T12:30:00.000Z"); // +30 min (Corte)
+
+    // Round-trip que bookAppointment hace internamente (formatHHmmInZone(startIso) === start):
+    // pasar startIso a la reserva reconstruye la MISMA hora local que se le mostró al cliente.
+    const zonedBack = new TZDate(new Date(slot0900!.startIso).getTime(), TZ);
+    const hhmm = `${String(zonedBack.getHours()).padStart(2, "0")}:${String(zonedBack.getMinutes()).padStart(2, "0")}`;
+    expect(hhmm).toBe(slot0900!.start);
+  });
+
   it("Pitfall 4: un turno cancelado NO bloquea (el slot sigue disponible)", async () => {
     const turnoCancelado = makeTurno({
       estado: "cancelado",

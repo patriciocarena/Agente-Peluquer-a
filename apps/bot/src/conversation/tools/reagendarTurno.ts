@@ -30,8 +30,8 @@
  * el bypass opt-in de la ventana de reserva (el bot respeta 60min/30d, a
  * diferencia del dueño).
  */
-import { rescheduleAppointment, uuidLike } from "@turnosbot/availability-engine";
-import type { BookAppointmentResult } from "@turnosbot/availability-engine";
+import { computeSlots, rescheduleAppointment, uuidLike } from "@turnosbot/availability-engine";
+import type { BookAppointmentResult, ComputeSlotsInput } from "@turnosbot/availability-engine";
 import { tool } from "ai";
 import { z } from "zod";
 
@@ -43,12 +43,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@turnosbot/db-types";
 
 /** inputSchema de `reagendarTurno`. Sin `negocioId` — closure-captured
- * (D-13). */
+ * (D-13). `nuevaFecha` + `nuevaHoraInicio` son la fecha y la HORA LOCAL del
+ * nuevo slot (tal como buscarHorarios se lo mostró al modelo), NO un ISO — el
+ * instante UTC lo resuelve el servidor acá (mismo fix de timezone que
+ * `confirmarTurno`: el modelo nunca arma un timestamp). */
 export const reagendarTurnoInputSchema = z.object({
   turnoId: uuidLike,
   profesionalId: uuidLike,
-  nuevoSlotInicio: z.iso.datetime(),
-  nuevoSlotFin: z.iso.datetime(),
+  nuevaFecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "nuevaFecha debe tener formato YYYY-MM-DD"),
+  nuevaHoraInicio: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, "nuevaHoraInicio debe tener formato HH:mm (hora local del slot)"),
 });
 
 export type ReagendarTurnoInput = z.infer<typeof reagendarTurnoInputSchema>;
@@ -80,6 +85,7 @@ function mapRescheduleResult(result: BookAppointmentResult): ReagendarTurnoResul
  * por mocks deterministas sin DB real ni Gemini. */
 export interface ReagendarTurnoDeps {
   rescheduleAppointment: typeof rescheduleAppointment;
+  computeSlots: typeof computeSlots;
   buildBotAvailabilityData: typeof realBuildBotAvailabilityData;
   negocioScoped: typeof realNegocioScoped;
   supabase: SupabaseClient<Database>;
@@ -87,6 +93,7 @@ export interface ReagendarTurnoDeps {
 
 const defaultDeps: ReagendarTurnoDeps = {
   rescheduleAppointment,
+  computeSlots,
   buildBotAvailabilityData: realBuildBotAvailabilityData,
   negocioScoped: realNegocioScoped,
   supabase: supabaseAdmin,
@@ -128,14 +135,35 @@ export function reagendarTurnoTool(
       // Anti-cache (Pattern 7): freshData SIEMPRE fetcheado dentro del execute.
       const freshData = await deps.buildBotAvailabilityData(negocioId);
 
+      // Resolución server-side del instante (mismo fix que confirmarTurno): el
+      // modelo pasó la nueva fecha + HORA LOCAL; buscamos el slot real a esa
+      // hora y usamos su startIso/endIso. Se EXCLUYE el propio turno de la
+      // disponibilidad (mismo criterio que rescheduleAppointment internamente),
+      // para que su horario ACTUAL no aparezca ocupado al resolver el nuevo.
+      const dataExcludingSelf = {
+        ...freshData,
+        turnos: freshData.turnos.filter((t) => t.id !== input.turnoId),
+      };
+      const computeInput: ComputeSlotsInput = {
+        negocioId,
+        serviceIds,
+        professionalId: input.profesionalId,
+        date: input.nuevaFecha,
+      };
+      const slots = await deps.computeSlots(computeInput, dataExcludingSelf);
+      const nuevoSlot = slots.find((s) => s.start === input.nuevaHoraInicio);
+      if (!nuevoSlot) {
+        return { ok: false, mensaje: SLOT_TAKEN_COPY };
+      }
+
       const result = await deps.rescheduleAppointment(
         {
           negocioId,
           turnoId: input.turnoId,
           profesionalId: input.profesionalId,
           serviceIds,
-          inicio: input.nuevoSlotInicio,
-          fin: input.nuevoSlotFin,
+          inicio: nuevoSlot.startIso,
+          fin: nuevoSlot.endIso,
           // Bypass opt-in de la ventana de reserva NUNCA activado (el bot
           // respeta 60min/30d, a diferencia del dueño en el dashboard).
         },

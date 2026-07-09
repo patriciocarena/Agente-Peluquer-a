@@ -11,7 +11,10 @@ import { autoAssign } from "./autoAssign.js";
 import type { AvailableSlot } from "./types.js";
 
 function slot(start: string, end: string, professionalId: string): AvailableSlot {
-  return { start, end, professionalId };
+  // autoAssign solo usa `start` (HH:mm) para el tie-break; startIso/endIso son
+  // irrelevantes para esta función pero requeridos por el tipo AvailableSlot —
+  // se derivan sintéticamente (autoAssign nunca los lee).
+  return { start, end, startIso: `2026-07-06T${start}:00.000Z`, endIso: `2026-07-06T${end}:00.000Z`, professionalId };
 }
 
 describe("autoAssign", () => {

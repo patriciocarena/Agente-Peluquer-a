@@ -141,10 +141,15 @@ export async function computeSlots(
           (slotInterval) => slotInterval.start >= minStart && slotInterval.start <= maxStart,
         );
 
-    // 5. Interval (epoch ms) → AvailableSlot (HH:mm en zona del negocio).
+    // 5. Interval (epoch ms) → AvailableSlot. `start`/`end` en HH:mm local
+    //    (para mostrarle al cliente) y `startIso`/`endIso` como ISO UTC del
+    //    MISMO instante (el epoch ms ya lo tenemos acá) — así el caller pasa
+    //    el instante exacto a bookAppointment sin reconstruir el timestamp.
     const availableSlots: AvailableSlot[] = slotsEnVentana.map((slotInterval) => ({
       start: formatHHmmInZone(slotInterval.start, timezone),
       end: formatHHmmInZone(slotInterval.end, timezone),
+      startIso: new Date(slotInterval.start).toISOString(),
+      endIso: new Date(slotInterval.end).toISOString(),
       professionalId: profesionalId,
     }));
 

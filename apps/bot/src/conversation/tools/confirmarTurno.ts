@@ -24,8 +24,8 @@
  * ni se deja pasar un turno_id fantasma. En error, la estructura NUNCA incluye
  * `turnoId`.
  */
-import { bookAppointment, uuidLike } from "@turnosbot/availability-engine";
-import type { BookAppointmentResult } from "@turnosbot/availability-engine";
+import { bookAppointment, computeSlots, uuidLike } from "@turnosbot/availability-engine";
+import type { BookAppointmentResult, ComputeSlotsInput } from "@turnosbot/availability-engine";
 import { tool } from "ai";
 import { z } from "zod";
 
@@ -36,12 +36,21 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@turnosbot/db-types";
 
 /** inputSchema de `confirmarTurno`. Sin `negocioId` ni `clienteId` — ambos
- * closure-captured (D-13, mismo Pattern 1 que las tools de lectura). */
+ * closure-captured (D-13, mismo Pattern 1 que las tools de lectura).
+ *
+ * `fecha` + `horaInicio` son la fecha y la HORA LOCAL del slot elegido (tal
+ * como buscarHorarios/asignarProfesional se lo mostraron al modelo en
+ * `start`), NO un ISO. El instante UTC real lo resuelve el SERVIDOR acá
+ * (matcheando contra computeSlots) — el modelo nunca arma un timestamp ni hace
+ * aritmética de timezone. Esto elimina un bug real hallado en el smoke en vivo:
+ * Gemini le pegaba "Z" a la hora local y `confirmarTurno` reservaba la hora
+ * equivocada (14:30 local → 14:30Z = 11:30 AR), a veces en silencio porque el
+ * instante erróneo caía en otro slot libre. */
 export const confirmarTurnoInputSchema = z.object({
   profesionalId: uuidLike,
   servicioIds: z.array(uuidLike).min(1, "servicioIds no puede estar vacío"),
-  slotInicio: z.iso.datetime(),
-  slotFin: z.iso.datetime(),
+  fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "fecha debe tener formato YYYY-MM-DD"),
+  horaInicio: z.string().regex(/^\d{2}:\d{2}$/, "horaInicio debe tener formato HH:mm (hora local del slot)"),
 });
 
 export type ConfirmarTurnoInput = z.infer<typeof confirmarTurnoInputSchema>;
@@ -79,12 +88,14 @@ function mapBookAppointmentResult(result: BookAppointmentResult): ConfirmarTurno
  * Gemini. */
 export interface ConfirmarTurnoDeps {
   bookAppointment: typeof bookAppointment;
+  computeSlots: typeof computeSlots;
   buildBotAvailabilityData: typeof realBuildBotAvailabilityData;
   supabase: SupabaseClient<Database>;
 }
 
 const defaultDeps: ConfirmarTurnoDeps = {
   bookAppointment,
+  computeSlots,
   buildBotAvailabilityData: realBuildBotAvailabilityData,
   supabase: supabaseAdmin,
 };
@@ -108,14 +119,33 @@ export function confirmarTurnoTool(
       // dentro del execute, nunca reusado de un turno de conversación previo.
       const freshData = await deps.buildBotAvailabilityData(negocioId);
 
+      // Resolución server-side del instante: el modelo pasó la fecha + la HORA
+      // LOCAL del slot; buscamos entre los slots reales de computeSlots el que
+      // arranca a esa hora local y usamos SU startIso/endIso (el instante UTC
+      // exacto). Así el modelo nunca arma el timestamp — imposible reservar la
+      // hora equivocada por un error de timezone. Si no hay slot a esa hora
+      // (ya se ocupó, o el modelo mandó una hora que no se ofreció), es un
+      // slot_taken benigno, nunca una reserva a un horario distinto.
+      const computeInput: ComputeSlotsInput = {
+        negocioId,
+        serviceIds: input.servicioIds,
+        professionalId: input.profesionalId,
+        date: input.fecha,
+      };
+      const slots = await deps.computeSlots(computeInput, freshData);
+      const slot = slots.find((s) => s.start === input.horaInicio);
+      if (!slot) {
+        return { ok: false, mensaje: SLOT_TAKEN_COPY };
+      }
+
       const result = await deps.bookAppointment(
         {
           negocioId,
           profesionalId: input.profesionalId,
           clienteId,
           serviceIds: input.servicioIds,
-          inicio: input.slotInicio,
-          fin: input.slotFin,
+          inicio: slot.startIso,
+          fin: slot.endIso,
           // Bypass opt-in de la ventana de reserva NUNCA activado: el bot
           // respeta la ventana 60min/30d (a diferencia del alta manual del
           // dueño en el dashboard).

@@ -1,14 +1,17 @@
 /**
  * reagendarTurno.test.ts — RED/GREEN del bloque <behavior> de 06-04-PLAN.md
- * Task 2 (mitad reagendarTurno). `rescheduleAppointment`/`negocioScoped` van
- * MOCKEADOS (no fixtures reales): esta tool es wrapper/mapeo, no motor. Sin
- * Gemini, sin DB real.
+ * Task 2 (mitad reagendarTurno). `rescheduleAppointment`/`computeSlots`/
+ * `negocioScoped` van MOCKEADOS (no fixtures reales): esta tool es
+ * wrapper/mapeo + resolución del slot, no motor. Sin Gemini, sin DB real.
  *
  * CR-03: `negocioScoped(negocioId).turnos()` también se mockea con filas
- * fijas — la tool ahora hace un ownership check (`turno.cliente_id ===
- * clienteId`) ANTES de delegar en `rescheduleAppointment`.
+ * fijas — la tool hace un ownership check (`turno.cliente_id === clienteId`)
+ * ANTES de delegar en `rescheduleAppointment`.
+ *
+ * Fix timezone (06-UAT): la tool recibe `nuevaFecha` + `nuevaHoraInicio` (hora
+ * LOCAL) y resuelve el instante UTC contra `computeSlots` server-side.
  */
-import type { BookAppointmentResult } from "@turnosbot/availability-engine";
+import type { AvailableSlot, BookAppointmentResult } from "@turnosbot/availability-engine";
 import { describe, expect, it, vi } from "vitest";
 
 // Mismo fix que buscarHorarios.test.ts: evita que db/client.ts lance en
@@ -25,14 +28,20 @@ const SERVICIO_ID = "44444444-4444-4444-4444-444444444444";
 const TURNO_ID = "55555555-5555-5555-5555-555555555555";
 const OTRO_TURNO_ID = "66666666-6666-6666-6666-666666666666";
 
+// 09:00 local == 12:00 UTC (AR). El modelo pasa la hora local; la tool resuelve el ISO.
+const HORA = "09:00";
+const SLOT_START_ISO = "2026-07-13T12:00:00.000Z";
+const SLOT_END_ISO = "2026-07-13T12:30:00.000Z";
+
 const INPUT = {
   turnoId: TURNO_ID,
   profesionalId: PROFESIONAL_ID,
-  nuevoSlotInicio: "2026-07-13T12:00:00.000Z",
-  nuevoSlotFin: "2026-07-13T12:30:00.000Z",
+  nuevaFecha: "2026-07-13",
+  nuevaHoraInicio: HORA,
 };
 
-const FAKE_FRESH_DATA = { fake: "freshData" } as unknown as Awaited<
+// freshData.turnos debe ser un array (la tool lo filtra para excluir el propio turno).
+const FAKE_FRESH_DATA = { turnos: [] } as unknown as Awaited<
   ReturnType<typeof import("../buildBotAvailabilityData.js").buildBotAvailabilityData>
 >;
 
@@ -40,11 +49,19 @@ function fakeBuildBotAvailabilityData() {
   return vi.fn(async (_negocioId: string) => FAKE_FRESH_DATA);
 }
 
-/** fakeNegocioScoped — devuelve un `negocioScoped` fake cuyo `turnoServicios()`
- * resuelve filas fijas (incluyendo un turno_id ajeno, para probar el filtro)
- * y cuyo `turnos()` (CR-03) resuelve TURNO_ID como propio de CLIENTE_ID y
- * OTRO_TURNO_ID como propio de OTRO_CLIENTE_ID — para probar el ownership
- * check. */
+function fakeComputeSlots(slots: AvailableSlot[] = [
+  { start: HORA, end: "09:30", startIso: SLOT_START_ISO, endIso: SLOT_END_ISO, professionalId: PROFESIONAL_ID },
+]) {
+  return vi.fn(
+    async (
+      _input: Parameters<typeof import("@turnosbot/availability-engine").computeSlots>[0],
+      _data: Parameters<typeof import("@turnosbot/availability-engine").computeSlots>[1],
+    ): Promise<AvailableSlot[]> => slots,
+  );
+}
+
+/** fakeNegocioScoped — `turnoServicios()` con filas fijas (incl. un turno ajeno)
+ * y `turnos()` (CR-03) con TURNO_ID de CLIENTE_ID y OTRO_TURNO_ID de OTRO_CLIENTE_ID. */
 function fakeNegocioScoped() {
   const turnoServiciosRows = [
     { turno_id: TURNO_ID, servicio_id: SERVICIO_ID },
@@ -57,50 +74,43 @@ function fakeNegocioScoped() {
   const turnoServicios = vi.fn(async () => ({ data: turnoServiciosRows, error: null }));
   const turnos = vi.fn(async () => ({ data: turnosRows, error: null }));
   const negocioScopedFn = vi.fn((_negocioId: string) => ({ turnoServicios, turnos }));
-  // Cast: el fake solo implementa `turnoServicios`/`turnos` (lo único que
-  // usa esta tool) — el tipo real de `negocioScoped` expone muchos más
-  // accessors.
   const negocioScoped = negocioScopedFn as unknown as typeof import("../../db/negocioScoped.js").negocioScoped;
   return { negocioScoped, turnoServicios, turnos, negocioScopedFn };
 }
 
-/** fakeRescheduleAppointment — mock tipado con la MISMA firma que
- * `rescheduleAppointment` real para que `.mock.calls[0]` infiera una tupla
- * no-vacía (evita `Tuple type '[]' has no element at index '0'`). */
 function fakeRescheduleAppointment(result: BookAppointmentResult) {
   return vi.fn(
     async (
-      _input: Parameters<
-        typeof import("@turnosbot/availability-engine").rescheduleAppointment
-      >[0],
-      _deps: Parameters<
-        typeof import("@turnosbot/availability-engine").rescheduleAppointment
-      >[1],
+      _input: Parameters<typeof import("@turnosbot/availability-engine").rescheduleAppointment>[0],
+      _deps: Parameters<typeof import("@turnosbot/availability-engine").rescheduleAppointment>[1],
     ): Promise<BookAppointmentResult> => result,
   );
 }
 
-async function runExecute(
-  t: ReturnType<typeof reagendarTurnoTool>,
-  input: unknown,
-): Promise<unknown> {
-  const execute = t.execute as unknown as (
-    input: unknown,
-    options: unknown,
-  ) => Promise<unknown>;
+function buildTool(overrides: Partial<Parameters<typeof reagendarTurnoTool>[2]> = {}) {
+  const { negocioScoped } = fakeNegocioScoped();
+  return reagendarTurnoTool(NEGOCIO_ID, CLIENTE_ID, {
+    rescheduleAppointment: fakeRescheduleAppointment({ ok: true, turnoId: TURNO_ID, precioTotal: 5000 }),
+    computeSlots: fakeComputeSlots(),
+    buildBotAvailabilityData: fakeBuildBotAvailabilityData(),
+    negocioScoped,
+    supabase: {} as never,
+    ...overrides,
+  });
+}
+
+async function runExecute(t: ReturnType<typeof reagendarTurnoTool>, input: unknown): Promise<unknown> {
+  const execute = t.execute as unknown as (input: unknown, options: unknown) => Promise<unknown>;
   return execute(input, { toolCallId: "test", messages: [] });
 }
 
 describe("reagendarTurnoTool", () => {
-  it("trae serviceIds vía turnoServicios y llama rescheduleAppointment con la misma forma que el dashboard (D-09)", async () => {
-    const rescheduleAppointmentMock = fakeRescheduleAppointment({
-      ok: true,
-      turnoId: TURNO_ID,
-      precioTotal: 5000,
-    });
+  it("trae serviceIds vía turnoServicios y resuelve el instante server-side: rescheduleAppointment recibe el startIso/endIso del slot (fix timezone), misma forma que el dashboard (D-09)", async () => {
+    const rescheduleAppointmentMock = fakeRescheduleAppointment({ ok: true, turnoId: TURNO_ID, precioTotal: 5000 });
     const { negocioScoped } = fakeNegocioScoped();
     const t = reagendarTurnoTool(NEGOCIO_ID, CLIENTE_ID, {
       rescheduleAppointment: rescheduleAppointmentMock,
+      computeSlots: fakeComputeSlots(),
       buildBotAvailabilityData: fakeBuildBotAvailabilityData(),
       negocioScoped,
       supabase: {} as never,
@@ -116,43 +126,30 @@ describe("reagendarTurnoTool", () => {
       turnoId: TURNO_ID,
       profesionalId: PROFESIONAL_ID,
       serviceIds: [SERVICIO_ID], // solo el servicio del turnoId pedido, no el ajeno
-      inicio: INPUT.nuevoSlotInicio,
-      fin: INPUT.nuevoSlotFin,
+      inicio: SLOT_START_ISO, // resuelto server-side desde "09:00" local
+      fin: SLOT_END_ISO,
     });
     expect(rawInput).not.toHaveProperty("skipBookingWindow");
   });
 
-  it("caso ok: devuelve estructura con turnoId", async () => {
-    const rescheduleAppointmentMock = fakeRescheduleAppointment({
-      ok: true,
-      turnoId: TURNO_ID,
-      precioTotal: 5000,
-    });
-    const { negocioScoped } = fakeNegocioScoped();
-    const t = reagendarTurnoTool(NEGOCIO_ID, CLIENTE_ID, {
-      rescheduleAppointment: rescheduleAppointmentMock,
-      buildBotAvailabilityData: fakeBuildBotAvailabilityData(),
-      negocioScoped,
-      supabase: {} as never,
-    });
+  it("nueva hora local sin slot disponible -> slot_taken, sin llamar rescheduleAppointment", async () => {
+    const rescheduleAppointmentMock = fakeRescheduleAppointment({ ok: true, turnoId: TURNO_ID, precioTotal: 5000 });
+    const t = buildTool({ rescheduleAppointment: rescheduleAppointmentMock, computeSlots: fakeComputeSlots([]) });
 
     const result = await runExecute(t, INPUT);
 
+    expect(rescheduleAppointmentMock).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ ok: false });
+    expect((result as { mensaje: string }).mensaje).toMatch(/se acaba de ocupar/i);
+  });
+
+  it("caso ok: devuelve estructura con turnoId", async () => {
+    const result = await runExecute(buildTool(), INPUT);
     expect(result).toEqual({ ok: true, turnoId: TURNO_ID, precioTotal: 5000 });
   });
 
-  it("reason=slot_taken -> estructura de error mapeada (re-oferta)", async () => {
-    const rescheduleAppointmentMock = fakeRescheduleAppointment({
-      ok: false,
-      reason: "slot_taken",
-    });
-    const { negocioScoped } = fakeNegocioScoped();
-    const t = reagendarTurnoTool(NEGOCIO_ID, CLIENTE_ID, {
-      rescheduleAppointment: rescheduleAppointmentMock,
-      buildBotAvailabilityData: fakeBuildBotAvailabilityData(),
-      negocioScoped,
-      supabase: {} as never,
-    });
+  it("reason=slot_taken (de rescheduleAppointment) -> estructura de error mapeada (re-oferta)", async () => {
+    const t = buildTool({ rescheduleAppointment: fakeRescheduleAppointment({ ok: false, reason: "slot_taken" }) });
 
     const result = await runExecute(t, INPUT);
 
@@ -162,18 +159,8 @@ describe("reagendarTurnoTool", () => {
   });
 
   it("CR-03: turnoId de OTRO cliente del mismo negocio -> ok:false GENERIC_ERROR_COPY, rescheduleAppointment NUNCA llamado", async () => {
-    const rescheduleAppointmentMock = fakeRescheduleAppointment({
-      ok: true,
-      turnoId: OTRO_TURNO_ID,
-      precioTotal: 5000,
-    });
-    const { negocioScoped } = fakeNegocioScoped();
-    const t = reagendarTurnoTool(NEGOCIO_ID, CLIENTE_ID, {
-      rescheduleAppointment: rescheduleAppointmentMock,
-      buildBotAvailabilityData: fakeBuildBotAvailabilityData(),
-      negocioScoped,
-      supabase: {} as never,
-    });
+    const rescheduleAppointmentMock = fakeRescheduleAppointment({ ok: true, turnoId: OTRO_TURNO_ID, precioTotal: 5000 });
+    const t = buildTool({ rescheduleAppointment: rescheduleAppointmentMock });
 
     const result = await runExecute(t, { ...INPUT, turnoId: OTRO_TURNO_ID });
 
@@ -183,18 +170,8 @@ describe("reagendarTurnoTool", () => {
   });
 
   it("CR-03: turnoId inexistente en el negocio -> ok:false, mismo mensaje genérico que un turnoId ajeno (no leak)", async () => {
-    const rescheduleAppointmentMock = fakeRescheduleAppointment({
-      ok: true,
-      turnoId: "inexistente",
-      precioTotal: 0,
-    });
-    const { negocioScoped } = fakeNegocioScoped();
-    const t = reagendarTurnoTool(NEGOCIO_ID, CLIENTE_ID, {
-      rescheduleAppointment: rescheduleAppointmentMock,
-      buildBotAvailabilityData: fakeBuildBotAvailabilityData(),
-      negocioScoped,
-      supabase: {} as never,
-    });
+    const rescheduleAppointmentMock = fakeRescheduleAppointment({ ok: true, turnoId: "inexistente", precioTotal: 0 });
+    const t = buildTool({ rescheduleAppointment: rescheduleAppointmentMock });
 
     const result = await runExecute(t, { ...INPUT, turnoId: "99999999-9999-9999-9999-999999999999" });
 
