@@ -362,7 +362,7 @@ export async function responder(conversacion: Tables<"conversacion">, mensajeEnt
     try {
       const retry = await deps.generateText({
         model: deps.model,
-        system: buildSystemPrompt(),
+        system: buildSystemPrompt(fechaHoy, diaSemanaHoy, timezone, clienteNombre),
         messages: [...history, userMessage, ...result.response.messages, EMPTY_TEXT_RETRY_NUDGE],
         stopWhen: isStepCount(6),
         temperature: 0.3,
