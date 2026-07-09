@@ -2,13 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 07
-current_phase_name: hardening-y-listo-para-produccion
-status: ready_to_plan
-stopped_at: "Phase 06 complete (UAT 7/7, security 26/26); bug de timezone del agendamiento arreglado y verificado en vivo"
-last_updated: "2026-07-09T00:00:00.000Z"
-last_activity: 2026-07-09
-last_activity_desc: "Fase 6 cerrada — agendamiento en vivo funciona en la hora correcta; lista la Fase 7 (Hardening)"
+status: verifying
+last_updated: "2026-07-09T14:22:10.121Z"
+last_activity: 2026-07-09 — Fase 6 cerrada de verdad; bug de timezone del agendamiento arreglado
 progress:
   total_phases: 7
   completed_phases: 6
@@ -141,9 +137,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-07T22:01:51.447Z
-Stopped at: Completed 06-05-PLAN.md
-Resume file: None
+Last session: 2026-07-09T14:22:10.117Z
+Stopped at: Phase 7 context gathered
+Resume file: .planning/phases/07-hardening-y-listo-para-produccion/07-CONTEXT.md
 
 **HANDOFF NOTE (2026-07-05):** Phase 4 has 7 plans planned across 5 waves (see 04-*-PLAN.md). Wave 1 = 04-01 + 04-02 in parallel worktrees.
 
