@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 06
-current_phase_name: agente-conversacional-de-agendamiento
-status: executing
-stopped_at: Completed 06-05-PLAN.md
-last_updated: "2026-07-08T18:01:35.544Z"
-last_activity: 2026-07-08
-last_activity_desc: Phase 06 execution started
+current_phase: 07
+current_phase_name: hardening-y-listo-para-produccion
+status: ready_to_plan
+stopped_at: "Phase 06 complete (UAT 7/7, security 26/26); bug de timezone del agendamiento arreglado y verificado en vivo"
+last_updated: "2026-07-09T00:00:00.000Z"
+last_activity: 2026-07-09
+last_activity_desc: "Fase 6 cerrada — agendamiento en vivo funciona en la hora correcta; lista la Fase 7 (Hardening)"
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 38
-  completed_plans: 37
-  percent: 71
+  completed_plans: 38
+  percent: 86
 ---
 
 # Project State
@@ -24,16 +24,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-03)
 
 **Core value:** Un cliente puede agendar un turno real, en un horario realmente disponible, conversando por WhatsApp en lenguaje natural — sin intervención humana de la peluquería.
-**Current focus:** Phase 06 — agente-conversacional-de-agendamiento
+**Current focus:** Phase 07 — hardening-y-listo-para-produccion (lista para planificar)
 
 ## Current Position
 
-Phase: 06 (agente-conversacional-de-agendamiento) — EXECUTING
-Plan: 1 of 7
-Status: Executing Phase 06
-Last activity: 2026-07-08 — Phase 06 execution started
+Phase: 07 (hardening-y-listo-para-produccion) — READY TO PLAN
+Status: Fase 06 completa (UAT 7/7, seguridad 26/26). El agendamiento en vivo agenda un turno real en la hora correcta (bug de timezone resuelto y verificado). Próximo: /gsd-plan-phase 7.
+Last activity: 2026-07-09 — Fase 6 cerrada de verdad; bug de timezone del agendamiento arreglado
 
-Progress: [██████████] 97%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
