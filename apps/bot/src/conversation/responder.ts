@@ -371,13 +371,32 @@ export async function responder(conversacion: Tables<"conversacion">, mensajeEnt
         tools: {},
       });
 
-      if (retry.text.trim() !== "") {
+      if (retry.text.trim() !== "" && hasClosingLanguage(retry.text) && !turnoIdReal && !cancelacionExitosa) {
+        // CR-01 (gate D-12 en el reintento): el reintento corre con `tools:{}`,
+        // así que su texto NUNCA puede tener un turno_id nuevo detrás. Se lo
+        // pasa por el MISMO gate D-12 que el primer intento, evaluado contra
+        // los tool-results REALES del primer intento (turnoIdReal /
+        // cancelacionExitosa de result.steps): si narra lenguaje de cierre y
+        // no hubo turno real ni cancelación exitosa, es confirmación fantasma
+        // → se bloquea igual que en el camino principal (sin esto, el
+        // reintento era un bypass del guardrail catastrófico #1).
+        deps.log(
+          { negocioId, conversacionId: conversacion.id, modelText: retry.text },
+          "Gate D-12 (reintento): lenguaje de cierre sin turno_id real ni cancelación exitosa — bloqueado",
+        );
+        finalText = SAFE_FALLBACK_MESSAGE;
+        needsHuman = true;
+      } else if (retry.text.trim() !== "") {
         finalText = retry.text;
         // El nudge sintético NUNCA se persiste como si el cliente lo
         // hubiera dicho — solo lo generado por el modelo en ambos intentos.
         messagesToPersist = [...result.response.messages, ...retry.response.messages];
       } else {
+        // CR-02: consistente con todo otro camino de SAFE_FALLBACK_MESSAGE
+        // (gate D-12 y catch de generateText) — un fallback marca needsHuman
+        // para que el PRÓXIMO inbound del hilo lo salte (D-11).
         finalText = SAFE_FALLBACK_MESSAGE;
+        needsHuman = true;
       }
     } catch (retryErr) {
       deps.log(
@@ -385,11 +404,13 @@ export async function responder(conversacion: Tables<"conversacion">, mensajeEnt
         "Guard de empty-text: el reintento de generateText falló — degradando a SAFE_FALLBACK_MESSAGE",
       );
       finalText = SAFE_FALLBACK_MESSAGE;
+      needsHuman = true; // CR-02: fallback → needsHuman (consistente)
     }
   } else if (finalText.trim() === "") {
     // Texto vacío SIN ningún tool-result en result.steps: no hay dato real
     // que priorizar narrar, así que se degrada directo sin reintento.
     finalText = SAFE_FALLBACK_MESSAGE;
+    needsHuman = true; // CR-02: fallback → needsHuman (consistente)
   }
 
   const newContext = serializeConversationContext({

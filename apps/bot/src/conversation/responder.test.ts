@@ -434,4 +434,70 @@ describe("responder — tool-loop + gate D-12 + persistencia", () => {
     expect(secondCallArgs.tools).not.toHaveProperty("reagendarTurno");
     expect(secondCallArgs.tools).not.toHaveProperty("cancelarTurno");
   });
+
+  it("CR-01 (gate D-12 en el reintento): primer intento SIN turno real + texto vacío + reintento con lenguaje de cierre -> BLOQUEADO (mensaje seguro + needsHuman), nunca confirmación fantasma", async () => {
+    // Primer intento: confirmarTurno FALLÓ (ok:false, sin turnoId) y devolvió
+    // texto vacío -> dispara el guard de empty-text. El reintento (tools:{})
+    // alucina una confirmación. Sin el fix CR-01 esto se enviaba al cliente.
+    const firstResult = fakeResult({
+      text: "",
+      steps: [stepWithConfirmarTurno({ ok: false })],
+      responseMessages: [
+        { role: "assistant", content: [{ type: "tool-call", toolCallId: "call_1", toolName: "confirmarTurno", input: {} }] },
+        { role: "tool", content: [{ type: "tool-result", toolCallId: "call_1", toolName: "confirmarTurno", output: { ok: false } }] },
+      ],
+    });
+    const retryResult = fakeResult({ text: `listo, ${CLOSING_LANGUAGE_LEXICON[2]} para el sábado a las 15hs`, steps: [] });
+
+    let call = 0;
+    const { deps, spies } = buildDeps({
+      generateTextImpl: async () => {
+        call += 1;
+        return call === 1 ? firstResult : retryResult;
+      },
+    });
+
+    const reply = await responder(makeConversacion(), "dale confirmalo", deps);
+
+    expect(reply).toBe(SAFE_FALLBACK_MESSAGE);
+    expect(spies.generateText).toHaveBeenCalledTimes(2);
+    const [, patch] = spies.updateConversacion.mock.calls[0]!;
+    expect((patch as { context: { needsHuman: boolean } }).context.needsHuman).toBe(true);
+  });
+
+  it("CR-02: reintento vacío -> SAFE_FALLBACK_MESSAGE marca needsHuman=true (consistente con los otros fallbacks)", async () => {
+    const firstResult = fakeResult({ text: "", steps: [stepWithConsultarNegocio({ ok: true })] });
+    const retryResult = fakeResult({ text: "", steps: [] });
+    let call = 0;
+    const { deps, spies } = buildDeps({
+      generateTextImpl: async () => {
+        call += 1;
+        return call === 1 ? firstResult : retryResult;
+      },
+    });
+
+    const reply = await responder(makeConversacion(), "hola", deps);
+
+    expect(reply).toBe(SAFE_FALLBACK_MESSAGE);
+    const [, patch] = spies.updateConversacion.mock.calls[0]!;
+    expect((patch as { context: { needsHuman: boolean } }).context.needsHuman).toBe(true);
+  });
+
+  it("CR-02: el reintento lanza excepción -> SAFE_FALLBACK_MESSAGE marca needsHuman=true", async () => {
+    const firstResult = fakeResult({ text: "", steps: [stepWithConsultarNegocio({ ok: true })] });
+    let call = 0;
+    const { deps, spies } = buildDeps({
+      generateTextImpl: async () => {
+        call += 1;
+        if (call === 1) return firstResult;
+        throw new Error("retry boom");
+      },
+    });
+
+    const reply = await responder(makeConversacion(), "hola", deps);
+
+    expect(reply).toBe(SAFE_FALLBACK_MESSAGE);
+    const [, patch] = spies.updateConversacion.mock.calls[0]!;
+    expect((patch as { context: { needsHuman: boolean } }).context.needsHuman).toBe(true);
+  });
 });
