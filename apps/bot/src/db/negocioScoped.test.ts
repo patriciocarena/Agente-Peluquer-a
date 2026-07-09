@@ -21,7 +21,9 @@
  * Extended from a single turnos()-only check (Phase 3) to loop over all 12
  * read accessors negocioScoped() exposes today (negocio, profesionales,
  * horariosTrabajo, servicios, profesionalServicios, clientes, turnos,
- * turnoServicios, bloqueos, conversaciones, mensajes, recordatorios).
+ * turnoServicios, bloqueos, conversaciones, mensajes, recordatorios), plus a
+ * tool-level check on `consultarNegocioTool` (BOT-05/06/08) with negocio A's
+ * context, asserting it never surfaces a negocio-B servicio id.
  *
  * `negocio()` is a special case: it has no `negocio_id` column — it filters
  * by its own primary key `.eq('id', negocioId)` (negocioScoped.ts header
@@ -33,6 +35,11 @@
  * Run via: pnpm exec tsx --env-file=.env apps/bot/src/db/negocioScoped.test.ts
  * (tsx does NOT auto-load .env — pass --env-file=.env explicitly, D-05/07-04).
  */
+import type {
+  ConsultarNegocioInput,
+  ConsultarNegocioResult,
+} from "../conversation/tools/consultarNegocio.js";
+import { consultarNegocioTool } from "../conversation/tools/consultarNegocio.js";
 import { negocioScoped } from "./negocioScoped.js";
 
 // Seeded fixture negocio IDs (mirrors scripts/seed-fixtures.ts TENANT_A/
@@ -42,6 +49,12 @@ import { negocioScoped } from "./negocioScoped.js";
 // exercises cross-tenant isolation, not just cross-negocio.
 const NEGOCIO_A_ID = "21111111-1111-1111-1111-111111111111";
 const NEGOCIO_B_ID = "22222222-2222-2222-2222-222222222222";
+
+// TENANT_A.clienteId literal (scripts/seed-fixtures.ts) — duplicated here for
+// the same reason as NEGOCIO_A_ID/NEGOCIO_B_ID above (apps/bot cannot import
+// from scripts/). Only used to construct consultarNegocioTool's closure-
+// captured clienteId (D-13/D-07) below — never a model-controllable input.
+const CLIENTE_A_ID = "51111111-1111-1111-1111-111111111111";
 
 /** The 12 read accessors negocioScoped() exposes today (negocioScoped.ts,
  * lines 64-82) — write accessors (insertMensaje, updateCliente, etc.) are
@@ -139,6 +152,19 @@ async function checkAccessor(
   );
 }
 
+/** `t.execute` tipado igual que buscarHorarios.test.ts's `runExecute` — evita
+ * repetir el cast por cada llamada. */
+async function runConsultarNegocioExecute(
+  t: ReturnType<typeof consultarNegocioTool>,
+  input: ConsultarNegocioInput,
+): Promise<ConsultarNegocioResult> {
+  const execute = t.execute as unknown as (
+    input: ConsultarNegocioInput,
+    options: unknown,
+  ) => Promise<ConsultarNegocioResult>;
+  return execute(input, { toolCallId: "sec03", messages: [] });
+}
+
 async function main() {
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     console.error(
@@ -166,6 +192,34 @@ async function main() {
   for (const accessor of READ_ACCESSORS) {
     await checkAccessor("B", NEGOCIO_B_ID, "A", NEGOCIO_A_ID, accessor);
   }
+
+  // Chequeo a nivel tool (SEC-03 Success Criterion #3, segunda mitad):
+  // consultarNegocioTool con el contexto del negocio A nunca debe surfacear
+  // un servicio del negocio B. Los ids del negocio B se derivan en vivo (no
+  // hardcodeados) para no depender de que el seed no cambie.
+  const { data: serviciosB, error: errServiciosB } = await negocioScoped(NEGOCIO_B_ID)
+    .servicios()
+    .select("*");
+  assert(
+    !errServiciosB,
+    `negocioScoped(B).servicios() no debería fallar (setup del chequeo tool): ${errServiciosB?.message}`,
+  );
+  const KNOWN_NEGOCIO_B_SERVICIO_IDS = new Set((serviciosB ?? []).map((servicio) => servicio.id));
+
+  const tool = consultarNegocioTool(NEGOCIO_A_ID, CLIENTE_A_ID);
+  const preciosA = await runConsultarNegocioExecute(tool, { tipo: "precios" });
+  assert(
+    preciosA.tipo === "precios",
+    "consultarNegocio(A) con tipo:'precios' no devolvió tipo:'precios'.",
+  );
+  const idsA = preciosA.servicios.map((servicio) => servicio.id);
+  assert(
+    idsA.every((id) => !KNOWN_NEGOCIO_B_SERVICIO_IDS.has(id)),
+    "consultarNegocio(A) devolvió un servicio del negocio B -- FUGA CROSS-NEGOCIO.",
+  );
+  console.log(
+    `OK: consultarNegocio(A) tipo:'precios' devuelve ${idsA.length} servicio(s), ninguno de los ${KNOWN_NEGOCIO_B_SERVICIO_IDS.size} servicio(s) conocidos del negocio B.`,
+  );
 
   console.log("\nnegocioScoped.test.ts: PASSED");
 }
