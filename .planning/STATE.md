@@ -6,15 +6,15 @@ current_phase: 07
 current_phase_name: hardening-y-listo-para-produccion
 status: executing
 stopped_at: Phase 7 context gathered
-last_updated: "2026-07-09T21:09:26.155Z"
+last_updated: "2026-07-09T21:28:23.987Z"
 last_activity: 2026-07-09
 last_activity_desc: Phase 07 execution started
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 43
-  completed_plans: 39
-  percent: 86
+  completed_plans: 40
+  percent: 93
 ---
 
 # Project State
@@ -30,9 +30,9 @@ See: .planning/PROJECT.md (updated 2026-07-03)
 
 Phase: 07 (hardening-y-listo-para-produccion) — EXECUTING
 Status: Executing Phase 07
-Last activity: 2026-07-09 — Phase 07 execution started
+Last activity: 2026-07-09 — Completado plan 07-05 (SEC-03 negocioScoped isolation, verificado en vivo)
 
-Progress: [█████████░] 86%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -75,6 +75,7 @@ Progress: [█████████░] 86%
 | Phase 06-agente-conversacional-de-agendamiento P04 | 15min | 2 tasks | 6 files |
 | Phase 06-agente-conversacional-de-agendamiento P05 | 15min | 3 tasks | 6 files |
 | Phase 07 P04 | 20min | 1 tasks | 1 files |
+| Phase 07 P05 | 15min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -118,6 +119,7 @@ Recent decisions affecting current work:
 - [Phase 06-05]: responder.ts ensamblado como tool-loop generateText(stopWhen isStepCount(6)) con las 5 tools de 06-03/06-04; gate D-12 escanea result.steps (nunca result.text) por confirmarTurno/reagendarTurno con turno_id real vía closingLanguage.ts (léxico único, compartido con la eval offline 06-06)
 - [Phase 06-05]: inboundWorker.ts lee needsHuman de conversacion.context ANTES de invocar responder (D-11) — el handoff a humano queda fuera del control del modelo, saltando responder+sendWhatsappMessage sin regresión del dedup 23505 ni del gate de ventana 24h
 - [Phase 07]: [Phase 07-04]: verify-concurrent-booking.ts probo en vivo SEC-02 Success Criterion #2 -- 3/3 corridas deterministas, exactamente 1 exito y N-1 slot_taken via bookAppointment (GiST EXCLUDE, no chequeo en memoria)
+- [Phase 07-05]: negocioScoped.test.ts extendido a los 12 accessors de lectura + chequeo a nivel tool consultarNegocioTool -- SEC-03 Success Criterion #3 probado en vivo contra bdgufnitakelyialjoqg, 26/26 aserciones OK, cero fugas cross-negocio
 
 ### Blockers/Concerns
 
@@ -143,9 +145,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-09T21:08:27.168Z
-Stopped at: Phase 7 context gathered
-Resume file: .planning/phases/07-hardening-y-listo-para-produccion/07-CONTEXT.md
+Last session: 2026-07-09T21:24:46Z
+Stopped at: Completado plan 07-05 (SEC-03 negocioScoped isolation)
+Resume file: .planning/phases/07-hardening-y-listo-para-produccion/07-05-SUMMARY.md
 
 **HANDOFF NOTE (2026-07-05):** Phase 4 has 7 plans planned across 5 waves (see 04-*-PLAN.md). Wave 1 = 04-01 + 04-02 in parallel worktrees.
 

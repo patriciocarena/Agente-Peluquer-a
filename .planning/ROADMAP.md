@@ -232,13 +232,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Un test de carga con reservas concurrentes sobre el mismo slot confirma que solo una tiene éxito y el resto recibe un rechazo controlado
   3. Un test de aislamiento cross-tenant confirma que las consultas del bot (service_role) con el contexto del tenant A nunca devuelven filas del tenant B
 
-**Plans**: 1/5 plans executed
+**Plans**: 2/5 plans executed
 
 **Wave 1** *(paralelas — sin overlap de archivos)*
 
 - [ ] 07-01-PLAN.md — [BLOCKING] Migración 0005 (Vault: extensión + 2 wrappers SECURITY DEFINER + swap negocio.whatsapp_token→whatsapp_token_secret_id) + apply live/regen db-types (SEC-01)
 - [x] 07-04-PLAN.md — SEC-02: script gated verify-concurrent-booking.ts (N reservas concurrentes al mismo slot vía bookAppointment, freshData compartido, exactamente 1 éxito)
-- [ ] 07-05-PLAN.md — SEC-03: extender negocioScoped.test.ts a los 12 accessors + chequeo tool consultarNegocio (aislamiento cross-negocio service_role, live)
+- [x] 07-05-PLAN.md — SEC-03: extender negocioScoped.test.ts a los 12 accessors + chequeo tool consultarNegocio (aislamiento cross-negocio service_role, live)
 
 **Wave 2** *(depende de 07-01)*
 
@@ -261,7 +261,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Grilla y turnos del dashboard | 7/7 | Complete   | 2026-07-06 |
 | 5. Integración WhatsApp Cloud API | 6/6 | Complete    | 2026-07-06 |
 | 6. Agente conversacional de agendamiento | 7/7 | Complete   | 2026-07-08 |
-| 7. Hardening y listo para producción | 1/5 | In Progress|  |
+| 7. Hardening y listo para producción | 2/5 | In Progress|  |
 
 ## Research Flags
 
