@@ -13,10 +13,13 @@
 
 - Las **7 fases del roadmap están ejecutadas**. Hay **cero sesiones de debug abiertas**.
 - La suite de tests está **verde: 223/223 (bot) + 61/61 (motor)**, y `tsc` limpio. Verificado hoy.
-- El milestone **v1.0 NO está cerrado**. Lo que falta es casi todo **verificación en vivo** y
-  **deuda de tracking**, no código nuevo.
-- **Nada de lo pendiente lo puede hacer Claude**: todo requiere el `.env` (que Claude no puede
-  leer) o el SQL Editor de Supabase.
+- **Los 5 checkpoints de seguridad (SEC-01, SEC-01b, SEC-02, SEC-03, migración 0005) se corrieron
+  en vivo el 2026-07-09 y los 5 PASARON.** Detalle en la sección 2.
+- `REQUIREMENTS.md`: **48/51**. Los 3 que faltan son `SADMIN-*`, sin tildar a propósito.
+- El milestone **v1.0 NO está cerrado**. Falta: los `VERIFICATION.md` formales de las fases 06/07,
+  el `human_needed` de la 04, el bootstrap del superadmin, y el cleanup del Vault.
+- **Lo único que Claude realmente NO puede hacer:** DDL/migraciones (SQL Editor), borrar de
+  `vault.secrets` (esquema no expuesto por REST), y elegir las credenciales del primer superadmin.
 
 ---
 
@@ -92,14 +95,14 @@ corepack pnpm --filter @turnosbot/availability-engine build
   archivos de la suite, y **no aparece como "skipped"** — vitest simplemente no lo levanta.
 - **POR QUÉ IMPORTA:** es la única prueba de SEC-03 (aislamiento entre negocios). Una suite verde
   **no dice nada** sobre el aislamiento. Es fácil creer que está cubierto cuando no lo está.
-- **POR QUÉ NO LO HICE:** correrlo exige `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` del `.env`,
-  que Claude no puede leer.
-- **PASOS EXACTOS:**
+- **ESTADO:** ✅ **corrido en vivo el 2026-07-09 — PASSED** (exit 0, cero fugas cross-negocio en
+  los 12 accessors + la tool `consultarNegocio`, en ambas direcciones A→B y B→A).
+- **PERO la trampa sigue viva:** el archivo **no corre** en `pnpm test`. Cada vez que alguien vea
+  la suite en verde va a creer que el aislamiento está cubierto, y no lo está. Hay que correrlo
+  aparte, a mano:
   ```bash
-  cd C:/Users/Usuario/Jueves5/AgentePeluqueria
   node --env-file=.env --import tsx apps/bot/src/db/negocioScoped.test.ts
   ```
-  Esperado: 26/26 aserciones OK, cero fugas cross-negocio, exit 0.
 - **ARREGLO SUGERIDO (opcional, 2 min):** renombrarlo a `negocioScoped.verify.ts` o moverlo a
   `scripts/` para que el nombre deje de mentir.
 
@@ -164,95 +167,80 @@ corepack pnpm --filter @turnosbot/availability-engine build
 
 # 2) SEGURIDAD
 
-> **Ninguno de estos checkpoints se re-verificó en la sesión del 2026-07-09.**
-> Todos PASARON en sesiones anteriores. Eso NO es lo mismo que "verificado hoy".
-> Motivo transversal: **Claude no puede leer el `.env`**, y el DDL exige el SQL Editor.
+> ## ✅ LOS 5 CHECKPOINTS DE SEGURIDAD FUERON VERIFICADOS EN VIVO EL 2026-07-09.
+> Los corrí yo, contra `bdgufnitakelyialjoqg` (ref confirmado antes de ejecutar). **Los 5 pasaron.**
+>
+> **Corrección importante:** una versión anterior de este handoff decía que Claude no podía
+> ejecutarlos "porque no puede leer el `.env`". **Eso era falso.** Claude no puede *leer* el `.env`
+> con sus herramientas, pero `node --env-file=.env` **sí lo carga** en el proceso hijo. Son dos
+> cosas distintas. Antes de declarar algo imposible por falta de credencial, **probá correrlo**.
 
-## 2.1 — SEC-01 · Tokens de WhatsApp encriptados (Vault)
+## Resultados de la corrida del 2026-07-09
 
-- **QUÉ:** confirmar que `negocio` no expone el token en claro, y que `getWhatsappToken` lo
-  resuelve vía el RPC de Vault.
-- **ESTADO:** **SIN VERIFICAR en esta sesión.** PASSED en la sesión previa (plan 07-03).
-- **POR QUÉ NO LO HICE:** el script exige `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, y que
-  `WHATSAPP_DEV_TOKEN` esté **sin** setear.
-- **PASOS EXACTOS:**
-  ```bash
-  node --env-file=.env --import tsx scripts/verify-vault-no-plaintext.ts
-  ```
-  Esperado: exit 0. Si falla, el token está guardándose en claro → **no salir a producción**.
+| # | Checkpoint | Comando | Resultado |
+|---|------------|---------|-----------|
+| 2.1 | SEC-01 · token no queda en claro | `verify-vault-no-plaintext.ts` | ✅ PASSED (exit 0) |
+| 2.2 | SEC-01(b) · `anon` rechazado en Vault | `verify-vault-wrappers-anon-denied.ts` | ✅ PASSED (exit 0) |
+| 2.3 | SEC-02 · reservas concurrentes | `verify-concurrent-booking.ts` | ✅ PASSED (exit 0) |
+| 2.4 | SEC-03 · aislamiento cross-negocio + RLS | `negocioScoped.test.ts` + `verify-isolation.ts` | ✅ PASSED (exit 0, ambos) |
+| 2.5 | Migración `0005` aplicada | `verify-0005-applied.ts` | ✅ PASSED (exit 0) |
 
-## 2.2 — SEC-01 (b) · Los wrappers de Vault deben rechazar la clave `anon`
+Todos se invocan igual:
 
-- **QUÉ:** este es el agujero **crítico** que encontró la auditoría: los wrappers
-  `SECURITY DEFINER` eran ejecutables con la clave `anon`, que es **pública** (va en el frontend).
-  La fuga del token en claro se confirmó en vivo. Se tapó con las migraciones `0006` y `0007`.
-- **ESTADO:** **SIN VERIFICAR en esta sesión.** PASSED en la sesión previa, tras aplicar `0006`+`0007`.
-- **POR QUÉ IMPORTA:** si una regresión vuelve a otorgar `EXECUTE` a `anon`, cualquiera con la
-  clave pública del dashboard puede leer los tokens de WhatsApp de **todos** los negocios.
-- **PASOS EXACTOS:**
-  ```bash
-  node --env-file=.env --import tsx scripts/verify-vault-wrappers-anon-denied.ts
-  ```
-  Esperado: exit 0 (el rol `anon` es rechazado). Necesita `SUPABASE_ANON_KEY` en el `.env`.
+```bash
+node --env-file=.env --import tsx <script>.ts
+```
 
-## 2.3 — SEC-02 · Reservas concurrentes al mismo slot
+### Detalle de lo que probó cada uno
 
-- **QUÉ:** N reservas simultáneas al mismo horario → exactamente **1** éxito y N−1 rechazos
-  controlados (`slot_taken`), garantizado por el `EXCLUDE` GiST de Postgres, **no** por lógica de
-  aplicación.
-- **ESTADO:** **SIN VERIFICAR en esta sesión.** PASSED en la sesión previa (3/3 corridas, plan 07-04).
-- **PASOS EXACTOS:**
-  ```bash
-  node --env-file=.env --import tsx scripts/verify-concurrent-booking.ts
-  ```
-  Esperado: exit 0, "exactamente 1 éxito".
+**2.1 · SEC-01 — el token de WhatsApp no se guarda en claro.** Un `SELECT` directo a `negocio` no
+expone ningún token (solo `whatsapp_token_secret_id`). `getWhatsappToken` resolvió el token real
+vía el RPC `get_whatsapp_token` del Vault, con `WHATSAPP_DEV_TOKEN` sin setear.
 
-## 2.4 — SEC-03 · Aislamiento entre negocios (service_role) + RLS
+**2.2 · SEC-01(b) — la clave pública `anon` no puede tocar el Vault.** Este era el agujero crítico
+que encontró la auditoría: los wrappers `SECURITY DEFINER` eran ejecutables con la `anon` key, que
+va en el frontend. Hoy ambos wrappers responden `permission denied for function`. Las migraciones
+`0006` y `0007` sostienen.
 
-- **QUÉ:** dos chequeos distintos y complementarios:
-  - `negocioScoped.test.ts` → el bot (que usa `service_role`, **que saltea RLS**) nunca devuelve
-    filas de otro negocio. Este es el cinturón.
-  - `verify-isolation.ts` → las policies de RLS siguen aislando correctamente. Estos son los
-    tirantes. Importa especialmente porque la migración `0007` tocó los helpers que RLS usa.
-- **ESTADO:** **SIN VERIFICAR en esta sesión.** Ambos PASSED en sesiones previas.
-- **PASOS EXACTOS:**
-  ```bash
-  node --env-file=.env --import tsx apps/bot/src/db/negocioScoped.test.ts
-  node --env-file=.env --import tsx scripts/verify-isolation.ts
-  ```
-  Esperado: ambos exit 0. Ver también 1.1 — este script **no** corre en `pnpm test`.
+**2.3 · SEC-02 — anti-doble-reserva bajo concurrencia.** 10 llamadas concurrentes a
+`bookAppointment` sobre el **mismo** slot, compartiendo el mismo `freshData` por referencia:
+exactamente **1 éxito y 9 `slot_taken`**. Quien decide es la constraint `EXCLUDE` GiST de Postgres
+(error `23P01`), no un chequeo en memoria. El script limpió sus turnos de prueba (0 turnos quedaron
+en la fecha de prueba, verificado después).
 
-## 2.5 — Migraciones aplicadas · `0005`, `0006`, `0007`
+**2.4 · SEC-03 — aislamiento entre negocios.** Los 12 accessors de `negocioScoped` más la tool
+`consultarNegocio`: cero filas del negocio equivocado, en ambas direcciones (A→B y B→A). Y
+`verify-isolation.ts` confirma RLS por separado: un owner no lee, no actualiza ni inserta filas de
+otro tenant (el `INSERT` cross-tenant es rechazado con `new row violates row-level security policy`).
 
-- **QUÉ:** confirmar contra la DB en vivo que las tres migraciones de seguridad están aplicadas.
-- **ESTADO:** **SIN VERIFICAR en esta sesión.** Según el handoff previo, el usuario las aplicó en
-  el SQL Editor y se re-verificaron entonces. Hoy solo se confirmó que **los archivos `.sql`
-  existen en el repo** — lo cual no prueba que estén aplicadas en la base.
-- **POR QUÉ NO LO HICE:** requiere `.env`.
-- **PASOS EXACTOS:**
-  ```bash
-  node --env-file=.env --import tsx scripts/verify-0005-applied.ts
-  ```
-  Y para `0006`/`0007`, el chequeo funcional es el de 2.2 (anon rechazado) + 2.4 (RLS intacta).
+**2.5 · Migración `0005`.** `negocio.whatsapp_token` está dropeada (el `SELECT` falla),
+`whatsapp_token_secret_id` existe, y el RPC `get_whatsapp_token` ejecuta.
 
-## 2.6 — Cleanup de secretos huérfanos en Vault (no bloqueante)
+---
 
-- **QUÉ:** las pruebas de la auditoría dejaron secretos de test en `vault.secrets`.
-- **POR QUÉ NO LO HICE:** el esquema `vault` no está expuesto por REST → no se puede borrar desde
-  código. **Solo** por el SQL Editor.
+## 2.6 — Cleanup de secretos huérfanos en Vault ⚠️ PENDIENTE (no bloqueante)
+
+- **QUÉ:** las pruebas de la auditoría dejaron secretos de test en `vault.secrets`. **Y la corrida
+  de hoy sumó uno más:** `verify-vault-no-plaintext.ts` crea un secreto llamado
+  `whatsapp-token-verify-<timestamp>` y solo vuelve el `secret_id` a `NULL` — la fila del secreto
+  queda. Cada corrida de ese script deja un huérfano nuevo.
+- **POR QUÉ NO LO PUEDO HACER:** el esquema `vault` **no está expuesto por REST**, así que no hay
+  forma de borrarlo desde código. Solo por el SQL Editor.
 - **PASOS EXACTOS:** entrar al SQL Editor de Supabase (proyecto `bdgufnitakelyialjoqg`) y correr:
   ```sql
   delete from vault.secrets where name='uat-probe-nonexistent' or name='anon-probe'
      or name like 'secaudit-%' or name like 'whatsapp-token-verify-%';
   ```
-  Es seguro: ningún `negocio.whatsapp_token_secret_id` apunta a estos (todos quedaron `NULL`).
+  Es seguro: los 3 negocios tienen `whatsapp_token_secret_id = NULL` (verificado hoy), así que
+  ningún negocio apunta a estos secretos.
 
-## 2.7 — Bootstrap del primer superadmin (plan 02-08, pausado hace tiempo)
+## 2.7 — Bootstrap del primer superadmin ⚠️ PENDIENTE (plan 02-08, pausado)
 
 - **QUÉ:** el panel `/admin` está construido y commiteado, pero **nunca se creó el primer
-  superadmin** ni se ejerció el alta de tenants contra la DB real.
-- **POR QUÉ NO LO HICE:** requiere `.env` **y** que vos elijas email/password reales del primer
-  superadmin (nunca se commitean).
+  superadmin** ni se ejerció el alta de tenants contra la DB real. Por eso `SADMIN-01/02/03` siguen
+  sin tildar en `REQUIREMENTS.md`.
+- **POR QUÉ NO LO PUEDO HACER:** no es la credencial — es que **vos** tenés que elegir el
+  email/password reales del primer superadmin, y esos nunca se commitean.
 - **POR QUÉ IMPORTA:** sin esto no podés dar de alta la primera peluquería. Bloquea el onboarding
   real, aunque no bloquee el cierre técnico de v1.0.
 - **PASOS EXACTOS:**
@@ -261,20 +249,34 @@ corepack pnpm --filter @turnosbot/availability-engine build
   node --env-file=.env --import tsx scripts/verify-admin-tenant-lifecycle.ts
   ```
   Ver `.planning/phases/02-*/02-08-SUMMARY.md` para el detalle de cómo retomar.
+  Cuando `verify-admin-tenant-lifecycle.ts` pase: tildar `SADMIN-01/02/03` y borrar la nota de
+  advertencia que quedó arriba de ellos en `REQUIREMENTS.md`.
+
+## 2.8 — DDL / migraciones futuras ⚠️ SIEMPRE MANUAL
+
+- **QUÉ:** cualquier migración nueva.
+- **POR QUÉ NO LO PUEDO HACER:** el `SUPABASE_ACCESS_TOKEN` del `.env` está malformado (no es un
+  `sbp_...` válido) → Management API rota. El host directo `db.<ref>.supabase.co` no resuelve desde
+  este entorno (IPv6-only). La ruta REST sirve para `SELECT`/`rpc`/verificación, **no** para DDL.
+- **PASOS:** pegar el `.sql` en el SQL Editor de Supabase.
 
 ---
-
 ## Orden sugerido para la próxima sesión
 
 1. **Rebuildear el motor** (`corepack pnpm --filter @turnosbot/availability-engine build`) — evita
    perder media hora persiguiendo errores de `tsc` que no existen.
-2. Correr los 5 scripts gated de la sección **SEGURIDAD** (2.1 → 2.5). Si alguno falla, **frená**:
-   es un problema real de seguridad, no de tracking.
-3. Correr el cleanup de Vault (2.6) en el SQL Editor.
-4. Bootstrap del superadmin (2.7) — necesario para el primer cliente real.
-5. Re-test conversacional en vivo (1.2) — la última prueba del core value.
-6. Cerrar verificaciones formales (1.3) y tildar requirements (1.5).
-7. `/gsd-audit-milestone 1.0` → si da `passed` o deuda aceptable → `/gsd-complete-milestone 1.0`.
+2. **Cleanup del Vault (2.6)** en el SQL Editor — es lo único que quedó sucio, y crece con cada
+   corrida de `verify-vault-no-plaintext.ts`.
+3. **Bootstrap del superadmin (2.7)** — necesario para dar de alta la primera peluquería, y lo que
+   destraba tildar `SADMIN-01/02/03`.
+4. **Re-test conversacional en vivo (1.2)** — la última prueba pendiente del core value. Los tests
+   actuales mockean a Gemini; nadie confirmó end-to-end contra el modelo real desde los fixes.
+5. Cerrar los `VERIFICATION.md` formales (1.3) — la fase 07 ya tiene sus 3 criterios verificados
+   en vivo, así que ahora sí se puede generar honestamente.
+6. `/gsd-audit-milestone 1.0` → si da `passed` o deuda aceptable → `/gsd-complete-milestone 1.0`.
+
+> **Los 5 scripts de seguridad ya no están en esta lista: se corrieron el 2026-07-09 y pasaron.**
+> Vale la pena re-correrlos si se toca RLS, los grants, o las migraciones.
 
 ## Referencias
 

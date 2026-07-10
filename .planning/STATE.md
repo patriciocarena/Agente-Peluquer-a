@@ -130,23 +130,37 @@ Recent decisions affecting current work:
 > Detalle completo de acciones manuales pendientes, con pasos exactos:
 > **`.planning/HANDOFF-milestone-v1.md`** ← archivo de referencia para retomar.
 
-**⚠️ Regla de honestidad:** lo marcado "SIN VERIFICAR" abajo NO se ejecutó en esta sesión.
-Las verificaciones en vivo (UAT fase 07, SEC-01/02/03) PASARON en sesiones **anteriores**;
-esta sesión NO las re-corrió. No se dio nada por hecho.
+**✅ SEGURIDAD VERIFICADA EN VIVO (2026-07-09) — los 5 checkpoints PASARON:**
 
-**Requieren acción manual del usuario (Claude no puede ejecutarlas):**
+| Checkpoint | Script | Resultado |
+|---|---|---|
+| SEC-01 · token no en claro | `verify-vault-no-plaintext.ts` | ✅ exit 0 |
+| SEC-01b · `anon` rechazado en Vault | `verify-vault-wrappers-anon-denied.ts` | ✅ exit 0 |
+| SEC-02 · 10 reservas concurrentes | `verify-concurrent-booking.ts` | ✅ 1 éxito / 9 slot_taken |
+| SEC-03 · aislamiento cross-negocio | `negocioScoped.test.ts` | ✅ exit 0, 0 fugas |
+| RLS · aislamiento por owner | `verify-isolation.ts` | ✅ exit 0, INSERT cross-tenant rechazado |
+| Migración `0005` aplicada | `verify-0005-applied.ts` | ✅ exit 0 |
 
-- **`.env` no es legible por Claude.** Todo script "gated" que toque la DB en vivo lo tiene
-  que correr el usuario a mano. Ver HANDOFF, secciones "BUGS / TESTS" y "SEGURIDAD".
-- **DDL solo por el SQL Editor de Supabase.** El `SUPABASE_ACCESS_TOKEN` del `.env` está
+**CORRECCIÓN de una creencia falsa que costó un handoff mal escrito:** Claude **sí puede**
+correr los scripts gated. No puede *leer* el `.env` con sus herramientas, pero
+`node --env-file=.env --import tsx <script>.ts` lo carga en el proceso hijo. Antes de
+declarar algo imposible por falta de credencial, **probarlo**.
+
+**Lo que Claude realmente NO puede hacer:**
+
+- **DDL / migraciones → SQL Editor de Supabase.** El `SUPABASE_ACCESS_TOKEN` del `.env` está
   malformado (no es un `sbp_...` válido) → Management API rota. El host directo
-  `db.<ref>.supabase.co` no resuelve desde este entorno (IPv6-only). La ruta REST con
-  `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` SÍ sirve para SELECT/rpc/verificación.
-- **SEGURIDAD SIN VERIFICAR en esta sesión:** SEC-01 (token en claro / Vault), SEC-02
-  (reservas concurrentes), SEC-03 (aislamiento cross-negocio), RLS (`verify-isolation.ts`),
-  wrappers Vault vs. `anon`, y el estado aplicado de las migraciones 0005/0006/0007.
-- **Cleanup de secretos huérfanos en Vault** (SQL Editor). No bloqueante.
-- **Plan 02-08 sigue pausado en Task 3** (bootstrap del primer superadmin) — ver abajo.
+  `db.<ref>.supabase.co` no resuelve (IPv6-only). La ruta REST sirve para SELECT/rpc, no DDL.
+- **Borrar de `vault.secrets`** → el esquema `vault` no está expuesto por REST.
+- **Elegir credenciales del primer superadmin** → decisión del usuario, nunca se commitean.
+
+**Pendientes reales:**
+
+- ⚠️ **Cleanup de secretos huérfanos en Vault** (SQL Editor). Crece con cada corrida de
+  `verify-vault-no-plaintext.ts`, que crea `whatsapp-token-verify-<ts>` y no lo borra.
+- ⚠️ **Plan 02-08 pausado en Task 3** (bootstrap del primer superadmin). Bloquea el alta de
+  la primera peluquería y el tildado de `SADMIN-01/02/03`.
+- ⚠️ **Re-test conversacional en vivo** contra Gemini real — los tests mockean el modelo.
 
 **Trampa de entorno (descubierta y resuelta ESTA sesión — no re-aprender):**
 
@@ -226,12 +240,18 @@ Resume file: **`.planning/HANDOFF-milestone-v1.md`** ← empezar acá
 - Presencia en código de ambos fixes, confirmada por lectura directa (no por confianza en
   el reporte de un subagente).
 
-### SIN VERIFICAR en esta sesión (no ejecutado — no asumir que pasa)
+### También verificado en vivo acá (segunda tanda, tras descubrir que los scripts SÍ corren)
 
-- Todos los scripts gated contra la DB en vivo (SEC-01/02/03, RLS, wrappers Vault vs anon).
-- Estado aplicado de las migraciones 0005/0006/0007 contra `bdgufnitakelyialjoqg`.
-- Re-test conversacional end-to-end contra Gemini + Supabase reales.
-- Motivo en todos los casos: **`.env` no es legible por Claude**; DDL y cleanup requieren el
-  SQL Editor de Supabase. Los pasos exactos, en `HANDOFF-milestone-v1.md`.
+- Los 6 scripts gated contra `bdgufnitakelyialjoqg` (ref confirmado antes de ejecutar):
+  SEC-01, SEC-01b (anon), SEC-02 (10 concurrentes → 1 éxito), SEC-03, RLS, migración 0005.
+  **Los 6 exit 0.** Ver la tabla en Blockers/Concerns.
+- Confirmado que `verify-concurrent-booking.ts` limpia sus turnos (0 en la fecha de prueba)
+  y que los 3 negocios tienen `whatsapp_token_secret_id = NULL`.
+
+### SIN VERIFICAR (no ejecutado — no asumir que pasa)
+
+- **Re-test conversacional end-to-end contra Gemini real.** Los tests unitarios mockean
+  `generateText`: prueban nuestra lógica, no el comportamiento del modelo.
+- **El flujo de superadmin** (`bootstrap-superadmin.ts`) — nunca se ejerció contra la base.
 
 Last activity: 2026-07-09 — Cerradas ambas sesiones de debug; suite verde (223+61); handoff de acciones manuales escrito en `.planning/HANDOFF-milestone-v1.md`

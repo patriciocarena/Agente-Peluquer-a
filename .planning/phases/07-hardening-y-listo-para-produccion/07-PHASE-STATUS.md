@@ -1,7 +1,7 @@
 ---
 phase: 07-hardening-y-listo-para-produccion
 type: phase-summary
-status: plans_complete_verification_pending
+status: plans_complete_criteria_verified_live
 plans: 5/5
 requirements: [SEC-01, SEC-02, SEC-03]
 created: 2026-07-09
@@ -12,20 +12,22 @@ success_criteria:
   - id: SEC-01
     criterion: "Los tokens de acceso de WhatsApp de cada tenant están encriptados en la base (no legibles en una consulta directa a la tabla)"
     code_status: implemented
-    live_verification: passed_in_prior_session_NOT_reverified_2026-07-09
+    live_verification: PASSED_2026-07-09  # exit 0
     script: scripts/verify-vault-no-plaintext.ts
+    also: scripts/verify-vault-wrappers-anon-denied.ts  # PASSED — anon rechazado en ambos wrappers
   - id: SEC-02
     criterion: "Un test de carga con reservas concurrentes sobre el mismo slot confirma que solo una tiene éxito y el resto recibe un rechazo controlado"
     code_status: implemented
-    live_verification: passed_in_prior_session_NOT_reverified_2026-07-09
+    live_verification: PASSED_2026-07-09  # 10 concurrentes -> 1 exito, 9 slot_taken via GiST 23P01
     script: scripts/verify-concurrent-booking.ts
   - id: SEC-03
     criterion: "Un test de aislamiento cross-tenant confirma que las consultas del bot (service_role) con el contexto del tenant A nunca devuelven filas del tenant B"
     code_status: implemented
-    live_verification: passed_in_prior_session_NOT_reverified_2026-07-09
+    live_verification: PASSED_2026-07-09  # 12 accessors + tool consultarNegocio, 0 fugas, A->B y B->A
     script: apps/bot/src/db/negocioScoped.test.ts
+    also: scripts/verify-isolation.ts  # PASSED — RLS por owner, INSERT cross-tenant rechazado
 
-verification_artifact: MISSING  # no existe 07-VERIFICATION.md
+verification_artifact: MISSING  # no existe 07-VERIFICATION.md, pero los 3 criterios ya estan probados en vivo
 ---
 
 # Fase 07 — Hardening y listo para producción · Resumen de fase
@@ -35,9 +37,11 @@ verification_artifact: MISSING  # no existe 07-VERIFICATION.md
 **Los 5 planes están ejecutados y commiteados.** El UAT de la fase (`07-UAT.md`) dio 4/4 y
 `07-SECURITY.md` quedó en `status: verified`, `threats_open: 0`.
 
-**Lo que NO está:** no existe un `07-VERIFICATION.md` formal, y ninguna de las tres
-verificaciones de seguridad en vivo (SEC-01/02/03) fue **re-corrida** en la sesión del
-2026-07-09. Todas pasaron en sesiones anteriores; ninguna se dio por hecho acá.
+**Los 3 Success Criteria están verificados en vivo** (2026-07-09, contra `bdgufnitakelyialjoqg`,
+ref confirmado antes de ejecutar). Los 6 scripts dieron exit 0. Ver el frontmatter.
+
+**Lo único que falta para cerrar la fase formalmente:** el artefacto `07-VERIFICATION.md`, que
+ahora sí se puede generar honestamente porque la evidencia en vivo existe.
 
 | Plan | Qué entregó | Estado |
 |------|-------------|--------|
@@ -69,9 +73,13 @@ Ambas fueron aplicadas por el usuario en el SQL Editor y re-verificadas en la se
 - `corepack pnpm --filter @turnosbot/availability-engine test -- --run` → **61/61 tests, 7/7 archivos**.
 - `npx tsc --noEmit` en `apps/bot` → **0 errores**, tras rebuildear el motor.
 
-**Sin verificar acá (no ejecutado):** los tres scripts gated de SEC-01/02/03, `verify-isolation.ts`,
-`verify-vault-wrappers-anon-denied.ts`, y el estado aplicado de `0005`/`0006`/`0007`.
-Motivo: requieren `.env` (no legible por Claude) y/o el SQL Editor de Supabase.
+**También verificado acá (segunda tanda):** los 6 scripts gated, todos exit 0 — SEC-01,
+SEC-01b (`anon` rechazado), SEC-02 (10 concurrentes → exactamente 1 éxito), SEC-03, RLS, y la
+migración `0005` aplicada. Se confirmó además que el script de concurrencia limpia sus turnos.
+
+**Corrección:** una versión previa de este archivo decía que Claude no podía correrlos "porque no
+puede leer el `.env`". Falso: `node --env-file=.env --import tsx <script>.ts` los corre sin
+problema. Lo que Claude no puede es DDL (SQL Editor) ni borrar de `vault.secrets` (no expuesto).
 
 **Trampa de entorno descubierta:** `apps/bot` importa `@turnosbot/availability-engine` desde
 `dist/`, que está gitignoreado. Tras un `git pull` que toque `packages/`, `tsc` reporta errores
@@ -97,6 +105,8 @@ renombrarlo a `negocioScoped.verify.ts` (o moverlo a `scripts/`) para que el nom
 
 ## Para cerrar la fase formalmente
 
-1. Correr los scripts gated de SEC-01/02/03 (ver `.planning/HANDOFF-milestone-v1.md`, sección SEGURIDAD).
-2. Generar `07-VERIFICATION.md` (`/gsd-verify-work 7`), apoyándose en `07-UAT.md` + `07-SECURITY.md`.
-3. Correr el cleanup de secretos huérfanos de Vault en el SQL Editor.
+1. ~~Correr los scripts gated de SEC-01/02/03~~ → ✅ **hecho el 2026-07-09, los 6 pasaron.**
+2. Generar `07-VERIFICATION.md` (`/gsd-verify-work 7`), apoyándose en `07-UAT.md` (4/4),
+   `07-SECURITY.md` (`threats_open: 0`) y la evidencia en vivo del frontmatter de este archivo.
+3. Correr el cleanup de secretos huérfanos de Vault en el SQL Editor (único ítem sucio;
+   ver `HANDOFF-milestone-v1.md` sección 2.6).
