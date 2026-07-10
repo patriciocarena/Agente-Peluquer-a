@@ -24,3 +24,6 @@ supabase/.temp/
 
 # Material de marketing suelto (no forma parte del código del repo)
 /Imagenes del Avatar/
+
+# Cache de gsd-project-researcher (no versionar)
+.planning/research/.cache/

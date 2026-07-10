@@ -24,10 +24,10 @@ success_criteria:
     criterion: "Un test de aislamiento cross-tenant confirma que las consultas del bot (service_role) con el contexto del tenant A nunca devuelven filas del tenant B"
     code_status: implemented
     live_verification: PASSED_2026-07-09  # 12 accessors + tool consultarNegocio, 0 fugas, A->B y B->A
-    script: apps/bot/src/db/negocioScoped.test.ts
+    script: apps/bot/src/db/negocioScoped.verify.ts
     also: scripts/verify-isolation.ts  # PASSED — RLS por owner, INSERT cross-tenant rechazado
 
-verification_artifact: MISSING  # no existe 07-VERIFICATION.md, pero los 3 criterios ya estan probados en vivo
+verification_artifact: 07-VERIFICATION.md  # status: passed, 3/3 must-haves, 2026-07-09
 ---
 
 # Fase 07 — Hardening y listo para producción · Resumen de fase
@@ -40,8 +40,9 @@ verification_artifact: MISSING  # no existe 07-VERIFICATION.md, pero los 3 crite
 **Los 3 Success Criteria están verificados en vivo** (2026-07-09, contra `bdgufnitakelyialjoqg`,
 ref confirmado antes de ejecutar). Los 6 scripts dieron exit 0. Ver el frontmatter.
 
-**Lo único que falta para cerrar la fase formalmente:** el artefacto `07-VERIFICATION.md`, que
-ahora sí se puede generar honestamente porque la evidencia en vivo existe.
+**`07-VERIFICATION.md` generado → `status: passed`, 3/3 must-haves, 0 behavior_unverified.**
+La fase está cerrada. Queda un único ítem de higiene fuera del alcance de la fase: el cleanup de
+secretos huérfanos en `vault.secrets`, que solo se puede hacer desde el SQL Editor.
 
 | Plan | Qué entregó | Estado |
 |------|-------------|--------|
@@ -49,7 +50,7 @@ ahora sí se puede generar honestamente porque la evidencia en vivo existe.
 | 07-02 | Call-sites (`getWhatsappToken.ts`, `admin-tenants.ts`) migrados a los RPC de Vault | Completo |
 | 07-03 | `verify-vault-no-plaintext.ts` — prueba live de SEC-01 SC#1 | PASSED (sesión previa) |
 | 07-04 | `verify-concurrent-booking.ts` — SEC-02, 3/3 corridas deterministas | PASSED (sesión previa) |
-| 07-05 | `negocioScoped.test.ts` extendido a los 12 accessors + tool `consultarNegocio` — SEC-03, 26/26 | PASSED (sesión previa) |
+| 07-05 | `negocioScoped.verify.ts` extendido a los 12 accessors + tool `consultarNegocio` — SEC-03, 26/26 | PASSED (sesión previa) |
 
 ## Hallazgo de seguridad crítico de esta fase (ya cerrado)
 
@@ -90,18 +91,21 @@ vitest no lo detectan porque no typechequean. Rebuildear antes de creerle a `tsc
 corepack pnpm --filter @turnosbot/availability-engine build
 ```
 
-## Trampa importante: `negocioScoped.test.ts` NO es un test de vitest
+## Trampa resuelta: la prueba de aislamiento parecía cubierta por CI y no lo estaba
 
-Pese al nombre `.test.ts`, el archivo tiene un `main()` y es un **script standalone**. **No corre**
-en `pnpm test` — no está entre los 24 archivos de la suite, y no aparece como "skipped" (simplemente
-no lo levanta vitest). La verificación de SEC-03 solo ocurre si alguien lo corre a mano:
+El verificador de fase (W-01 de `07-VERIFICATION.md`) encontró que `negocioScoped.test.ts` —la
+única prueba de SEC-03— era un script standalone (`main()` + `process.exit`) **explícitamente
+excluido** en `apps/bot/vitest.config.ts`. No corría en `pnpm test` ni figuraba como "skipped".
+Una suite verde no decía nada sobre el aislamiento entre negocios.
+
+**Arreglado (2026-07-09):** renombrado a `apps/bot/src/db/negocioScoped.verify.ts`. El sufijo
+`.verify.ts` no matchea el include `src/**/*.test.ts`, así que la entrada en `exclude` se eliminó.
+Tras el cambio: vitest 223/223 sobre 24 archivos, `tsc` 0 errores, y el script pasa en vivo
+(exit 0). Sigue siendo manual por diseño (toca la DB real), pero el nombre ya no miente:
 
 ```
-node --env-file=.env --import tsx apps/bot/src/db/negocioScoped.test.ts
+node --env-file=.env --import tsx apps/bot/src/db/negocioScoped.verify.ts
 ```
-
-Consecuencia: **una suite verde no dice nada sobre el aislamiento cross-negocio.** Vale la pena
-renombrarlo a `negocioScoped.verify.ts` (o moverlo a `scripts/`) para que el nombre no mienta.
 
 ## Para cerrar la fase formalmente
 

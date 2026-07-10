@@ -16,8 +16,10 @@
 - **Los 5 checkpoints de seguridad (SEC-01, SEC-01b, SEC-02, SEC-03, migración 0005) se corrieron
   en vivo el 2026-07-09 y los 5 PASARON.** Detalle en la sección 2.
 - `REQUIREMENTS.md`: **48/51**. Los 3 que faltan son `SADMIN-*`, sin tildar a propósito.
-- El milestone **v1.0 NO está cerrado**. Falta: los `VERIFICATION.md` formales de las fases 06/07,
-  el `human_needed` de la 04, el bootstrap del superadmin, y el cleanup del Vault.
+- **Fase 07 CERRADA:** `07-VERIFICATION.md` → `status: passed`, 3/3.
+- El milestone **v1.0 NO está cerrado**. Falta: el `VERIFICATION.md` de la fase 06 (necesita el
+  re-test conversacional en vivo), el `human_needed` de la 04, el bootstrap del superadmin, y el
+  cleanup del Vault.
 - **Lo único que Claude realmente NO puede hacer:** DDL/migraciones (SQL Editor), borrar de
   `vault.secrets` (esquema no expuesto por REST), y elegir las credenciales del primer superadmin.
 
@@ -88,23 +90,25 @@ corepack pnpm --filter @turnosbot/availability-engine build
 
 # 1) BUGS / TESTS
 
-## 1.1 — `negocioScoped.test.ts` NO es un test de vitest (trampa activa) ⚠️
+## 1.1 — La prueba de aislamiento parecía cubierta por CI y no lo estaba — ✅ RESUELTO
 
-- **QUÉ:** el archivo `apps/bot/src/db/negocioScoped.test.ts` tiene un `main()` y es un **script
-  standalone**, pese a la extensión `.test.ts`. **No corre** en `pnpm test`: no está entre los 24
-  archivos de la suite, y **no aparece como "skipped"** — vitest simplemente no lo levanta.
-- **POR QUÉ IMPORTA:** es la única prueba de SEC-03 (aislamiento entre negocios). Una suite verde
-  **no dice nada** sobre el aislamiento. Es fácil creer que está cubierto cuando no lo está.
-- **ESTADO:** ✅ **corrido en vivo el 2026-07-09 — PASSED** (exit 0, cero fugas cross-negocio en
-  los 12 accessors + la tool `consultarNegocio`, en ambas direcciones A→B y B→A).
-- **PERO la trampa sigue viva:** el archivo **no corre** en `pnpm test`. Cada vez que alguien vea
-  la suite en verde va a creer que el aislamiento está cubierto, y no lo está. Hay que correrlo
-  aparte, a mano:
+- **QUÉ ERA:** la única prueba de SEC-03 (aislamiento entre negocios) se llamaba
+  `negocioScoped.test.ts`, pero era un **script standalone** (`main()` + `process.exit`) y estaba
+  **explícitamente en la lista `exclude`** de `apps/bot/vitest.config.ts`. No corría en
+  `pnpm test`, y ni siquiera aparecía como "skipped".
+- **POR QUÉ IMPORTABA:** una suite verde no decía **nada** sobre el aislamiento entre negocios.
+  Cualquiera hubiera asumido que CI lo cubría. Un bug de aislamiento podía llegar a producción sin
+  que ningún test se pusiera rojo.
+- **ARREGLO (2026-07-09):** renombrado a `apps/bot/src/db/negocioScoped.verify.ts`. El sufijo
+  `.verify.ts` no matchea el include `src/**/*.test.ts`, así que la entrada en `exclude` se
+  eliminó — ya no hace falta ocultarlo, porque ya no se parece a un test.
+- **VERIFICADO tras el cambio:** vitest sigue en **223/223 sobre 24 archivos**, `tsc --noEmit` da
+  **0 errores**, y el script sigue pasando en vivo (**exit 0**).
+- **Sigue siendo manual, por diseño** — toca la DB real, así que no puede vivir en CI sin
+  credenciales. Pero ahora el nombre lo dice. Correrlo cuando se toque RLS, grants o migraciones:
   ```bash
-  node --env-file=.env --import tsx apps/bot/src/db/negocioScoped.test.ts
+  node --env-file=.env --import tsx apps/bot/src/db/negocioScoped.verify.ts
   ```
-- **ARREGLO SUGERIDO (opcional, 2 min):** renombrarlo a `negocioScoped.verify.ts` o moverlo a
-  `scripts/` para que el nombre deje de mentir.
 
 ## 1.2 — Re-test conversacional en vivo del bot (Gemini + Supabase reales)
 
@@ -126,17 +130,15 @@ corepack pnpm --filter @turnosbot/availability-engine build
 
 ## 1.3 — Fases sin `VERIFICATION.md`
 
-- **QUÉ:** Fases **06** y **07** no tienen `VERIFICATION.md`. Fase **04** lo tiene en estado
-  `human_needed` (hay un escenario sin resolver).
-- **POR QUÉ NO LO HICE:** generar la verificación de una fase requiere ejecutar sus criterios de
-  éxito en vivo, que caen en el mismo bloqueo de credenciales.
-- **PASOS EXACTOS:**
-  ```
-  /gsd-verify-work 6
-  /gsd-verify-work 7
-  ```
-  Para la fase 04, abrir `.planning/phases/04-*/04-VERIFICATION.md`, buscar el escenario en
-  `human_needed`, ejecutarlo a mano en el dashboard y registrar el resultado.
+- ✅ **Fase 07: HECHO (2026-07-09).** `07-VERIFICATION.md` → `status: passed`, 3/3 must-haves,
+  0 `behavior_unverified`. Los 3 criterios se probaron en vivo; el verificador chequeó además a
+  nivel de código que cada artefacto existe y está cableado a la ruta sancionada.
+- ⚠️ **Fase 06: falta.** Sus criterios de éxito son conversaciones reales con el bot (identificar
+  servicio en lenguaje natural, negociar horarios, confirmar solo con `turno_id` real, resistir
+  prompt injection). Requiere el re-test conversacional de **1.2** antes de poder verificarse
+  honestamente. `/gsd-verify-work 6`
+- ⚠️ **Fase 04: `human_needed`.** Abrir `.planning/phases/04-*/04-VERIFICATION.md`, buscar el
+  escenario pendiente, ejecutarlo a mano en el dashboard y registrar el resultado.
 
 ## 1.4 — Nyquist / validación
 
@@ -182,7 +184,7 @@ corepack pnpm --filter @turnosbot/availability-engine build
 | 2.1 | SEC-01 · token no queda en claro | `verify-vault-no-plaintext.ts` | ✅ PASSED (exit 0) |
 | 2.2 | SEC-01(b) · `anon` rechazado en Vault | `verify-vault-wrappers-anon-denied.ts` | ✅ PASSED (exit 0) |
 | 2.3 | SEC-02 · reservas concurrentes | `verify-concurrent-booking.ts` | ✅ PASSED (exit 0) |
-| 2.4 | SEC-03 · aislamiento cross-negocio + RLS | `negocioScoped.test.ts` + `verify-isolation.ts` | ✅ PASSED (exit 0, ambos) |
+| 2.4 | SEC-03 · aislamiento cross-negocio + RLS | `negocioScoped.verify.ts` + `verify-isolation.ts` | ✅ PASSED (exit 0, ambos) |
 | 2.5 | Migración `0005` aplicada | `verify-0005-applied.ts` | ✅ PASSED (exit 0) |
 
 Todos se invocan igual:

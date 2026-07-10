@@ -118,7 +118,7 @@ Recent decisions affecting current work:
 - [Phase 06-05]: responder.ts ensamblado como tool-loop generateText(stopWhen isStepCount(6)) con las 5 tools de 06-03/06-04; gate D-12 escanea result.steps (nunca result.text) por confirmarTurno/reagendarTurno con turno_id real vía closingLanguage.ts (léxico único, compartido con la eval offline 06-06)
 - [Phase 06-05]: inboundWorker.ts lee needsHuman de conversacion.context ANTES de invocar responder (D-11) — el handoff a humano queda fuera del control del modelo, saltando responder+sendWhatsappMessage sin regresión del dedup 23505 ni del gate de ventana 24h
 - [Phase 07]: [Phase 07-04]: verify-concurrent-booking.ts probo en vivo SEC-02 Success Criterion #2 -- 3/3 corridas deterministas, exactamente 1 exito y N-1 slot_taken via bookAppointment (GiST EXCLUDE, no chequeo en memoria)
-- [Phase 07-05]: negocioScoped.test.ts extendido a los 12 accessors de lectura + chequeo a nivel tool consultarNegocioTool -- SEC-03 Success Criterion #3 probado en vivo contra bdgufnitakelyialjoqg, 26/26 aserciones OK, cero fugas cross-negocio
+- [Phase 07-05]: negocioScoped.verify.ts extendido a los 12 accessors de lectura + chequeo a nivel tool consultarNegocioTool -- SEC-03 Success Criterion #3 probado en vivo contra bdgufnitakelyialjoqg, 26/26 aserciones OK, cero fugas cross-negocio
 - [Phase 07-02]: negocioId se valida con regex de forma (8-4-4-4-12), no z.uuid() estricto -- mismo fix que uuidLike en booking.ts (z.uuid() rechaza UUIDs reales sin variante 8/9/a/b)
 - [Phase 07-02]: Ambos call-sites del token de WhatsApp (getWhatsappToken.ts lectura, admin-tenants.ts setWhatsappTokenSecret escritura) pasan exclusivamente por RPC Vault -- cierra el wiring de SEC-01, verificacion live queda para 07-03
 - [Phase ?]: [Phase 07-03]: SEC-01 Success Criterion #1 probado en vivo contra bdgufnitakelyialjoqg -- verify-vault-no-plaintext.ts confirma que negocio no expone token en claro y que getWhatsappToken resuelve el valor real via Vault (RPC get_whatsapp_token), con WHATSAPP_DEV_TOKEN unset; invocacion en este entorno: node --env-file=.env --import tsx (no pnpm exec tsx)
@@ -137,7 +137,7 @@ Recent decisions affecting current work:
 | SEC-01 · token no en claro | `verify-vault-no-plaintext.ts` | ✅ exit 0 |
 | SEC-01b · `anon` rechazado en Vault | `verify-vault-wrappers-anon-denied.ts` | ✅ exit 0 |
 | SEC-02 · 10 reservas concurrentes | `verify-concurrent-booking.ts` | ✅ 1 éxito / 9 slot_taken |
-| SEC-03 · aislamiento cross-negocio | `negocioScoped.test.ts` | ✅ exit 0, 0 fugas |
+| SEC-03 · aislamiento cross-negocio | `negocioScoped.verify.ts` | ✅ exit 0, 0 fugas |
 | RLS · aislamiento por owner | `verify-isolation.ts` | ✅ exit 0, INSERT cross-tenant rechazado |
 | Migración `0005` aplicada | `verify-0005-applied.ts` | ✅ exit 0 |
 
@@ -195,7 +195,7 @@ declarar algo imposible por falta de credencial, **probarlo**.
 - Confirmar límites de rate del tier gratuito de Gemini 2.5 Flash-Lite en Google AI Studio antes de planificar capacidad para Phase 6.
 - ✅ RESUELTO: Plan 02-01 (migración 0003) fue aplicada en vivo contra bdgufnitakelyialjoqg (ver 02-01-SUMMARY.md) — este blocker quedó obsoleto.
 - **Plan 02-08 pausado en Task 3** (checkpoint:human-action, gate=blocking-human): Tasks 1-2 (Server Actions superadmin + panel /admin completo) commiteadas (`4c60ac9`, `7f6fcb6`, `fbe2b5e`). Falta ejecutar `scripts/bootstrap-superadmin.ts` + `scripts/verify-admin-tenant-lifecycle.ts` contra bdgufnitakelyialjoqg — requiere `.env` (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) + credenciales reales de email/password para el primer superadmin (nunca committear). Ver `02-08-SUMMARY.md` para el detalle exacto de cómo retomar.
-- ✅ RESUELTO (2026-07-05): los 2 checkpoints live de la Fase 03 se ejecutaron con .env real contra bdgufnitakelyialjoqg y PASARON — `apps/bot/src/db/negocioScoped.test.ts` (aislamiento cross-negocio) y `scripts/verify-availability-engine.ts` (bookAppointment round-trip + snapshot congelado AVAIL-03 + 23P01→slot_taken). Fix aplicado: `booking.ts` `z.uuid()` estricto → `uuidLike` (forma 8-4-4-4-12). Fase 03 100% verificada.
+- ✅ RESUELTO (2026-07-05): los 2 checkpoints live de la Fase 03 se ejecutaron con .env real contra bdgufnitakelyialjoqg y PASARON — `apps/bot/src/db/negocioScoped.verify.ts` (aislamiento cross-negocio) y `scripts/verify-availability-engine.ts` (bookAppointment round-trip + snapshot congelado AVAIL-03 + 23P01→slot_taken). Fix aplicado: `booking.ts` `z.uuid()` estricto → `uuidLike` (forma 8-4-4-4-12). Fase 03 100% verificada.
 
 ### Quick Tasks Completed
 

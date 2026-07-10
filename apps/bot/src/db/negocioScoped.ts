@@ -34,10 +34,10 @@
  * Scope note: this layer was first wired in Phase 1 as pattern/structure
  * only. Phase 03 (motor de disponibilidad) is the first real consumer —
  * the bot-side data-fetching that feeds `@turnosbot/availability-engine`'s
- * `computeSlots` reads through this layer. The formal automated
- * cross-negocio service_role test suite (SEC-03) is deferred to Phase 7;
- * this file's own smoke test (negocioScoped.test.ts) proves the pattern
- * holds against the two seeded tenants' negocios, live.
+ * `computeSlots` reads through this layer. The cross-negocio service_role
+ * isolation proof (SEC-03) lives in `negocioScoped.verify.ts` — a live-DB
+ * script, NOT a vitest suite: `pnpm test` no lo corre. Verificado en vivo
+ * el 2026-07-09 (12 accessors + tool consultarNegocio, 0 fugas, A→B y B→A).
  *
  * Write accessors (Fase 5, D-11): Phase 5 (integración WhatsApp Cloud API)
  * is the FIRST writer through this layer — every prior consumer only read.
