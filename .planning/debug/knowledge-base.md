@@ -11,3 +11,21 @@ Resolved debug sessions. Used by `gsd-debugger` to surface known-pattern hypothe
 - **Fix:** Introduced a single `userMessage = { role: "user", content: mensajeEntrante }` local reused in the `generateText` call, the error/catch persistence path, and the happy-path persistence (`[...history, userMessage, ...messagesToPersist]`), so the user's turn message survives into the next turn's history on all paths.
 - **Files changed:** apps/bot/src/conversation/responder.ts, apps/bot/src/conversation/responder.test.ts
 ---
+
+## responder-empty-text-after-tool-call — Gemini 2.5 Flash-Lite termina el turno sin texto tras un tool-result exitoso
+- **Date:** 2026-07-09
+- **Error patterns:** finishReason "stop", result.text vacío, texto vacío tras tool-call, generateText, gemini-2.5-flash-lite, @ai-sdk/google, consultarNegocio, tool-result sin narrar, bot responde ""
+- **Root cause:** Dos capas. (1) EXTERNA, no controlable: la familia Gemini 2.5 (especialmente flash-lite) a veces cierra el turno con `finishReason: "stop"` y texto vacío inmediatamente después de un function-call exitoso, en vez de narrar el resultado. Documentado independientemente contra Gemini API cruda, Vercel AI SDK, LangChain.js, Genkit y Goose — no es un bug de nuestro código ni de `@ai-sdk/google`. (2) AGRAVANTE bajo nuestro control: `systemPrompt.ts` tenía solo instrucciones NEGATIVAS (D-12, "no inventes confirmaciones") y ninguna POSITIVA equivalente ("si consultaste un dato real, comunicalo"), y `responder.ts` no tenía fallback para "hubo tool-result exitoso pero result.text vino vacío" — esa cadena vacía se enviaba tal cual al cliente.
+- **Fix:** (a) `systemPrompt.ts` gana la instrucción positiva "# Siempre comunicá el resultado de una consulta". (b) `responder.ts` gana un guard: si `finalText.trim() === "" && hadToolResult(result.steps)`, reintenta UNA vez con `tools: {}` — ir sin tools es restricción de seguridad dura, impide una segunda escritura tras una escritura ya exitosa. Si el reintento también vuelve vacío, envía `SAFE_FALLBACK_MESSAGE` en vez de "".
+- **Lección transferible:** contra un modelo no-determinista, la mitigación correcta es doble — prompt pressure (reduce probabilidad) + guard defensivo en código (contiene el efecto). Ninguna de las dos sola alcanza; nunca confiar en que `result.text` viene no-vacío.
+- **Files changed:** apps/bot/src/conversation/systemPrompt.ts, apps/bot/src/conversation/responder.ts, apps/bot/src/conversation/responder.test.ts
+---
+
+## [ENTORNO, no un bug] `dist/` desactualizado de availability-engine produce errores fantasma de tsc
+- **Date:** 2026-07-09
+- **Error patterns:** error TS2339 'startIso' does not exist on type 'AvailableSlot', error TS2353, confirmarTurno.ts, reagendarTurno.ts, tsc --noEmit falla pero los tests pasan
+- **Root cause:** NO es un bug de código. `apps/bot` importa `@turnosbot/availability-engine` desde `dist/` compilado, no desde `src/` (decisión de fase 04-07: Turbopack no resuelve los especificadores NodeNext `.js` internos). `dist/` está en `.gitignore`, así que es un artefacto **local** que no viaja en el repo. Tras un `git pull` que trae cambios al motor (ej. el campo `startIso`/`endIso` en `AvailableSlot`), el `dist/` local queda viejo y `tsc` reporta como faltantes propiedades que SÍ existen en el fuente. Los tests de vitest pasan igual porque vitest no hace typecheck — señal engañosa.
+- **Fix:** `corepack pnpm --filter @turnosbot/availability-engine build` (ejecuta `tsc -b`). Después: `tsc --noEmit` en apps/bot → 0 errores.
+- **Lección transferible:** si `tsc` se queja de propiedades que existen en el fuente de un paquete del workspace, sospechar de `dist/` viejo ANTES de tocar código. Rebuildear el paquete es el primer diagnóstico, no el último. Regla general: tras cualquier `git pull` que toque `packages/`, rebuildear antes de creerle a `tsc`.
+- **Files changed:** ninguno (artefacto de build local)
+---

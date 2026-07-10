@@ -1,0 +1,102 @@
+---
+phase: 07-hardening-y-listo-para-produccion
+type: phase-summary
+status: plans_complete_verification_pending
+plans: 5/5
+requirements: [SEC-01, SEC-02, SEC-03]
+created: 2026-07-09
+updated: 2026-07-09
+
+# Estado de los 3 Success Criteria de la fase
+success_criteria:
+  - id: SEC-01
+    criterion: "Los tokens de acceso de WhatsApp de cada tenant están encriptados en la base (no legibles en una consulta directa a la tabla)"
+    code_status: implemented
+    live_verification: passed_in_prior_session_NOT_reverified_2026-07-09
+    script: scripts/verify-vault-no-plaintext.ts
+  - id: SEC-02
+    criterion: "Un test de carga con reservas concurrentes sobre el mismo slot confirma que solo una tiene éxito y el resto recibe un rechazo controlado"
+    code_status: implemented
+    live_verification: passed_in_prior_session_NOT_reverified_2026-07-09
+    script: scripts/verify-concurrent-booking.ts
+  - id: SEC-03
+    criterion: "Un test de aislamiento cross-tenant confirma que las consultas del bot (service_role) con el contexto del tenant A nunca devuelven filas del tenant B"
+    code_status: implemented
+    live_verification: passed_in_prior_session_NOT_reverified_2026-07-09
+    script: apps/bot/src/db/negocioScoped.test.ts
+
+verification_artifact: MISSING  # no existe 07-VERIFICATION.md
+---
+
+# Fase 07 — Hardening y listo para producción · Resumen de fase
+
+## Estado
+
+**Los 5 planes están ejecutados y commiteados.** El UAT de la fase (`07-UAT.md`) dio 4/4 y
+`07-SECURITY.md` quedó en `status: verified`, `threats_open: 0`.
+
+**Lo que NO está:** no existe un `07-VERIFICATION.md` formal, y ninguna de las tres
+verificaciones de seguridad en vivo (SEC-01/02/03) fue **re-corrida** en la sesión del
+2026-07-09. Todas pasaron en sesiones anteriores; ninguna se dio por hecho acá.
+
+| Plan | Qué entregó | Estado |
+|------|-------------|--------|
+| 07-01 | Migración `0005` — Vault + 2 wrappers `SECURITY DEFINER` + swap `negocio.whatsapp_token` → `whatsapp_token_secret_id` | Aplicada en vivo (sesión previa) |
+| 07-02 | Call-sites (`getWhatsappToken.ts`, `admin-tenants.ts`) migrados a los RPC de Vault | Completo |
+| 07-03 | `verify-vault-no-plaintext.ts` — prueba live de SEC-01 SC#1 | PASSED (sesión previa) |
+| 07-04 | `verify-concurrent-booking.ts` — SEC-02, 3/3 corridas deterministas | PASSED (sesión previa) |
+| 07-05 | `negocioScoped.test.ts` extendido a los 12 accessors + tool `consultarNegocio` — SEC-03, 26/26 | PASSED (sesión previa) |
+
+## Hallazgo de seguridad crítico de esta fase (ya cerrado)
+
+`/gsd-secure-phase 7` encontró que los wrappers de Vault (`SECURITY DEFINER`) eran
+**ejecutables con la clave `anon`**, que es pública. La fuga del token en claro se confirmó
+en vivo. Causa: en Supabase, `REVOKE ALL FROM PUBLIC` **no** revoca de `anon`/`authenticated`
+— los default privileges se los otorgan explícitamente.
+
+- **Migración `0006`** → `REVOKE` de `anon`/`authenticated` sobre los wrappers de Vault.
+- **Migración `0007`** → corrige una sobre-corrección de `0006`, que había revocado de más
+  (`auth_negocio_ids` / `auth_tenant_id`) y roto las policies de RLS. **Nunca** revocar los
+  helpers que RLS evalúa con el rol que consulta.
+
+Ambas fueron aplicadas por el usuario en el SQL Editor y re-verificadas en la sesión previa.
+
+## Sesión 2026-07-09 — qué se hizo sobre esta fase
+
+**Verificado en vivo acá (pasó):**
+
+- `corepack pnpm --filter @turnosbot/bot test -- --run` → **223/223 tests, 24/24 archivos, 0 skipped**.
+- `corepack pnpm --filter @turnosbot/availability-engine test -- --run` → **61/61 tests, 7/7 archivos**.
+- `npx tsc --noEmit` en `apps/bot` → **0 errores**, tras rebuildear el motor.
+
+**Sin verificar acá (no ejecutado):** los tres scripts gated de SEC-01/02/03, `verify-isolation.ts`,
+`verify-vault-wrappers-anon-denied.ts`, y el estado aplicado de `0005`/`0006`/`0007`.
+Motivo: requieren `.env` (no legible por Claude) y/o el SQL Editor de Supabase.
+
+**Trampa de entorno descubierta:** `apps/bot` importa `@turnosbot/availability-engine` desde
+`dist/`, que está gitignoreado. Tras un `git pull` que toque `packages/`, `tsc` reporta errores
+fantasma (`startIso` no existe en `AvailableSlot`) que **no son bugs de código**. Los tests de
+vitest no lo detectan porque no typechequean. Rebuildear antes de creerle a `tsc`:
+
+```
+corepack pnpm --filter @turnosbot/availability-engine build
+```
+
+## Trampa importante: `negocioScoped.test.ts` NO es un test de vitest
+
+Pese al nombre `.test.ts`, el archivo tiene un `main()` y es un **script standalone**. **No corre**
+en `pnpm test` — no está entre los 24 archivos de la suite, y no aparece como "skipped" (simplemente
+no lo levanta vitest). La verificación de SEC-03 solo ocurre si alguien lo corre a mano:
+
+```
+node --env-file=.env --import tsx apps/bot/src/db/negocioScoped.test.ts
+```
+
+Consecuencia: **una suite verde no dice nada sobre el aislamiento cross-negocio.** Vale la pena
+renombrarlo a `negocioScoped.verify.ts` (o moverlo a `scripts/`) para que el nombre no mienta.
+
+## Para cerrar la fase formalmente
+
+1. Correr los scripts gated de SEC-01/02/03 (ver `.planning/HANDOFF-milestone-v1.md`, sección SEGURIDAD).
+2. Generar `07-VERIFICATION.md` (`/gsd-verify-work 7`), apoyándose en `07-UAT.md` + `07-SECURITY.md`.
+3. Correr el cleanup de secretos huérfanos de Vault en el SQL Editor.

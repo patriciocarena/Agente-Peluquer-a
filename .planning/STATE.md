@@ -125,6 +125,50 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
+> **ESTADO AL 2026-07-09 (fin de sesión).** Las 7 fases del roadmap están ejecutadas.
+> El milestone v1.0 NO está cerrado. **Cero sesiones de debug abiertas.**
+> Detalle completo de acciones manuales pendientes, con pasos exactos:
+> **`.planning/HANDOFF-milestone-v1.md`** ← archivo de referencia para retomar.
+
+**⚠️ Regla de honestidad:** lo marcado "SIN VERIFICAR" abajo NO se ejecutó en esta sesión.
+Las verificaciones en vivo (UAT fase 07, SEC-01/02/03) PASARON en sesiones **anteriores**;
+esta sesión NO las re-corrió. No se dio nada por hecho.
+
+**Requieren acción manual del usuario (Claude no puede ejecutarlas):**
+
+- **`.env` no es legible por Claude.** Todo script "gated" que toque la DB en vivo lo tiene
+  que correr el usuario a mano. Ver HANDOFF, secciones "BUGS / TESTS" y "SEGURIDAD".
+- **DDL solo por el SQL Editor de Supabase.** El `SUPABASE_ACCESS_TOKEN` del `.env` está
+  malformado (no es un `sbp_...` válido) → Management API rota. El host directo
+  `db.<ref>.supabase.co` no resuelve desde este entorno (IPv6-only). La ruta REST con
+  `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` SÍ sirve para SELECT/rpc/verificación.
+- **SEGURIDAD SIN VERIFICAR en esta sesión:** SEC-01 (token en claro / Vault), SEC-02
+  (reservas concurrentes), SEC-03 (aislamiento cross-negocio), RLS (`verify-isolation.ts`),
+  wrappers Vault vs. `anon`, y el estado aplicado de las migraciones 0005/0006/0007.
+- **Cleanup de secretos huérfanos en Vault** (SQL Editor). No bloqueante.
+- **Plan 02-08 sigue pausado en Task 3** (bootstrap del primer superadmin) — ver abajo.
+
+**Trampa de entorno (descubierta y resuelta ESTA sesión — no re-aprender):**
+
+- `packages/availability-engine/dist/` está gitignoreado, y `apps/bot` importa el compilado,
+  no el fuente (decisión de fase 04-07). Tras un `git pull` que toque `packages/`, el `dist/`
+  local queda viejo y `tsc --noEmit` reporta errores fantasma (ej. `startIso` no existe en
+  `AvailableSlot`) que NO son bugs de código. Los tests de vitest NO lo detectan porque no
+  typechequean. **Siempre** correr, después de un pull:
+  `corepack pnpm --filter @turnosbot/availability-engine build`
+- `pnpm` no está en PATH → usar `corepack pnpm ...`. Scripts gated:
+  `node --env-file=.env --import tsx <script>.ts` (tsx no autocarga `.env`).
+
+**Deuda de tracking (NO son features faltantes — son checkboxes sin tildar):**
+
+- `REQUIREMENTS.md`: 41/51 tildados. Los 10 restantes están construidos. `SADMIN-01/02/03`
+  necesitan confirmación manual (su SUMMARY de 02-08 tiene `requirements_completed: []`).
+- Fases 06 y 07 sin `VERIFICATION.md`. Fase 04 con `VERIFICATION.md` en `human_needed`.
+- Nyquist: fase 01 sin `VALIDATION.md`; fase 05 con `nyquist_compliant: false`.
+- UAT parcial fase 02 (`02-HUMAN-UAT.md`, 1 escenario abierto).
+
+**Concerns de negocio (preexistentes, siguen vigentes):**
+
 - La verificación de Meta Business/Tech Provider puede tardar 2-7+ días hábiles — no debe bloquear el desarrollo de fases no relacionadas con WhatsApp (Fases 1-4 pueden avanzar en paralelo a ese trámite).
 - Confirmar límites de rate del tier gratuito de Gemini 2.5 Flash-Lite en Google AI Studio antes de planificar capacidad para Phase 6.
 - ✅ RESUELTO: Plan 02-01 (migración 0003) fue aplicada en vivo contra bdgufnitakelyialjoqg (ver 02-01-SUMMARY.md) — este blocker quedó obsoleto.
@@ -147,20 +191,39 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-10T00:13:37.460Z
-Stopped at: Completado plan 07-03 (SEC-01 SC#1 verificado en vivo, script gated PASSED exit 0) -- Phase 07 100% completa (5/5 plans)
-Resume file: None
+Last session: 2026-07-09 (fin)
+Stopped at: Cerradas las 2 sesiones de debug abiertas. Phase 07 100% completa. Milestone v1.0 NO cerrado — bloqueado por verificaciones en vivo que requieren `.env` + SQL Editor (usuario).
+Resume file: **`.planning/HANDOFF-milestone-v1.md`** ← empezar acá
 
-**HANDOFF NOTE (2026-07-05):** Phase 4 has 7 plans planned across 5 waves (see 04-*-PLAN.md). Wave 1 = 04-01 + 04-02 in parallel worktrees.
+### Qué pasó en la sesión del 2026-07-09
 
-- 04-02 (dashboard foundation: popover, sidebar nav, zod schemas) — DONE, merged to main.
-- 04-01 (availability-engine: skipBookingWindow + rescheduleAppointment) — was STILL RUNNING when this session ended (out of tokens). Its worktree branch `worktree-agent-a53d00a653b8bb78d` at `.claude/worktrees/agent-a53d00a653b8bb78d` has 5 commits (both tasks appear code-complete: skipBookingWindow + rescheduleAppointment + gated verify script) but had NOT yet committed 04-01-SUMMARY.md as of handoff.
+1. **`git pull`** trajo la Fase 07 completa desde `origin/main` (el ROADMAP local decía 2/5;
+   en realidad estaba 5/5, con UAT 4/4 y `07-SECURITY.md` en `threats_open: 0`).
+2. **`responder-history-drops-user-messages`** — el "blocker crítico" del handoff anterior
+   **ya estaba arreglado en `main`** (commit `d6d959e`, workstream paralelo). No se cambió
+   código; se verificó y se archivó en `.planning/debug/resolved/`.
+3. **`responder-empty-text-after-tool-call`** — fix presente en ambas capas
+   (`systemPrompt.ts:106` instrucción positiva + `responder.ts:349` guard con reintento sin
+   tools + `SAFE_FALLBACK_MESSAGE`). Verificado y archivado en `resolved/`.
+4. **Hallazgo de entorno:** `tsc --noEmit` en apps/bot daba 6 errores fantasma por `dist/`
+   viejo de `availability-engine`. NO era un bug. Resuelto rebuildeando. Documentado en
+   `.planning/debug/knowledge-base.md` como lección transferible.
 
-**Next teammate — before running `/gsd-execute-phase 4`:**
+### Verificado EN VIVO en esta sesión (pasó)
 
-1. `git worktree list` — check if `agent-a53d00a653b8bb78d` still exists.
-2. `git -C .claude/worktrees/agent-a53d00a653b8bb78d log --oneline -3` — if a `docs(04-01): add plan summary` commit is now present, the agent finished on its own: merge it manually first — `git merge --no-ff worktree-agent-a53d00a653b8bb78d -m "chore: merge executor worktree (worktree-agent-a53d00a653b8bb78d)"`, then remove the worktree (`git worktree remove .claude/worktrees/agent-a53d00a653b8bb78d --force`) and delete the branch (`git branch -D worktree-agent-a53d00a653b8bb78d`).
-3. If no SUMMARY commit and the worktree seems stalled (no new commits in a while), it's safe to remove the worktree/branch and let `/gsd-execute-phase 4` redispatch 04-01 fresh.
-4. Once 04-01 is merged (or redispatched and complete), run `/gsd-execute-phase 4` — it will detect 04-02 (and 04-01, once merged) as done via their SUMMARY.md files and continue with Wave 2 (plan 04-03) onward.
+- `corepack pnpm --filter @turnosbot/bot test -- --run` → **223/223 tests, 24/24 archivos,
+  0 skipped**. Corrido dos veces (antes y después del rebuild), verde ambas.
+- `corepack pnpm --filter @turnosbot/availability-engine test -- --run` → **61/61 tests, 7/7 archivos**.
+- `npx tsc --noEmit` en `apps/bot` → **0 errores** (después del rebuild del motor).
+- Presencia en código de ambos fixes, confirmada por lectura directa (no por confianza en
+  el reporte de un subagente).
 
-Last activity: 2026-07-04 - Completed quick task 260704-jb5: Terminar de actualizar 02-UI-SPEC.md y 02-RESEARCH.md de la Fase 2 (dashboard-y-datos-del-negocio) reflejando el cambio de modelo Tenant->Negocio(s), y commitear
+### SIN VERIFICAR en esta sesión (no ejecutado — no asumir que pasa)
+
+- Todos los scripts gated contra la DB en vivo (SEC-01/02/03, RLS, wrappers Vault vs anon).
+- Estado aplicado de las migraciones 0005/0006/0007 contra `bdgufnitakelyialjoqg`.
+- Re-test conversacional end-to-end contra Gemini + Supabase reales.
+- Motivo en todos los casos: **`.env` no es legible por Claude**; DDL y cleanup requieren el
+  SQL Editor de Supabase. Los pasos exactos, en `HANDOFF-milestone-v1.md`.
+
+Last activity: 2026-07-09 — Cerradas ambas sesiones de debug; suite verde (223+61); handoff de acciones manuales escrito en `.planning/HANDOFF-milestone-v1.md`
