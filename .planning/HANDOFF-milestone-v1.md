@@ -141,17 +141,18 @@ corepack pnpm --filter @turnosbot/availability-engine build
 - **POR QUÉ NO LO HICE:** no bloqueante, y fuera del alcance de esta sesión.
 - **PASOS EXACTOS:** `/gsd-validate-phase 1` y `/gsd-validate-phase 5`.
 
-## 1.5 — Deuda de tracking en `REQUIREMENTS.md`
+## 1.5 — Deuda de tracking en `REQUIREMENTS.md` — ✅ CERRADA (salvo SADMIN)
 
-- **QUÉ:** 41 de 51 requirements tildados. Los 10 restantes **están construidos** — es atraso de
-  tracking, no features faltantes.
-  - Solo falta tildar: `PRO-01` (02-06), `SVC-01`/`SVC-02` (02-05), `BIZ-01`/`BIZ-02`/`BIZ-03`
-    (02-04), `SEC-03` (07-05).
-  - **Confirmar a mano antes de tildar:** `SADMIN-01`/`SADMIN-02`/`SADMIN-03` — se construyeron en
-    02-08, pero su SUMMARY tiene `requirements_completed: []` (frontmatter vacío), así que la
-    evidencia de que están completos es indirecta.
-- **POR QUÉ NO LO HICE:** tildar `SADMIN-*` sin confirmar sería exactamente el tipo de "dar por
-  hecho" que este handoff evita. Y el panel de superadmin nunca se ejerció en vivo (ver 2.5).
+- **HECHO (2026-07-09):** se tildaron los 7 que tenían evidencia directa en el frontmatter
+  `requirements-completed` de un SUMMARY: `PRO-01` (02-06), `SVC-01`/`SVC-02` (02-05),
+  `BIZ-01`/`BIZ-02`/`BIZ-03` (02-04), `SEC-03` (07-05, verificado en vivo).
+  **Estado actual: 48/51.**
+- **PENDIENTE — `SADMIN-01`/`SADMIN-02`/`SADMIN-03`:** deliberadamente **sin tildar**. El panel
+  `/admin` está construido, pero el plan 02-08 quedó pausado en Task 3 y el flujo nunca se ejerció
+  contra la base real; su SUMMARY tiene `requirements-completed: []`. Tildarlos sería asumir.
+- **PASOS EXACTOS:** cerrarlos corriendo el bootstrap del superadmin (ver **2.7**). Una vez que
+  `verify-admin-tenant-lifecycle.ts` pase, tildar los tres y borrar la nota de advertencia que
+  quedó escrita arriba de ellos en `REQUIREMENTS.md`.
 
 ## 1.6 — UAT parcial de fase 02
 
@@ -278,7 +279,9 @@ corepack pnpm --filter @turnosbot/availability-engine build
 ## Referencias
 
 - **Estado general:** `.planning/STATE.md` (secciones "Blockers/Concerns" y "Session Continuity").
-- **Resumen de la fase 07:** `.planning/phases/07-hardening-y-listo-para-produccion/07-SUMMARY.md`.
+- **Resumen de la fase 07:** `.planning/phases/07-hardening-y-listo-para-produccion/07-PHASE-STATUS.md`
+  (NO se llama `07-SUMMARY.md` a propósito: ese glob lo cuenta GSD como resumen-de-plan e infla
+  el contador de progreso a 44/43).
 - **Lecciones de debug:** `.planning/debug/knowledge-base.md` (incluye la trampa del `dist/` viejo).
 - **Sesiones de debug cerradas:** `.planning/debug/resolved/` (4 archivos, ninguna abierta).
 - **Migraciones de seguridad:** `supabase/migrations/0005_whatsapp_token_vault.sql`,

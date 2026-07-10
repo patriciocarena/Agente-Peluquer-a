@@ -159,11 +159,19 @@ esta sesión NO las re-corrió. No se dio nada por hecho.
 - `pnpm` no está en PATH → usar `corepack pnpm ...`. Scripts gated:
   `node --env-file=.env --import tsx <script>.ts` (tsx no autocarga `.env`).
 
-**Deuda de tracking (NO son features faltantes — son checkboxes sin tildar):**
+**Deuda de tracking:**
 
-- `REQUIREMENTS.md`: 41/51 tildados. Los 10 restantes están construidos. `SADMIN-01/02/03`
-  necesitan confirmación manual (su SUMMARY de 02-08 tiene `requirements_completed: []`).
-- Fases 06 y 07 sin `VERIFICATION.md`. Fase 04 con `VERIFICATION.md` en `human_needed`.
+- ✅ `REQUIREMENTS.md`: **48/51** tildados (2026-07-09). Se cerraron los 7 con evidencia directa
+  en el frontmatter de un SUMMARY. Quedan solo `SADMIN-01/02/03`, **sin tildar a propósito**: el
+  panel `/admin` existe pero nunca se ejerció contra la base (plan 02-08 pausado en Task 3).
+- Fases 06 y 07 sin `VERIFICATION.md` (query `verification.status` → `missing` en ambas).
+  Fase 04 con `VERIFICATION.md` en `human_needed`.
+  ⚠️ **No se pueden cerrar sin credenciales:** los criterios de éxito de la fase 07 SON las 3
+  pruebas de seguridad en vivo, y los de la 06 son conversaciones reales con el bot.
+- ⚠️ **No crear `07-SUMMARY.md`.** GSD cuenta `*-SUMMARY.md` como resumen-de-plan e infla el
+  progreso a 44/43. El resumen de fase vive en `07-PHASE-STATUS.md`.
+- Nota: `gsd query progress` reporta "1 sesión de debug activa", pero es un falso positivo —
+  el glob `.planning/debug/*.md` levanta `knowledge-base.md`. **Hay 0 sesiones abiertas.**
 - Nyquist: fase 01 sin `VALIDATION.md`; fase 05 con `nyquist_compliant: false`.
 - UAT parcial fase 02 (`02-HUMAN-UAT.md`, 1 escenario abierto).
 

@@ -24,21 +24,21 @@ Requisitos para el release inicial. Cada uno mapea a una fase del roadmap.
 
 ### Gestión de profesionales (PRO)
 
-- [ ] **PRO-01**: El dueño puede crear, editar, activar/desactivar (soft delete) y listar profesionales
+- [x] **PRO-01**: El dueño puede crear, editar, activar/desactivar (soft delete) y listar profesionales
 - [x] **PRO-02**: El dueño puede definir el horario semanal recurrente de cada profesional (múltiples bloques por día)
 - [x] **PRO-03**: El dueño puede asignar a cada profesional los servicios que realiza (no todos hacen todo)
 - [x] **PRO-04**: El dueño puede fijar un precio custom de un servicio para un profesional (pisa el precio base)
 
 ### Servicios y precios (SVC)
 
-- [ ] **SVC-01**: El dueño puede crear, editar, activar/desactivar y listar servicios con nombre, descripción, precio y duración estimada
-- [ ] **SVC-02**: El dueño puede definir el orden de visualización de los servicios
+- [x] **SVC-01**: El dueño puede crear, editar, activar/desactivar y listar servicios con nombre, descripción, precio y duración estimada
+- [x] **SVC-02**: El dueño puede definir el orden de visualización de los servicios
 
 ### Perfil del negocio (BIZ)
 
-- [ ] **BIZ-01**: El dueño puede editar nombre, dirección, teléfono, horario general y timezone del negocio
-- [ ] **BIZ-02**: El dueño puede ver el número de WhatsApp vinculado al negocio
-- [ ] **BIZ-03**: El dueño puede configurar la granularidad de la grilla (slot de 15 o 30 min)
+- [x] **BIZ-01**: El dueño puede editar nombre, dirección, teléfono, horario general y timezone del negocio
+- [x] **BIZ-02**: El dueño puede ver el número de WhatsApp vinculado al negocio
+- [x] **BIZ-03**: El dueño puede configurar la granularidad de la grilla (slot de 15 o 30 min)
 
 ### Motor de disponibilidad (AVAIL)
 
@@ -81,6 +81,13 @@ Requisitos para el release inicial. Cada uno mapea a una fase del roadmap.
 
 ### Superadmin (SADMIN)
 
+> **Sin tildar a propósito (2026-07-09).** El panel `/admin` está construido y commiteado
+> (plan 02-08, Tasks 1-2), pero el plan quedó **pausado en Task 3**: nunca se corrió
+> `scripts/bootstrap-superadmin.ts` ni `scripts/verify-admin-tenant-lifecycle.ts` contra la
+> base real, así que el flujo jamás se ejerció end-to-end. Su `02-08-SUMMARY.md` tiene
+> `requirements-completed: []`. Tildarlos hoy sería asumir, no verificar.
+> Pasos para cerrarlos: `.planning/HANDOFF-milestone-v1.md`, sección 2.7.
+
 - [ ] **SADMIN-01**: El superadmin puede crear, editar y desactivar tenants (peluquerías)
 - [ ] **SADMIN-02**: El superadmin puede vincular a cada tenant su config de WhatsApp (phone_number_id, waba_id, token encriptado, número visible)
 - [ ] **SADMIN-03**: El superadmin puede listar y acceder a todos los tenants; su panel está aislado del acceso RLS de los dueños
@@ -89,7 +96,7 @@ Requisitos para el release inicial. Cada uno mapea a una fase del roadmap.
 
 - [x] **SEC-01**: Los tokens de acceso de WhatsApp por tenant se almacenan encriptados en reposo (Supabase Vault o AES-GCM)
 - [x] **SEC-02**: Existe un test de carga concurrente que prueba que la constraint anti-doble-reserva se sostiene
-- [ ] **SEC-03**: Existe un test de aislamiento cross-tenant sobre las queries service_role del bot
+- [x] **SEC-03**: Existe un test de aislamiento cross-tenant sobre las queries service_role del bot
 
 ## v2 Requirements
 
