@@ -141,4 +141,27 @@ la tool aislada primero: separa "el LLM se portó mal" de "el código falló" en
 Los **cinco** Success Criteria de la fase 06 están probados en vivo contra el modelo real:
 #1 (servicio en lenguaje natural), #2 (horarios reales del motor + confirmar solo con `turno_id`
 real), #3 (consultas de precio), #4 (**cancelar Y reagendar** por WhatsApp) y #5 (prompt injection
-+ aislamiento entre clientes). La fase 06 se puede verificar formalmente sin salvedades.
++ aislamiento entre clientes).
+
+**Resultado:** `06-VERIFICATION.md` → `status: passed`, 5/5, `behavior_unverified: 0`.
+
+## Qué queda pendiente (todo del lado humano)
+
+Nada de esto lo puede hacer Claude. Pasos exactos en `.planning/HANDOFF-milestone-v1.md`.
+
+| Pendiente | Por qué no lo puede hacer Claude |
+|---|---|
+| 4 tests visuales de la fase 04 (MQ-1..MQ-4) | Comportamientos visuales/interactivos; no hay framework de render de componentes en `apps/dashboard` |
+| Bootstrap del primer superadmin | `SUPERADMIN_EMAIL`/`SUPERADMIN_PASSWORD` están unset; las elige el usuario |
+| Cleanup de `vault.secrets` | El esquema `vault` no se expone por REST; solo SQL Editor |
+| Decidir el pase a tier pago de Gemini | Decisión de negocio (15 RPM se agota con ~5-8 mensajes/min) |
+
+**Este script no está en CI** y no debería estarlo: consume cuota de Gemini y escribe en la DB
+real. Correrlo a mano cuando se toque `responder.ts`, el system prompt, o cualquiera de las 6
+tools:
+
+```bash
+node --env-file=.env --import tsx scripts/verify-bot-conversation-live.ts
+```
+
+Si pega un rate limit (15 RPM), reporta `SKIPPED`, no `FAILED`. Esperar un minuto y reintentar.
