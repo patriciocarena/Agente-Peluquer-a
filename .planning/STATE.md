@@ -174,9 +174,12 @@ declarar algo imposible por falta de credencial, **probarlo**.
   `TurnosBotSeed!Norte1` (verificado en vivo hoy). **Para el equipo humano.**
 - ⚠️ **Cleanup de secretos huérfanos en Vault** (SQL Editor). Crece con cada corrida de
   `verify-vault-no-plaintext.ts`, que crea `whatsapp-token-verify-<ts>` y no lo borra.
-- ⚠️ **Plan 02-08 pausado en Task 3** (bootstrap del primer superadmin). `SUPERADMIN_EMAIL` y
-  `SUPERADMIN_PASSWORD` están **unset** en el `.env` (verificado). Bloquea el alta de la primera
-  peluquería y el tildado de `SADMIN-01/02/03`.
+- ✅ **RESUELTO (2026-07-10): bootstrap del primer superadmin ejecutado en vivo.**
+  `scripts/bootstrap-superadmin.ts` creó el `perfil` superadmin (`auth.users.id=f66ffbaf-6141-4441-87bd-543faea1c2f9`,
+  `phono4884@gmail.com`, `tenant_id=NULL`) y `scripts/verify-admin-tenant-lifecycle.ts` pasó
+  **exit 0** contra `bdgufnitakelyialjoqg`. `SADMIN-01/02/03` tildados en `REQUIREMENTS.md`
+  (quick 260710-jgn). Único pendiente: confirmación *visual* del gate `/admin` por la UI
+  (superadmin lo ve, owner no) — cae en los tests visuales de la fase 04.
 - ⚠️ **Cuota de Gemini: 15 RPM** — decisión de negocio antes del primer tenant con volumen.
 
 **Invariante del modelo de datos (descubierto hoy):** un `turno` **sin filas en `turno_servicio`
@@ -196,9 +199,9 @@ recalcular la duración.
 
 **Deuda de tracking:**
 
-- ✅ `REQUIREMENTS.md`: **48/51** tildados (2026-07-09). Se cerraron los 7 con evidencia directa
-  en el frontmatter de un SUMMARY. Quedan solo `SADMIN-01/02/03`, **sin tildar a propósito**: el
-  panel `/admin` existe pero nunca se ejerció contra la base (plan 02-08 pausado en Task 3).
+- ✅ `REQUIREMENTS.md`: **51/51** tildados (2026-07-10). Los últimos 3 (`SADMIN-01/02/03`) se
+  cerraron tras ejercer el flujo superadmin en vivo (bootstrap + lifecycle verify PASSED contra
+  `bdgufnitakelyialjoqg`, quick 260710-jgn). Único resto: confirmación visual del gate `/admin`.
 - ✅ **Fases 06 y 07: `VERIFICATION.md` generados, ambos `passed`** (2026-07-10). La 07 con 3/3
   criterios probados en vivo; la 06 con 5/5, `behavior_unverified: 0`.
 - ⚠️ **Fase 04: `human_needed`** — solo por los 4 tests visuales (MQ-1..MQ-4). Su quinto ítem
@@ -224,7 +227,7 @@ recalcular la duración.
 - ⚠️ El modelo por defecto en código es **`gemini-3.1-flash-lite`** (`responder.ts:139`), no el
   `2.5` que dicen `CLAUDE.md` y `research/STACK.md`. Funciona; la doc está desactualizada.
 - ✅ RESUELTO: Plan 02-01 (migración 0003) fue aplicada en vivo contra bdgufnitakelyialjoqg (ver 02-01-SUMMARY.md) — este blocker quedó obsoleto.
-- **Plan 02-08 pausado en Task 3** (checkpoint:human-action, gate=blocking-human): Tasks 1-2 (Server Actions superadmin + panel /admin completo) commiteadas (`4c60ac9`, `7f6fcb6`, `fbe2b5e`). Falta ejecutar `scripts/bootstrap-superadmin.ts` + `scripts/verify-admin-tenant-lifecycle.ts` contra bdgufnitakelyialjoqg — requiere `.env` (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) + credenciales reales de email/password para el primer superadmin (nunca committear). Ver `02-08-SUMMARY.md` para el detalle exacto de cómo retomar.
+- ✅ **RESUELTO (2026-07-10): Plan 02-08 Task 3 completado.** Tasks 1-2 (Server Actions superadmin + panel /admin) ya estaban commiteadas (`4c60ac9`, `7f6fcb6`, `fbe2b5e`). El 2026-07-10 se ejecutaron `scripts/bootstrap-superadmin.ts` + `scripts/verify-admin-tenant-lifecycle.ts` contra bdgufnitakelyialjoqg con credenciales reales (nunca committeadas): bootstrap OK (`auth.users.id=f66ffbaf-6141-4441-87bd-543faea1c2f9`) y lifecycle verify PASSED exit 0. `SADMIN-01/02/03` tildados (quick 260710-jgn). Resto: confirmación visual del gate /admin por la UI (dentro de los tests visuales de fase 04).
 - ✅ RESUELTO (2026-07-05): los 2 checkpoints live de la Fase 03 se ejecutaron con .env real contra bdgufnitakelyialjoqg y PASARON — `apps/bot/src/db/negocioScoped.verify.ts` (aislamiento cross-negocio) y `scripts/verify-availability-engine.ts` (bookAppointment round-trip + snapshot congelado AVAIL-03 + 23P01→slot_taken). Fix aplicado: `booking.ts` `z.uuid()` estricto → `uuidLike` (forma 8-4-4-4-12). Fase 03 100% verificada.
 
 ### Quick Tasks Completed
@@ -233,6 +236,7 @@ recalcular la duración.
 |---|-------------|------|--------|-----------|
 | 260704-jb5 | Terminar de actualizar 02-UI-SPEC.md y 02-RESEARCH.md de la Fase 2 (dashboard-y-datos-del-negocio) reflejando el cambio de modelo Tenant->Negocio(s), y commitear | 2026-07-04 | 591ad17 | [260704-jb5-terminar-de-actualizar-02-ui-spec-md-y-0](./quick/260704-jb5-terminar-de-actualizar-02-ui-spec-md-y-0/) |
 | 260709-w2y | verify-bot-conversation-live.ts — script gated que maneja responder() contra Gemini real + Supabase real; probó en vivo los 2 fixes de la fase 06 (memoria multi-turno + texto vacío tras tool-result). PASSED, exit 0 | 2026-07-10 | — | [260709-w2y-verify-bot-conversation-live](./quick/260709-w2y-verify-bot-conversation-live/) |
+| 260710-jgn | Cerrar SADMIN-01/02/03 tras ejecutar en vivo el bootstrap del superadmin + lifecycle verify (PASSED exit 0) contra bdgufnitakelyialjoqg. REQUIREMENTS 51/51. Solo docs. | 2026-07-10 | — | [260710-jgn-cerrar-sadmin-superadmin-live](./quick/260710-jgn-cerrar-sadmin-superadmin-live/) |
 
 ## Deferred Items
 
@@ -244,8 +248,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-10 (fin)
-Stopped at: Fases 06 y 07 verificadas (`passed`). Fase 04 en `human_needed` solo por 4 tests visuales. Milestone v1.0 NO cerrado — quedan 4 acciones manuales, todas del lado humano.
+Last session: 2026-07-10 (cont.)
+Stopped at: Bootstrap del superadmin ejecutado en vivo (lifecycle PASSED, `SADMIN-01/02/03` → 51/51, quick 260710-jgn). Milestone v1.0 NO cerrado — quedan **3** acciones humanas: (1) tests visuales de la fase 04 (MQ-1..4 + confirmación visual del gate `/admin`), (2) cleanup del Vault vía SQL Editor, (3) decisión de cuota de Gemini (dejada pendiente a pedido del usuario).
 Resume file: **`.planning/HANDOFF-milestone-v1.md`** ← empezar acá
 
 ### Qué pasó en la sesión del 2026-07-09/10
@@ -315,11 +319,12 @@ real**, sin mocks. Exit 0. Cubre los **5** Success Criteria de la fase 06:
 - **Los 4 tests visuales de la fase 04** (MQ-1..MQ-4). Comportamientos visuales/interactivos;
   `apps/dashboard` no tiene framework de render de componentes. **Requieren ojos humanos.**
   Guiones completos en `04-VALIDATION.md`.
-- **El flujo de superadmin** (`bootstrap-superadmin.ts` + `verify-admin-tenant-lifecycle.ts`).
-  Nunca se ejerció contra la base. `SUPERADMIN_EMAIL` / `SUPERADMIN_PASSWORD` están **unset** en
-  el `.env` (verificado) — esas credenciales las elige el usuario.
+- ~~**El flujo de superadmin**~~ ✅ **YA EJERCIDO EN VIVO (2026-07-10).** `bootstrap-superadmin.ts`
+  + `verify-admin-tenant-lifecycle.ts` corridos contra `bdgufnitakelyialjoqg`, lifecycle PASSED
+  exit 0. Lo único que sigue requiriendo ojos humanos es la confirmación *visual* del gate `/admin`
+  (superadmin lo ve, owner no) — parte de los tests visuales de la fase 04, abajo.
 - **El cleanup de `vault.secrets`.** El esquema `vault` no se expone por REST; solo SQL Editor.
 - **El escenario abierto del UAT de la fase 02** (`02-HUMAN-UAT.md`) — mismo bloqueo visual.
 - **Nyquist:** fase 01 sin `VALIDATION.md`; fase 05 `nyquist_compliant: false`.
 
-Last activity: 2026-07-10 — Fases 06 y 07 verificadas (`passed`); 8 scripts gated + el bot contra Gemini real, todos PASSED; blocker de rate limit cerrado (15 RPM). Handoff completo en `.planning/HANDOFF-milestone-v1.md`
+Last activity: 2026-07-10 — Bootstrap del superadmin ejecutado en vivo (lifecycle verify PASSED exit 0); `SADMIN-01/02/03` tildados → REQUIREMENTS 51/51 (quick 260710-jgn). Quedan 3 acciones humanas: tests visuales fase 04, cleanup Vault, decisión cuota Gemini. Handoff en `.planning/HANDOFF-milestone-v1.md`
