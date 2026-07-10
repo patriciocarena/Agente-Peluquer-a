@@ -2,19 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 07
-current_phase_name: hardening-y-listo-para-produccion
 status: executing
-stopped_at: Phase 7 context gathered
-last_updated: "2026-07-09T21:28:23.987Z"
-last_activity: 2026-07-09
-last_activity_desc: Phase 07 execution started
+stopped_at: Completado plan 07-02 (SEC-01 call-sites migrados a RPC Vault)
+last_updated: "2026-07-10T00:07:15.400Z"
+last_activity: 2026-07-09 — Completado plan 07-05 (SEC-03 negocioScoped isolation, verificado en vivo)
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 43
-  completed_plans: 40
-  percent: 93
+  completed_plans: 42
+  percent: 86
 ---
 
 # Project State
@@ -32,7 +29,7 @@ Phase: 07 (hardening-y-listo-para-produccion) — EXECUTING
 Status: Executing Phase 07
 Last activity: 2026-07-09 — Completado plan 07-05 (SEC-03 negocioScoped isolation, verificado en vivo)
 
-Progress: [█████████░] 93%
+Progress: [██████████] 98%
 
 ## Performance Metrics
 
@@ -76,6 +73,7 @@ Progress: [█████████░] 93%
 | Phase 06-agente-conversacional-de-agendamiento P05 | 15min | 3 tasks | 6 files |
 | Phase 07 P04 | 20min | 1 tasks | 1 files |
 | Phase 07 P05 | 15min | 3 tasks | 1 files |
+| Phase 07 P02 | 18min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -120,6 +118,8 @@ Recent decisions affecting current work:
 - [Phase 06-05]: inboundWorker.ts lee needsHuman de conversacion.context ANTES de invocar responder (D-11) — el handoff a humano queda fuera del control del modelo, saltando responder+sendWhatsappMessage sin regresión del dedup 23505 ni del gate de ventana 24h
 - [Phase 07]: [Phase 07-04]: verify-concurrent-booking.ts probo en vivo SEC-02 Success Criterion #2 -- 3/3 corridas deterministas, exactamente 1 exito y N-1 slot_taken via bookAppointment (GiST EXCLUDE, no chequeo en memoria)
 - [Phase 07-05]: negocioScoped.test.ts extendido a los 12 accessors de lectura + chequeo a nivel tool consultarNegocioTool -- SEC-03 Success Criterion #3 probado en vivo contra bdgufnitakelyialjoqg, 26/26 aserciones OK, cero fugas cross-negocio
+- [Phase 07-02]: negocioId se valida con regex de forma (8-4-4-4-12), no z.uuid() estricto -- mismo fix que uuidLike en booking.ts (z.uuid() rechaza UUIDs reales sin variante 8/9/a/b)
+- [Phase 07-02]: Ambos call-sites del token de WhatsApp (getWhatsappToken.ts lectura, admin-tenants.ts setWhatsappTokenSecret escritura) pasan exclusivamente por RPC Vault -- cierra el wiring de SEC-01, verificacion live queda para 07-03
 
 ### Blockers/Concerns
 
@@ -145,9 +145,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-09T21:24:46Z
-Stopped at: Completado plan 07-05 (SEC-03 negocioScoped isolation)
-Resume file: .planning/phases/07-hardening-y-listo-para-produccion/07-05-SUMMARY.md
+Last session: 2026-07-10T00:07:15.386Z
+Stopped at: Completado plan 07-02 (SEC-01 call-sites migrados a RPC Vault)
+Resume file: .planning/phases/07-hardening-y-listo-para-produccion/07-02-SUMMARY.md
 
 **HANDOFF NOTE (2026-07-05):** Phase 4 has 7 plans planned across 5 waves (see 04-*-PLAN.md). Wave 1 = 04-01 + 04-02 in parallel worktrees.
 
