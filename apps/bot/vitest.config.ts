@@ -12,15 +12,13 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts", "evals/**/*.test.ts"],
-    // negocioScoped.test.ts predates this vitest runner (Fase 03 Pitfall 7):
-    // it's a manual, live-DB smoke test (top-level `main()` + `process.exit`,
-    // gated on a real .env against bdgufnitakelyialjoqg) run via
-    // `pnpm exec tsx apps/bot/src/db/negocioScoped.test.ts`, NOT a vitest
-    // suite — it has no describe/it blocks and would crash the automated
-    // runner (missing env vars) or hard-exit the process if it had them.
-    // Excluded here so `vitest run` stays green without touching the file
-    // or its already-documented run convention.
-    exclude: ["src/db/negocioScoped.test.ts", "node_modules/**"],
+    // Los scripts de verificación live contra la DB real usan el sufijo
+    // `.verify.ts` (no `.test.ts`) justamente para NO matchear el include de
+    // arriba. Antes `negocioScoped.verify.ts` se llamaba `.test.ts` y vivía en
+    // esta lista de `exclude`: parecía cubierto por CI y no lo estaba. Ver
+    // W-01 de 07-VERIFICATION.md. Correr a mano:
+    //   node --env-file=.env --import tsx apps/bot/src/db/negocioScoped.verify.ts
+    exclude: ["node_modules/**"],
     globals: true,
   },
 })

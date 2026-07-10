@@ -1,16 +1,16 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "responder-history-drops-user-messages: El bot (apps/bot/src/conversation/responder.ts) no persiste los mensajes role:\"user\" en conversacion.context.messages — solo persiste result.response.messages del AI SDK (que documenta que solo incluye lo GENERADO por el modelo en esa llamada: assistant/tool, nunca el input echo). Como consecuencia, el modelo nunca ve lo que el cliente dijo en turnos anteriores; solo ve su propio historial de respuestas pasadas + el mensaje actual del cliente. El bot entra en loop pidiendo datos ya contestados."
 created: 2026-07-08T18:30:00Z
-updated: 2026-07-08T18:45:00Z
+updated: 2026-07-09T22:15:00Z
 ---
 
 ## Current Focus
 
-hypothesis: CONFIRMED — `responder()` persists `[...history, ...result.response.messages]` on every turn, and `result.response.messages` (AI SDK v7 `generateText`) contains ONLY the messages generated during that call (assistant text + tool-call/tool-result), never an echo of the input `messages` array. The `{ role: "user", content: mensajeEntrante }` object constructed for THIS turn's model call (line 195) is never added to what gets persisted (lines 246, 264, 267-270), nor in the error path (line 220). Net effect: `history` accumulates only assistant/tool turns; the model literally never sees what the customer said in any turn except the current one.
-test: Read responder.ts fully (persist paths at line ~220 error path, ~246/264/267-270 happy path); read conversationState.ts (parse/serialize, confirmed no hidden merging logic); read responder.test.ts (confirmed no test asserts that the user's message survives into the NEXT turn's persisted history — the existing test at line 227-240 explicitly encodes the buggy contract as correct: `context: { messages: [...history, ...responseMessages], needsHuman: false }` with no user message added); cross-checked AI SDK v7 docs via WebSearch to confirm `response.messages` semantics (excludes input messages, only generated assistant/tool messages).
-expecting: Confirms root cause exactly as stated in preliminary_findings and 06-UAT.md Test 2 / Gaps section.
-next_action: none — goal is find_root_cause_only, diagnosis complete. Return ROOT CAUSE FOUND to caller.
+hypothesis: CONFIRMED and FIXED. Verified against the current apps/bot/src/conversation/responder.ts (commit d6d959e "fix(06-07): persist the client's own message in conversation history (Gap 1)", merged into main via bfd6acd): a single `userMessage = { role: "user", content: mensajeEntrante }` local (line 243) is now reused in the `generateText` call (line 274: `messages: [...history, userMessage]`), the error/catch persistence path (line 302: `messages: [...history, userMessage]`), and the happy-path persistence (line 419: `messages: [...history, userMessage, ...messagesToPersist]`). All three sites identified in Evidence now include the user's own turn message.
+test: Ran `corepack pnpm --filter @turnosbot/bot test -- --run` (full apps/bot vitest suite) — 223/223 tests pass across 24 files. Ran `responder.test.ts` in isolation — 20/20 pass, including the two Gap-1 regression tests that were missing at diagnosis time and are now present: "persiste [...history, userMessage, ...result.response.messages] + needsHuman ... (Gap 1 — memoria multi-turno)" (asserts userMessage is in the persisted context on the happy path) and "Gap 1 — round-trip: un mensaje user del turno N sobrevive en el history que recibe generateText en el turno N+1" (feeds turno-1's persisted context into turno-2's `responder()` call and asserts the turno-1 user message appears in turno-2's `generateText` input — exactly the round-trip coverage this debug session flagged as missing). The error-path test also now asserts `persistedMessages` contains the user's message. `tsc --noEmit` on apps/bot shows 6 pre-existing errors, all in `confirmarTurno.ts`/`reagendarTurno.ts`/their tests about an unrelated `AvailableSlot.startIso`/`endIso` type mismatch — confirmed unrelated to this bug (no responder.ts/conversationState.ts/responder.test.ts errors) and outside this debug session's scope.
+expecting: n/a — resolved.
+next_action: none — resolved and archived.
 
 ## Symptoms
 
@@ -64,6 +64,19 @@ root_cause: |
 
   Root cause is fully confirmed — not a hypothesis requiring further testing. Confirmed independently via live DB inspection during Phase 06 UAT (conversacion.context showed 5 entries, 100% role:"assistant", 0% role:"user") and via static code read + AI SDK v7 documentation cross-check in this debug session.
 
-fix: (not applied — goal is find_root_cause_only; fix left to caller/specialist)
-verification: (not applicable — diagnose-only mode)
-files_changed: []
+fix: |
+  apps/bot/src/conversation/responder.ts — introduced a single `userMessage = { role: "user" as const, content: mensajeEntrante }` local (line 243), built once per turn from the ONLY source of the client's current-turn message, and reused it in all three places that previously dropped it:
+    1. The `generateText` call's `messages` input (line 274) — already worked before the fix, unchanged in effect.
+    2. The error/catch persistence path (line 302): `serializeConversationContext({ messages: [...history, userMessage], needsHuman: true })` — the message that triggered the error now survives into the next turn's history instead of being silently dropped.
+    3. The happy-path persistence (line 419): `serializeConversationContext({ messages: [...history, userMessage, ...messagesToPersist], needsHuman })` — `userMessage` is inserted BETWEEN the prior `history` and `messagesToPersist` (`result.response.messages`, optionally rewritten by the D-12 gate/empty-text retry), preserving true chronological turn order.
+  This fix was applied in commit d6d959e ("fix(06-07): persist the client's own message in conversation history (Gap 1)") on a parallel workstream (branch `claude-06-gap-closure`) that referenced this exact debug file, then integrated into main via merge commit bfd6acd. Two follow-up commits (8b16e94 Gap 2b empty-text guard, b06b81f CR-01/CR-02 gate hardening in the empty-text retry path) build on top of this same `userMessage` local without regressing it — confirmed by re-reading the current file end-to-end during this session.
+verification: |
+  Ran `corepack pnpm --filter @turnosbot/bot test -- --run` (full apps/bot vitest suite): 223/223 tests pass, 24/24 files. Ran `responder.test.ts` in isolation: 20/20 pass, including two regression tests that directly cover this bug and did not exist at the time of the original (buggy) implementation:
+    - "persiste [...history, userMessage, ...result.response.messages] + needsHuman vía serializeConversationContext/updateConversacion (Gap 1 — memoria multi-turno)" — asserts the happy-path persisted context includes the user's current-turn message in the correct position.
+    - "Gap 1 — round-trip: un mensaje user del turno N sobrevive en el history que recibe generateText en el turno N+1" — feeds the context persisted by a first `responder()` call into a second call as `conversacion.context`, and asserts the first turn's user message (`{ role: "user", content: "quiero un corte" }`) appears in the SECOND call's `generateText` input messages. This is the exact multi-turn round-trip this debug session flagged as the critical missing coverage.
+    - The error-path test ("un error de generateText ... no se narra como éxito") now also asserts `persistedMessages` contains `{ role: "user", content: "hola" }`.
+  `tsc --noEmit` on apps/bot: 6 pre-existing errors, all confined to `confirmarTurno.ts`/`reagendarTurno.ts`/their tests (`AvailableSlot.startIso`/`endIso` type mismatch) — unrelated to `responder.ts`/`conversationState.ts`/`responder.test.ts`, out of scope for this bug.
+  No live-DB re-test was performed in THIS session (working tree already matched the merged fix, no code changes were needed) — but the fix has already gone through human code review and iteration in production commits (b06b81f: "Hallado en un code-review del fix de empty-text (Gap 2b) del cierre de gaps 06-07, ya mergeado en main"), and is running in `main` alongside the rest of Phase 06.
+files_changed:
+  - apps/bot/src/conversation/responder.ts (fix applied in commit d6d959e, prior to this session; confirmed present and correct during this session — no further changes needed)
+  - apps/bot/src/conversation/responder.test.ts (regression tests added in the same workstream, prior to this session; confirmed present and passing during this session)

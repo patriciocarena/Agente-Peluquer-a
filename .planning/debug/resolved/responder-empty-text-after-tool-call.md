@@ -1,8 +1,8 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "responder-empty-text-after-tool-call: En el tool-loop del agente conversacional (apps/bot/src/conversation/responder.ts, generateText con Gemini 2.5 Flash-Lite), cuando el modelo llama exitosamente a una tool de solo-lectura (ej. consultarNegocio para precios) y recibe el resultado, el SIGUIENTE step del mismo generateText termina con finishReason:\"stop\" pero result.text/step.text vacío (\"\") — el bot nunca verbaliza el dato al cliente, a pesar de que el tool-result sí trae la información correcta."
 created: 2026-07-08T00:00:00Z
-updated: 2026-07-08T00:15:00Z
+updated: 2026-07-09T22:20:00Z
 ---
 
 ## Current Focus
@@ -10,7 +10,7 @@ updated: 2026-07-08T00:15:00Z
 hypothesis: "CONFIRMADA. Root cause de dos capas: (1) es un comportamiento documentado, cross-framework y cross-provider-path de la familia Gemini 2.5 (incluyendo flash-lite): tras un function-call exitoso, el modelo a veces termina el turno con finishReason STOP y una parte de texto vacía en vez de continuar narrando el resultado — reportado independientemente contra el Gemini API crudo, Vercel AI SDK (Google Vertex/MCP), LangChain.js, Genkit y Goose, es decir NO es un bug de nuestro código ni específico de @ai-sdk/google. (2) Nuestro system prompt (systemPrompt.ts) no tiene NINGUNA instrucción positiva/explícita tipo 'después de usar una tool de consulta, siempre generá un mensaje de texto que resuma el resultado' — solo tiene negativos (D-12: qué NO inventar). Esta ausencia incrementa la probabilidad de que el modelo trate el tool-call como 'la acción completa' del turno, sin la presión de prompt necesaria para forzar la narración. responder.ts tampoco tiene ningún fallback defensivo para 'result.text vacío tras un tool-result exitoso' — lo retorna/envía tal cual."
 test: "Completado. Evidencia: lectura completa de responder.ts + systemPrompt.ts + 06-AI-SPEC.md Section 3/4b + WebSearch de 4 queries cruzando 'gemini empty text after tool call finishReason stop' contra múltiples frameworks independientes."
 expecting: "N/A — hipótesis confirmada con evidencia directa (lectura de código) + evidencia externa (múltiples reportes independientes del mismo síntoma exacto en el modelo subyacente)."
-next_action: "Reportar ROOT CAUSE FOUND (goal: find_root_cause_only — no se aplica fix en este modo)."
+next_action: "none — resuelto y archivado (2026-07-09). El fix de ambas capas ya estaba en main (8b16e94, endurecido por b06b81f); esta sesión lo verificó (223/223 vitest, 5 tests de regresión Gap 2b, tsc limpio) y cerró el bookkeeping. Pendiente deseable, NO bloqueante: un re-test conversacional en vivo contra Gemini+Supabase reales, que esta sesión no ejecutó."
 
 ## Symptoms
 
@@ -225,6 +225,67 @@ root_cause: |
   result.text vino vacío" — hoy ese texto vacío es justamente lo que
   `finalText` termina siendo y lo que se retorna/envía al cliente, sin
   ningún fallback ni reintento.
-fix: ""
-verification: ""
-files_changed: []
+fix: |
+  Mitigación en las DOS capas que están bajo control del proyecto (la capa (1),
+  el no-determinismo de Gemini 2.5 Flash-Lite, es externa y no se puede eliminar
+  — solo reducir su probabilidad y contener su efecto).
+
+  (a) PROMPT PRESSURE — `apps/bot/src/conversation/systemPrompt.ts` (líneas ~106-107)
+  gana la instrucción positiva que faltaba, bajo el encabezado "# Siempre comunicá
+  el resultado de una consulta": obliga a escribir un mensaje de texto en lenguaje
+  natural tras CUALQUIER tool de consulta que devuelva datos, en el mismo turno, y
+  explicita que "usar la herramienta no alcanza: nunca termines un turno en silencio
+  después de consultar un dato". Cierra el hueco registrado en Evidence (el prompt
+  tenía negativos D-12 pero ningún positivo equivalente).
+
+  (b) GUARD DEFENSIVO EN CÓDIGO — `apps/bot/src/conversation/responder.ts` (línea ~349):
+  `if (finalText.trim() === "" && hadToolResult(result.steps))` dispara un reintento
+  ÚNICO de `generateText` con `tools: {}` (línea ~363). Ir sin tools en el reintento
+  es una restricción de seguridad dura, no una optimización: imposibilita que el
+  reintento ejecute una SEGUNDA escritura (confirmarTurno/reagendarTurno/cancelarTurno)
+  tras una escritura ya exitosa. Si el reintento también vuelve vacío — o si el texto
+  vacío ocurrió sin ningún tool-result — se envía `SAFE_FALLBACK_MESSAGE`
+  ("Dame un segundo que verifico y te confirmo 🙌", línea 82) en vez de una cadena
+  vacía. El bot nunca más puede mandarle "" al cliente.
+
+  El fix ya estaba en `main` antes de esta sesión (Gap 2b del cierre de fase 06-07,
+  commit 8b16e94; endurecido después por b06b81f "CR-01/CR-02 gate hardening" tras un
+  code review). Esta sesión NO cambió código: verificó que ambas capas están presentes
+  y cubiertas por tests, y cerró el bookkeeping que había quedado en `diagnosed`.
+verification: |
+  Verificado en vivo en esta sesión (2026-07-09), sin credenciales — todo con vitest local:
+
+  - `corepack pnpm --filter @turnosbot/bot test -- --run` → 223/223 tests pasan, 24/24
+    archivos, 0 skipped. Corrido DOS veces (antes y después de rebuildear el paquete
+    availability-engine), verde ambas.
+  - 5 tests cubren específicamente este bug en `responder.test.ts` (todos dentro de los 223):
+      * "Gap 2b: texto vacío tras tool-result de consulta -> reintenta UNA vez con
+        tools:{} y prioriza el texto narrado del reintento" (línea 323)
+      * "Gap 2b: ambos intentos vacíos -> SAFE_FALLBACK_MESSAGE (nunca cadena vacía)" (363)
+      * "Gap 2b: texto vacío SIN ningún tool-result -> SAFE_FALLBACK_MESSAGE sin
+        reintento" (380)
+      * "Gap 2b: texto no vacío -> generateText se llama una sola vez, reply intacto
+        (no regresión del camino sano)" (390)
+      * "Gap 2b (RESTRICCIÓN DE SEGURIDAD DURA): tool-result de ESCRITURA exitosa +
+        texto vacío -> el reintento va con tools:{} (nunca confirmarTurno/reagendarTurno/
+        cancelarTurno), imposibilitando una segunda escritura" (400)
+  - `npx tsc --noEmit` en apps/bot → 0 errores (tras rebuildear availability-engine; ver nota abajo).
+  - Presencia de ambas capas confirmada por lectura directa: systemPrompt.ts:106-107
+    (instrucción positiva) y responder.ts:349/363/82 (guard + reintento + fallback).
+
+  SIN VERIFICAR (honestidad explícita): NO se re-probó en vivo contra Gemini real +
+  Supabase real en esta sesión. La reproducción original del síntoma fue en vivo
+  (2/2 corridas, ver Symptoms), pero la confirmación de que el fix elimina el síntoma
+  end-to-end contra el modelo real NO se ejecutó acá — descansa en la cobertura de los
+  5 tests unitarios (que mockean generateText) más el UAT de fase 07 (4/4) de una sesión
+  previa. Un re-test conversacional en vivo sigue siendo deseable antes de producción.
+
+  Nota de entorno descubierta en esta sesión: `tsc --noEmit` en apps/bot arrojaba 6
+  errores (`startIso`/`endIso` no existen en `AvailableSlot`) que NO eran un bug de
+  código sino un `packages/availability-engine/dist/` desactualizado — `dist/` está
+  gitignoreado y apps/bot importa el compilado, no el fuente (decisión de fase 04-07).
+  Se resuelve con `corepack pnpm --filter @turnosbot/availability-engine build`.
+files_changed:
+  - apps/bot/src/conversation/systemPrompt.ts (instrucción positiva; commit 8b16e94, previo a esta sesión)
+  - apps/bot/src/conversation/responder.ts (guard empty-text + reintento sin tools + SAFE_FALLBACK_MESSAGE; commits 8b16e94, b06b81f — previos a esta sesión)
+  - apps/bot/src/conversation/responder.test.ts (5 tests de regresión Gap 2b; previos a esta sesión)

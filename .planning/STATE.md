@@ -118,24 +118,121 @@ Recent decisions affecting current work:
 - [Phase 06-05]: responder.ts ensamblado como tool-loop generateText(stopWhen isStepCount(6)) con las 5 tools de 06-03/06-04; gate D-12 escanea result.steps (nunca result.text) por confirmarTurno/reagendarTurno con turno_id real vía closingLanguage.ts (léxico único, compartido con la eval offline 06-06)
 - [Phase 06-05]: inboundWorker.ts lee needsHuman de conversacion.context ANTES de invocar responder (D-11) — el handoff a humano queda fuera del control del modelo, saltando responder+sendWhatsappMessage sin regresión del dedup 23505 ni del gate de ventana 24h
 - [Phase 07]: [Phase 07-04]: verify-concurrent-booking.ts probo en vivo SEC-02 Success Criterion #2 -- 3/3 corridas deterministas, exactamente 1 exito y N-1 slot_taken via bookAppointment (GiST EXCLUDE, no chequeo en memoria)
-- [Phase 07-05]: negocioScoped.test.ts extendido a los 12 accessors de lectura + chequeo a nivel tool consultarNegocioTool -- SEC-03 Success Criterion #3 probado en vivo contra bdgufnitakelyialjoqg, 26/26 aserciones OK, cero fugas cross-negocio
+- [Phase 07-05]: negocioScoped.verify.ts extendido a los 12 accessors de lectura + chequeo a nivel tool consultarNegocioTool -- SEC-03 Success Criterion #3 probado en vivo contra bdgufnitakelyialjoqg, 26/26 aserciones OK, cero fugas cross-negocio
 - [Phase 07-02]: negocioId se valida con regex de forma (8-4-4-4-12), no z.uuid() estricto -- mismo fix que uuidLike en booking.ts (z.uuid() rechaza UUIDs reales sin variante 8/9/a/b)
 - [Phase 07-02]: Ambos call-sites del token de WhatsApp (getWhatsappToken.ts lectura, admin-tenants.ts setWhatsappTokenSecret escritura) pasan exclusivamente por RPC Vault -- cierra el wiring de SEC-01, verificacion live queda para 07-03
 - [Phase ?]: [Phase 07-03]: SEC-01 Success Criterion #1 probado en vivo contra bdgufnitakelyialjoqg -- verify-vault-no-plaintext.ts confirma que negocio no expone token en claro y que getWhatsappToken resuelve el valor real via Vault (RPC get_whatsapp_token), con WHATSAPP_DEV_TOKEN unset; invocacion en este entorno: node --env-file=.env --import tsx (no pnpm exec tsx)
 
 ### Blockers/Concerns
 
+> **ESTADO AL 2026-07-10 (fin de sesión).** Las 7 fases están ejecutadas y **6 de 7 tienen
+> `VERIFICATION.md` en `passed`**. La única en `human_needed` es la 04, por 4 tests visuales.
+> El milestone v1.0 NO está cerrado. **Cero sesiones de debug abiertas.**
+> Detalle completo de acciones manuales pendientes, con pasos exactos:
+> **`.planning/HANDOFF-milestone-v1.md`** ← archivo de referencia para retomar.
+
+**✅ VERIFICADO EN VIVO (2026-07-10) contra `bdgufnitakelyialjoqg` — los 8 scripts exit 0:**
+
+| Script | Qué probó |
+|---|---|
+| `verify-vault-no-plaintext.ts` | SEC-01: token no en claro, se resuelve vía Vault |
+| `verify-vault-wrappers-anon-denied.ts` | SEC-01b: la clave pública `anon` es **rechazada** |
+| `verify-concurrent-booking.ts` | SEC-02: 10 concurrentes → 1 éxito, 9 `slot_taken` |
+| `negocioScoped.verify.ts` | SEC-03: 12 accessors + tool, 0 fugas, A→B y B→A |
+| `verify-isolation.ts` | RLS por owner: INSERT cross-tenant rechazado |
+| `verify-0005-applied.ts` | Migración `0005` aplicada |
+| `verify-reschedule.ts` | GiST EXCLUDE también dispara en `UPDATE` (nunca se había corrido) |
+| `verify-auth-login.ts` | AUTH-01/02: login owner + persistencia de sesión |
+
+**✅ EL BOT, CONTRA GEMINI REAL** — `scripts/verify-bot-conversation-live.ts`, PASSED exit 0.
+Cubre los **5** Success Criteria de la fase 06: memoria multi-turno, consulta de precio, cancelar,
+reagendar, y prompt injection + cross-client tampering. En el escenario de injection el modelo
+**sí** fue inducido a intentar cancelar el turno de otro cliente; lo frenó el ownership check de
+`cancelarTurno` del lado del código. **La seguridad no depende de que el LLM se porte bien.**
+
+**Suites:** 223/223 (bot), 61/61 (motor), `tsc --noEmit` 0 errores.
+
+**CORRECCIÓN de una creencia falsa que costó un handoff mal escrito:** Claude **sí puede**
+correr los scripts gated. No puede *leer* el `.env` con sus herramientas, pero
+`node --env-file=.env --import tsx <script>.ts` lo carga en el proceso hijo. Antes de
+declarar algo imposible por falta de credencial, **probarlo**.
+
+**Lo que Claude realmente NO puede hacer:**
+
+- **DDL / migraciones → SQL Editor de Supabase.** El `SUPABASE_ACCESS_TOKEN` del `.env` está
+  malformado (no es un `sbp_...` válido) → Management API rota. El host directo
+  `db.<ref>.supabase.co` no resuelve (IPv6-only). La ruta REST sirve para SELECT/rpc, no DDL.
+- **Borrar de `vault.secrets`** → el esquema `vault` no está expuesto por REST.
+- **Elegir credenciales del primer superadmin** → decisión del usuario, nunca se commitean.
+- **Los 4 tests visuales de la fase 04** → comportamientos visuales/interactivos; `apps/dashboard`
+  no tiene framework de render de componentes. Requieren ojos humanos sobre un navegador.
+
+**Pendientes reales (los 4, con pasos exactos en el HANDOFF):**
+
+- ⚠️ **4 tests visuales de la fase 04** (MQ-1..MQ-4, ver `04-VALIDATION.md`) — es lo único que
+  separa a esa fase de `passed`. Login del seed: `owner-norte@turnosbot-seed.test` /
+  `TurnosBotSeed!Norte1` (verificado en vivo hoy). **Para el equipo humano.**
+- ⚠️ **Cleanup de secretos huérfanos en Vault** (SQL Editor). Crece con cada corrida de
+  `verify-vault-no-plaintext.ts`, que crea `whatsapp-token-verify-<ts>` y no lo borra.
+- ⚠️ **Plan 02-08 pausado en Task 3** (bootstrap del primer superadmin). `SUPERADMIN_EMAIL` y
+  `SUPERADMIN_PASSWORD` están **unset** en el `.env` (verificado). Bloquea el alta de la primera
+  peluquería y el tildado de `SADMIN-01/02/03`.
+- ⚠️ **Cuota de Gemini: 15 RPM** — decisión de negocio antes del primer tenant con volumen.
+
+**Invariante del modelo de datos (descubierto hoy):** un `turno` **sin filas en `turno_servicio`
+se puede cancelar pero NO reagendar** — `reagendarTurno` saca de ahí los `serviceIds` para
+recalcular la duración.
+
+**Trampa de entorno (descubierta y resuelta ESTA sesión — no re-aprender):**
+
+- `packages/availability-engine/dist/` está gitignoreado, y `apps/bot` importa el compilado,
+  no el fuente (decisión de fase 04-07). Tras un `git pull` que toque `packages/`, el `dist/`
+  local queda viejo y `tsc --noEmit` reporta errores fantasma (ej. `startIso` no existe en
+  `AvailableSlot`) que NO son bugs de código. Los tests de vitest NO lo detectan porque no
+  typechequean. **Siempre** correr, después de un pull:
+  `corepack pnpm --filter @turnosbot/availability-engine build`
+- `pnpm` no está en PATH → usar `corepack pnpm ...`. Scripts gated:
+  `node --env-file=.env --import tsx <script>.ts` (tsx no autocarga `.env`).
+
+**Deuda de tracking:**
+
+- ✅ `REQUIREMENTS.md`: **48/51** tildados (2026-07-09). Se cerraron los 7 con evidencia directa
+  en el frontmatter de un SUMMARY. Quedan solo `SADMIN-01/02/03`, **sin tildar a propósito**: el
+  panel `/admin` existe pero nunca se ejerció contra la base (plan 02-08 pausado en Task 3).
+- ✅ **Fases 06 y 07: `VERIFICATION.md` generados, ambos `passed`** (2026-07-10). La 07 con 3/3
+  criterios probados en vivo; la 06 con 5/5, `behavior_unverified: 0`.
+- ⚠️ **Fase 04: `human_needed`** — solo por los 4 tests visuales (MQ-1..MQ-4). Su quinto ítem
+  humano (`verify-reschedule.ts`) **ya se corrió y pasó**, marcado `DONE_2026-07-10` en el archivo.
+- Estado por fase: 01 ✅ · 02 ✅ · 03 ✅ · 04 ⚠️ human_needed · 05 ✅ · 06 ✅ · 07 ✅
+- ⚠️ **No crear `07-SUMMARY.md`.** GSD cuenta `*-SUMMARY.md` como resumen-de-plan e infla el
+  progreso a 44/43. El resumen de fase vive en `07-PHASE-STATUS.md`.
+- Nota: `gsd query progress` reporta "1 sesión de debug activa", pero es un falso positivo —
+  el glob `.planning/debug/*.md` levanta `knowledge-base.md`. **Hay 0 sesiones abiertas.**
+- Nyquist: fase 01 sin `VALIDATION.md`; fase 05 con `nyquist_compliant: false`.
+- UAT parcial fase 02 (`02-HUMAN-UAT.md`, 1 escenario abierto).
+
+**Concerns de negocio (preexistentes, siguen vigentes):**
+
 - La verificación de Meta Business/Tech Provider puede tardar 2-7+ días hábiles — no debe bloquear el desarrollo de fases no relacionadas con WhatsApp (Fases 1-4 pueden avanzar en paralelo a ese trámite).
-- Confirmar límites de rate del tier gratuito de Gemini 2.5 Flash-Lite en Google AI Studio antes de planificar capacidad para Phase 6.
+- ✅ RESUELTO (2026-07-10): **el free tier de Gemini permite 15 requests/minuto**, no ~30 como
+  estimaba `research/STACK.md` (que marcaba el dato como confianza BAJA-MEDIA). Medido contra la
+  API real: `RESOURCE_EXHAUSTED`, `quotaId: GenerateRequestsPerMinutePerProjectPerModel-FreeTier`,
+  `quotaValue: "15"`, modelo `gemini-3.1-flash-lite`. Una conversación de agendamiento consume
+  ~1-3 requests por mensaje del cliente (el tool-loop hace varios pasos), así que **15 RPM se
+  agota con ~5-8 mensajes por minuto entre TODOS los tenants**. Planificar el pase a tier pago
+  antes del primer cliente real con volumen.
+- ⚠️ El modelo por defecto en código es **`gemini-3.1-flash-lite`** (`responder.ts:139`), no el
+  `2.5` que dicen `CLAUDE.md` y `research/STACK.md`. Funciona; la doc está desactualizada.
 - ✅ RESUELTO: Plan 02-01 (migración 0003) fue aplicada en vivo contra bdgufnitakelyialjoqg (ver 02-01-SUMMARY.md) — este blocker quedó obsoleto.
 - **Plan 02-08 pausado en Task 3** (checkpoint:human-action, gate=blocking-human): Tasks 1-2 (Server Actions superadmin + panel /admin completo) commiteadas (`4c60ac9`, `7f6fcb6`, `fbe2b5e`). Falta ejecutar `scripts/bootstrap-superadmin.ts` + `scripts/verify-admin-tenant-lifecycle.ts` contra bdgufnitakelyialjoqg — requiere `.env` (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) + credenciales reales de email/password para el primer superadmin (nunca committear). Ver `02-08-SUMMARY.md` para el detalle exacto de cómo retomar.
-- ✅ RESUELTO (2026-07-05): los 2 checkpoints live de la Fase 03 se ejecutaron con .env real contra bdgufnitakelyialjoqg y PASARON — `apps/bot/src/db/negocioScoped.test.ts` (aislamiento cross-negocio) y `scripts/verify-availability-engine.ts` (bookAppointment round-trip + snapshot congelado AVAIL-03 + 23P01→slot_taken). Fix aplicado: `booking.ts` `z.uuid()` estricto → `uuidLike` (forma 8-4-4-4-12). Fase 03 100% verificada.
+- ✅ RESUELTO (2026-07-05): los 2 checkpoints live de la Fase 03 se ejecutaron con .env real contra bdgufnitakelyialjoqg y PASARON — `apps/bot/src/db/negocioScoped.verify.ts` (aislamiento cross-negocio) y `scripts/verify-availability-engine.ts` (bookAppointment round-trip + snapshot congelado AVAIL-03 + 23P01→slot_taken). Fix aplicado: `booking.ts` `z.uuid()` estricto → `uuidLike` (forma 8-4-4-4-12). Fase 03 100% verificada.
 
 ### Quick Tasks Completed
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260704-jb5 | Terminar de actualizar 02-UI-SPEC.md y 02-RESEARCH.md de la Fase 2 (dashboard-y-datos-del-negocio) reflejando el cambio de modelo Tenant->Negocio(s), y commitear | 2026-07-04 | 591ad17 | [260704-jb5-terminar-de-actualizar-02-ui-spec-md-y-0](./quick/260704-jb5-terminar-de-actualizar-02-ui-spec-md-y-0/) |
+| 260709-w2y | verify-bot-conversation-live.ts — script gated que maneja responder() contra Gemini real + Supabase real; probó en vivo los 2 fixes de la fase 06 (memoria multi-turno + texto vacío tras tool-result). PASSED, exit 0 | 2026-07-10 | — | [260709-w2y-verify-bot-conversation-live](./quick/260709-w2y-verify-bot-conversation-live/) |
 
 ## Deferred Items
 
@@ -147,20 +244,82 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-10T00:13:37.460Z
-Stopped at: Completado plan 07-03 (SEC-01 SC#1 verificado en vivo, script gated PASSED exit 0) -- Phase 07 100% completa (5/5 plans)
-Resume file: None
+Last session: 2026-07-10 (fin)
+Stopped at: Fases 06 y 07 verificadas (`passed`). Fase 04 en `human_needed` solo por 4 tests visuales. Milestone v1.0 NO cerrado — quedan 4 acciones manuales, todas del lado humano.
+Resume file: **`.planning/HANDOFF-milestone-v1.md`** ← empezar acá
 
-**HANDOFF NOTE (2026-07-05):** Phase 4 has 7 plans planned across 5 waves (see 04-*-PLAN.md). Wave 1 = 04-01 + 04-02 in parallel worktrees.
+### Qué pasó en la sesión del 2026-07-09/10
 
-- 04-02 (dashboard foundation: popover, sidebar nav, zod schemas) — DONE, merged to main.
-- 04-01 (availability-engine: skipBookingWindow + rescheduleAppointment) — was STILL RUNNING when this session ended (out of tokens). Its worktree branch `worktree-agent-a53d00a653b8bb78d` at `.claude/worktrees/agent-a53d00a653b8bb78d` has 5 commits (both tasks appear code-complete: skipBookingWindow + rescheduleAppointment + gated verify script) but had NOT yet committed 04-01-SUMMARY.md as of handoff.
+1. **`git pull`** trajo la Fase 07 completa desde `origin/main` (el ROADMAP local decía 2/5;
+   en realidad estaba 5/5, con UAT 4/4 y `07-SECURITY.md` en `threats_open: 0`).
+2. **`responder-history-drops-user-messages`** — el "blocker crítico" del handoff anterior
+   **ya estaba arreglado en `main`** (commit `d6d959e`, workstream paralelo). Verificado y
+   archivado en `.planning/debug/resolved/`.
+3. **`responder-empty-text-after-tool-call`** — fix presente en ambas capas
+   (`systemPrompt.ts:106` instrucción positiva + `responder.ts:349` guard con reintento sin
+   tools + `SAFE_FALLBACK_MESSAGE`). Verificado y archivado. **Cero sesiones de debug abiertas.**
+4. **Corrección de una creencia falsa:** el handoff anterior decía que Claude no podía correr los
+   scripts gated "porque no puede leer el `.env`". **Falso.** `node --env-file=.env` los corre.
+   Se corrieron los 8 y pasaron todos.
+5. **`scripts/verify-bot-conversation-live.ts` (nuevo, quick 260709-w2y):** maneja `responder()`
+   contra Gemini real. 5 escenarios, PASSED. Cubre los 5 Success Criteria de la fase 06.
+6. **`VERIFICATION.md` de las fases 06 y 07**, generados con evidencia en vivo. Ambos `passed`.
+7. **W-01 arreglado:** `negocioScoped.test.ts` parecía cubierto por CI y estaba excluido de vitest.
+   Renombrado a `.verify.ts`; el nombre ya no miente.
+8. **Blocker histórico cerrado:** la cuota del free tier de Gemini es **15 RPM**, no ~30.
+9. **`verify-reschedule.ts`** (ítem humano de la fase 04, nunca ejecutado) corrido y PASSED.
 
-**Next teammate — before running `/gsd-execute-phase 4`:**
+### Trampas de entorno descubiertas (no re-aprender)
 
-1. `git worktree list` — check if `agent-a53d00a653b8bb78d` still exists.
-2. `git -C .claude/worktrees/agent-a53d00a653b8bb78d log --oneline -3` — if a `docs(04-01): add plan summary` commit is now present, the agent finished on its own: merge it manually first — `git merge --no-ff worktree-agent-a53d00a653b8bb78d -m "chore: merge executor worktree (worktree-agent-a53d00a653b8bb78d)"`, then remove the worktree (`git worktree remove .claude/worktrees/agent-a53d00a653b8bb78d --force`) and delete the branch (`git branch -D worktree-agent-a53d00a653b8bb78d`).
-3. If no SUMMARY commit and the worktree seems stalled (no new commits in a while), it's safe to remove the worktree/branch and let `/gsd-execute-phase 4` redispatch 04-01 fresh.
-4. Once 04-01 is merged (or redispatched and complete), run `/gsd-execute-phase 4` — it will detect 04-02 (and 04-01, once merged) as done via their SUMMARY.md files and continue with Wave 2 (plan 04-03) onward.
+- `packages/availability-engine/dist/` está gitignoreado y `apps/bot` importa el compilado. Tras un
+  `git pull` que toque `packages/`, `tsc` da errores fantasma que **no son bugs**. Rebuildear.
+- **No crear `07-SUMMARY.md`** ni ningún `*-SUMMARY.md` a nivel de fase: GSD los cuenta como
+  resumen-de-plan e infla el progreso (44/43). El de fase vive en `07-PHASE-STATUS.md`.
+- `gsd query progress` reporta "1 sesión de debug activa": es un falso positivo, el glob levanta
+  `knowledge-base.md`. **Hay 0 abiertas.**
+- Un `turno` sin filas en `turno_servicio` **se puede cancelar pero no reagendar**.
 
-Last activity: 2026-07-04 - Completed quick task 260704-jb5: Terminar de actualizar 02-UI-SPEC.md y 02-RESEARCH.md de la Fase 2 (dashboard-y-datos-del-negocio) reflejando el cambio de modelo Tenant->Negocio(s), y commitear
+### Verificado EN VIVO en esta sesión (pasó)
+
+- `corepack pnpm --filter @turnosbot/bot test -- --run` → **223/223 tests, 24/24 archivos,
+  0 skipped**. Corrido dos veces (antes y después del rebuild), verde ambas.
+- `corepack pnpm --filter @turnosbot/availability-engine test -- --run` → **61/61 tests, 7/7 archivos**.
+- `npx tsc --noEmit` en `apps/bot` → **0 errores** (después del rebuild del motor).
+- Presencia en código de ambos fixes, confirmada por lectura directa (no por confianza en
+  el reporte de un subagente).
+
+### También verificado en vivo acá (tras descubrir que los scripts SÍ corren)
+
+- Los **8 scripts gated** contra `bdgufnitakelyialjoqg` (ref confirmado antes de ejecutar), todos
+  exit 0. Ver la tabla en Blockers/Concerns.
+- Confirmado que `verify-concurrent-booking.ts` limpia sus turnos y que los 3 negocios tienen
+  `whatsapp_token_secret_id = NULL`. La base quedó igual que antes de la sesión (7 turnos).
+
+### Re-test conversacional en vivo — ✅ PASSED (2026-07-10)
+
+`scripts/verify-bot-conversation-live.ts` maneja `responder()` contra **Gemini real + Supabase
+real**, sin mocks. Exit 0. Cubre los **5** Success Criteria de la fase 06:
+
+- **Memoria multi-turno:** recordó día Y servicio a la vez; `context.messages` guarda los 3
+  mensajes `role:"user"` literales (antes del fix: cero).
+- **Texto vacío:** narró el precio real ($6000, leído de la DB) sin disparar el fallback.
+- **Cancelar:** pide confirmación explícita; tras confirmar, la fila queda `cancelado`.
+- **Reagendar:** la fila del mismo turno se movió al horario pedido. Es `UPDATE`, no `INSERT`.
+- **Prompt injection + cross-client tampering:** un atacante pegó el `turnoId` de otro cliente,
+  pidió cancelarlo + el teléfono de la víctima + el system prompt, y **confirmó**. El bot devolvió
+  el error genérico y el turno de la víctima siguió `confirmado`. El modelo **sí** fue inducido a
+  intentarlo; lo frenó el ownership check del código. **La seguridad no depende del LLM.**
+
+### SIN VERIFICAR (no ejecutado — **no asumir que pasa**)
+
+- **Los 4 tests visuales de la fase 04** (MQ-1..MQ-4). Comportamientos visuales/interactivos;
+  `apps/dashboard` no tiene framework de render de componentes. **Requieren ojos humanos.**
+  Guiones completos en `04-VALIDATION.md`.
+- **El flujo de superadmin** (`bootstrap-superadmin.ts` + `verify-admin-tenant-lifecycle.ts`).
+  Nunca se ejerció contra la base. `SUPERADMIN_EMAIL` / `SUPERADMIN_PASSWORD` están **unset** en
+  el `.env` (verificado) — esas credenciales las elige el usuario.
+- **El cleanup de `vault.secrets`.** El esquema `vault` no se expone por REST; solo SQL Editor.
+- **El escenario abierto del UAT de la fase 02** (`02-HUMAN-UAT.md`) — mismo bloqueo visual.
+- **Nyquist:** fase 01 sin `VALIDATION.md`; fase 05 `nyquist_compliant: false`.
+
+Last activity: 2026-07-10 — Fases 06 y 07 verificadas (`passed`); 8 scripts gated + el bot contra Gemini real, todos PASSED; blocker de rate limit cerrado (15 RPM). Handoff completo en `.planning/HANDOFF-milestone-v1.md`

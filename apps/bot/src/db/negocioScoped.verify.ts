@@ -1,5 +1,5 @@
 /**
- * apps/bot/src/db/negocioScoped.test.ts — functional smoke test for
+ * apps/bot/src/db/negocioScoped.verify.ts — functional smoke test for
  * negocioScoped(negocioId) (CORE-03) AND, since Phase 7 (SEC-03 Success
  * Criterion #3), the FORMAL cross-negocio isolation proof for the bot's
  * service_role codepath.
@@ -32,7 +32,11 @@
  * This is a functional smoke test, run directly via `pnpm exec tsx` (no test
  * framework wired yet for apps/bot) — NOT migrated to vitest.
  *
- * Run via: pnpm exec tsx --env-file=.env apps/bot/src/db/negocioScoped.test.ts
+ * Sufijo `.verify.ts` (no `.test.ts`): este archivo NO corre bajo `pnpm test`.
+ * Antes se llamaba `.test.ts` y estaba en el `exclude` de vitest.config.ts —
+ * parecía cubierto por CI y no lo estaba (W-01 de 07-VERIFICATION.md).
+ *
+ * Run via: node --env-file=.env --import tsx apps/bot/src/db/negocioScoped.verify.ts
  * (tsx does NOT auto-load .env — pass --env-file=.env explicitly, D-05/07-04).
  */
 import type {
@@ -221,10 +225,10 @@ async function main() {
     `OK: consultarNegocio(A) tipo:'precios' devuelve ${idsA.length} servicio(s), ninguno de los ${KNOWN_NEGOCIO_B_SERVICIO_IDS.size} servicio(s) conocidos del negocio B.`,
   );
 
-  console.log("\nnegocioScoped.test.ts: PASSED");
+  console.log("\nnegocioScoped.verify.ts: PASSED");
 }
 
 main().catch((err) => {
-  console.error("ERROR inesperado en negocioScoped.test.ts:", err);
+  console.error("ERROR inesperado en negocioScoped.verify.ts:", err);
   process.exit(1);
 });
