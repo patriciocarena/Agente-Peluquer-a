@@ -192,7 +192,15 @@ declarar algo imposible por falta de credencial, **probarlo**.
 **Concerns de negocio (preexistentes, siguen vigentes):**
 
 - La verificación de Meta Business/Tech Provider puede tardar 2-7+ días hábiles — no debe bloquear el desarrollo de fases no relacionadas con WhatsApp (Fases 1-4 pueden avanzar en paralelo a ese trámite).
-- Confirmar límites de rate del tier gratuito de Gemini 2.5 Flash-Lite en Google AI Studio antes de planificar capacidad para Phase 6.
+- ✅ RESUELTO (2026-07-10): **el free tier de Gemini permite 15 requests/minuto**, no ~30 como
+  estimaba `research/STACK.md` (que marcaba el dato como confianza BAJA-MEDIA). Medido contra la
+  API real: `RESOURCE_EXHAUSTED`, `quotaId: GenerateRequestsPerMinutePerProjectPerModel-FreeTier`,
+  `quotaValue: "15"`, modelo `gemini-3.1-flash-lite`. Una conversación de agendamiento consume
+  ~1-3 requests por mensaje del cliente (el tool-loop hace varios pasos), así que **15 RPM se
+  agota con ~5-8 mensajes por minuto entre TODOS los tenants**. Planificar el pase a tier pago
+  antes del primer cliente real con volumen.
+- ⚠️ El modelo por defecto en código es **`gemini-3.1-flash-lite`** (`responder.ts:139`), no el
+  `2.5` que dicen `CLAUDE.md` y `research/STACK.md`. Funciona; la doc está desactualizada.
 - ✅ RESUELTO: Plan 02-01 (migración 0003) fue aplicada en vivo contra bdgufnitakelyialjoqg (ver 02-01-SUMMARY.md) — este blocker quedó obsoleto.
 - **Plan 02-08 pausado en Task 3** (checkpoint:human-action, gate=blocking-human): Tasks 1-2 (Server Actions superadmin + panel /admin completo) commiteadas (`4c60ac9`, `7f6fcb6`, `fbe2b5e`). Falta ejecutar `scripts/bootstrap-superadmin.ts` + `scripts/verify-admin-tenant-lifecycle.ts` contra bdgufnitakelyialjoqg — requiere `.env` (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) + credenciales reales de email/password para el primer superadmin (nunca committear). Ver `02-08-SUMMARY.md` para el detalle exacto de cómo retomar.
 - ✅ RESUELTO (2026-07-05): los 2 checkpoints live de la Fase 03 se ejecutaron con .env real contra bdgufnitakelyialjoqg y PASARON — `apps/bot/src/db/negocioScoped.verify.ts` (aislamiento cross-negocio) y `scripts/verify-availability-engine.ts` (bookAppointment round-trip + snapshot congelado AVAIL-03 + 23P01→slot_taken). Fix aplicado: `booking.ts` `z.uuid()` estricto → `uuidLike` (forma 8-4-4-4-12). Fase 03 100% verificada.

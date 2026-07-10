@@ -136,12 +136,10 @@ corepack pnpm --filter @turnosbot/availability-engine build
 - ✅ **Fase 07: HECHO (2026-07-09).** `07-VERIFICATION.md` → `status: passed`, 3/3 must-haves,
   0 `behavior_unverified`. Los 3 criterios se probaron en vivo; el verificador chequeó además a
   nivel de código que cada artefacto existe y está cableado a la ruta sancionada.
-- ⚠️ **Fase 06: falta, pero ya es posible.** El re-test de **1.2** probó en vivo sus Success
-  Criteria **#1** (identificar servicio en lenguaje natural), **#2** (proponer horarios reales del
-  motor) y **#3** (responder consultas de precio). Quedan sin probar en vivo: **#4** (cancelar /
-  reagendar por WhatsApp) y **#5** (resistencia a prompt injection — hoy cubierto solo por evals
-  con el modelo mockeado). Extender `verify-bot-conversation-live.ts` con esos dos escenarios y
-  después `/gsd-verify-work 6`.
+- ✅ **Fase 06: sus 5 Success Criteria están probados EN VIVO** por
+  `scripts/verify-bot-conversation-live.ts` (5 escenarios, PASSED exit 0): #1 servicio en lenguaje
+  natural, #2 horarios reales del motor, #3 consultas de precio, #4 **cancelar Y reagendar** por
+  conversación, #5 prompt injection + aislamiento entre clientes. Ver `06-VERIFICATION.md`.
 - ⚠️ **Fase 04: `human_needed`.** Abrir `.planning/phases/04-*/04-VERIFICATION.md`, buscar el
   escenario pendiente, ejecutarlo a mano en el dashboard y registrar el resultado.
 
@@ -258,6 +256,22 @@ otro tenant (el `INSERT` cross-tenant es rechazado con `new row violates row-lev
   Ver `.planning/phases/02-*/02-08-SUMMARY.md` para el detalle de cómo retomar.
   Cuando `verify-admin-tenant-lifecycle.ts` pase: tildar `SADMIN-01/02/03` y borrar la nota de
   advertencia que quedó arriba de ellos en `REQUIREMENTS.md`.
+
+## 2.9 — Cuota de Gemini: 15 RPM ⚠️ DECISIÓN DE NEGOCIO ANTES DE PRODUCCIÓN
+
+- **QUÉ:** el free tier de Gemini permite **15 requests por minuto**, no ~30 como estimaba
+  `research/STACK.md` (que marcaba el dato como confianza BAJA-MEDIA, a verificar). Medido contra
+  la API real: `RESOURCE_EXHAUSTED`, `quotaValue: "15"`, modelo `gemini-3.1-flash-lite`.
+- **POR QUÉ IMPORTA:** el tool-loop consume **1-3 requests por cada mensaje del cliente**. O sea
+  que 15 RPM se agota con **~5-8 mensajes por minuto sumando TODOS los tenants**. Una sola
+  peluquería con dos clientes conversando a la vez ya lo roza.
+- **Lo bueno:** cuando la cuota se agota, el bot **no se rompe**. `responder()` cae al camino de
+  error y manda `SAFE_FALLBACK_MESSAGE` ("Dame un segundo que verifico y te confirmo 🙌"). Se
+  verificó en vivo. Pero el cliente no avanza su turno.
+- **PASOS:** decidir el pase a tier pago (mismo modelo, mismo código, solo cambia la API key)
+  antes de onboardear el primer tenant con volumen real. Ver también la nota de ToS del free tier
+  en `research/STACK.md` (Google puede usar los datos del free tier para entrenar — este proyecto
+  procesa nombres y teléfonos de clientes reales).
 
 ## 2.8 — DDL / migraciones futuras ⚠️ SIEMPRE MANUAL
 
