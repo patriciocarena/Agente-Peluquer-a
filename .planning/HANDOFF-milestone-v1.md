@@ -110,33 +110,38 @@ corepack pnpm --filter @turnosbot/availability-engine build
   node --env-file=.env --import tsx apps/bot/src/db/negocioScoped.verify.ts
   ```
 
-## 1.2 — Re-test conversacional en vivo del bot (Gemini + Supabase reales)
+## 1.2 — Re-test conversacional en vivo del bot — ✅ HECHO, PASSED
 
-- **QUÉ:** confirmar end-to-end que los dos fixes de `responder.ts` eliminan los síntomas
-  originales: (a) que el bot recuerda lo que dijiste en turnos anteriores, y (b) que nunca
-  responde vacío tras consultar un precio.
-- **POR QUÉ NO LO HICE:** requiere `.env` con la API key de Gemini y credenciales de Supabase,
-  además de un número de WhatsApp de prueba.
-- **ESTADO:** **SIN VERIFICAR.** La cobertura actual es de tests unitarios que **mockean**
-  `generateText` — prueban nuestra lógica, no el comportamiento del modelo real.
-- **PASOS EXACTOS:** reproducir el Test 2 de
-  `.planning/phases/06-agente-conversacional-de-agendamiento/06-UAT.md`:
-  1. Mandale al bot: `hola quiero sacar un turno para un corte`
-  2. Después: `mañana a la tarde`
-  3. Después: `el corte clásico nomás`
-  4. **Esperado:** NO vuelve a preguntar el día. Debe avanzar a proponer horarios reales.
-  5. En una conversación nueva: `hola cuanto sale el corte` → **esperado:** responde el precio
-     en texto (no se queda mudo).
+- **QUÉ ERA:** los dos fixes de `responder.ts` solo estaban cubiertos por tests unitarios que
+  **mockean `generateText`** — probaban nuestra lógica, no el comportamiento del modelo real.
+- **HECHO (2026-07-10):** se creó `scripts/verify-bot-conversation-live.ts`, que maneja
+  `responder()` contra **Gemini real + Supabase real**. Corrido: **PASSED, exit 0, 0 warnings.**
+  ```bash
+  node --env-file=.env --import tsx scripts/verify-bot-conversation-live.ts
+  ```
+- **Memoria multi-turno:** el bot recibió `mañana a la tarde`, ofreció horarios reales, y en el
+  turno siguiente recordaba **el día Y el servicio**: *"Para mañana viernes 10, tengo estos
+  horarios para el corte clásico (que sale $6.000)…"*. `context.messages` guarda los 3 mensajes
+  `role:"user"` literales y en orden (antes del fix: **cero**).
+- **Texto vacío:** ante `hola cuanto sale el corte` narró **$6000, el precio real de la DB**, sin
+  disparar `SAFE_FALLBACK_MESSAGE` — el modelo verbalizó solo, el guard ni tuvo que actuar.
+- **Nota de diseño:** las aserciones duras miran estado observable (`context.messages`, respuesta
+  no vacía), no la redacción del modelo. Un rate limit de Gemini se reporta `SKIPPED`, nunca
+  `FAILED`. Si aparece `SAFE_FALLBACK_MESSAGE` se reporta como WARN — el guard contuvo el bug,
+  pero el modelo siguió cerrando el turno sin texto.
+- Detalle completo: `.planning/quick/260709-w2y-verify-bot-conversation-live/260709-w2y-SUMMARY.md`
 
 ## 1.3 — Fases sin `VERIFICATION.md`
 
 - ✅ **Fase 07: HECHO (2026-07-09).** `07-VERIFICATION.md` → `status: passed`, 3/3 must-haves,
   0 `behavior_unverified`. Los 3 criterios se probaron en vivo; el verificador chequeó además a
   nivel de código que cada artefacto existe y está cableado a la ruta sancionada.
-- ⚠️ **Fase 06: falta.** Sus criterios de éxito son conversaciones reales con el bot (identificar
-  servicio en lenguaje natural, negociar horarios, confirmar solo con `turno_id` real, resistir
-  prompt injection). Requiere el re-test conversacional de **1.2** antes de poder verificarse
-  honestamente. `/gsd-verify-work 6`
+- ⚠️ **Fase 06: falta, pero ya es posible.** El re-test de **1.2** probó en vivo sus Success
+  Criteria **#1** (identificar servicio en lenguaje natural), **#2** (proponer horarios reales del
+  motor) y **#3** (responder consultas de precio). Quedan sin probar en vivo: **#4** (cancelar /
+  reagendar por WhatsApp) y **#5** (resistencia a prompt injection — hoy cubierto solo por evals
+  con el modelo mockeado). Extender `verify-bot-conversation-live.ts` con esos dos escenarios y
+  después `/gsd-verify-work 6`.
 - ⚠️ **Fase 04: `human_needed`.** Abrir `.planning/phases/04-*/04-VERIFICATION.md`, buscar el
   escenario pendiente, ejecutarlo a mano en el dashboard y registrar el resultado.
 

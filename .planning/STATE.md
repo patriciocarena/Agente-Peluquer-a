@@ -202,6 +202,7 @@ declarar algo imposible por falta de credencial, **probarlo**.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260704-jb5 | Terminar de actualizar 02-UI-SPEC.md y 02-RESEARCH.md de la Fase 2 (dashboard-y-datos-del-negocio) reflejando el cambio de modelo Tenant->Negocio(s), y commitear | 2026-07-04 | 591ad17 | [260704-jb5-terminar-de-actualizar-02-ui-spec-md-y-0](./quick/260704-jb5-terminar-de-actualizar-02-ui-spec-md-y-0/) |
+| 260709-w2y | verify-bot-conversation-live.ts — script gated que maneja responder() contra Gemini real + Supabase real; probó en vivo los 2 fixes de la fase 06 (memoria multi-turno + texto vacío tras tool-result). PASSED, exit 0 | 2026-07-10 | — | [260709-w2y-verify-bot-conversation-live](./quick/260709-w2y-verify-bot-conversation-live/) |
 
 ## Deferred Items
 
@@ -248,10 +249,24 @@ Resume file: **`.planning/HANDOFF-milestone-v1.md`** ← empezar acá
 - Confirmado que `verify-concurrent-booking.ts` limpia sus turnos (0 en la fecha de prueba)
   y que los 3 negocios tienen `whatsapp_token_secret_id = NULL`.
 
+### Re-test conversacional en vivo — ✅ PASSED (2026-07-10)
+
+`scripts/verify-bot-conversation-live.ts` maneja `responder()` contra **Gemini real + Supabase
+real**. Exit 0, 0 warnings. Los dos bugs de la fase 06 están muertos contra el modelo real:
+
+- **Memoria multi-turno:** el bot recordó día Y servicio a la vez; `context.messages` guarda los
+  3 mensajes `role:"user"` literales (antes del fix: cero).
+- **Texto vacío:** narró el precio real ($6000, leído de la DB) sin disparar el fallback.
+
+Cubre los Success Criteria #1/#2/#3 de la fase 06. Faltan #4 (cancelar/reagendar) y #5 (prompt
+injection) en vivo.
+
 ### SIN VERIFICAR (no ejecutado — no asumir que pasa)
 
-- **Re-test conversacional end-to-end contra Gemini real.** Los tests unitarios mockean
-  `generateText`: prueban nuestra lógica, no el comportamiento del modelo.
+- **Fase 06 SC#4 y SC#5** en vivo: cancelar/reagendar por WhatsApp, y resistencia a prompt
+  injection (hoy solo cubiertos por evals con el modelo mockeado).
 - **El flujo de superadmin** (`bootstrap-superadmin.ts`) — nunca se ejerció contra la base.
+  Requiere que el usuario defina `SUPERADMIN_EMAIL` / `SUPERADMIN_PASSWORD` en el `.env`
+  (verificado: ambas están unset).
 
 Last activity: 2026-07-09 — Cerradas ambas sesiones de debug; suite verde (223+61); handoff de acciones manuales escrito en `.planning/HANDOFF-milestone-v1.md`
