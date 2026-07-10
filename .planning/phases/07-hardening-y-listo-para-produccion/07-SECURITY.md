@@ -1,8 +1,8 @@
 ---
 phase: 07
 slug: hardening-y-listo-para-produccion
-status: blocked
-threats_open: 2
+status: verified
+threats_open: 0
 asvs_level: 1
 created: 2026-07-09
 ---
@@ -10,7 +10,7 @@ created: 2026-07-09
 # Phase 07 — Security
 
 > Per-phase security contract: threat register, accepted risks, and audit trail.
-> **⚠️ BLOCKED: 2 threats OPEN — critical anon-executable Vault wrappers (SEC-01 defeated).**
+> **✅ VERIFIED: threats_open 0. El bypass anon de los wrappers Vault (T-07-01/T-07-02) fue cerrado por 0006, y la regresión RLS que introdujo 0006 fue corregida por 0007 — todo re-verificado en vivo.**
 
 ---
 
@@ -19,7 +19,7 @@ created: 2026-07-09
 | Boundary | Description | Data Crossing |
 |----------|-------------|---------------|
 | Dump/SELECT directo a `negocio` → atacante | Post-0005 no hay columna plana de token | solo `whatsapp_token_secret_id` (uuid) |
-| **anon/authenticated (PostgREST) → RPC Vault wrappers** | **DEBE estar restringido a service_role — HOY NO LO ESTÁ** | **token de WhatsApp en claro (alta sensibilidad)** |
+| anon/authenticated (PostgREST) → RPC Vault wrappers | Restringido a service_role — CERRADO por 0006 (anon RECHAZADO, verificado) | token de WhatsApp en claro (alta sensibilidad) |
 | bot (service_role) → RPC get/set_whatsapp_token | Único camino sancionado en runtime | token de WhatsApp |
 | bot (service_role, negocioScoped) → tablas por negocio | Aislamiento en app-code (RLS no aplica a service_role) | datos por tenant |
 | bookAppointment concurrente → GiST EXCLUDE | Integridad anti-doble-reserva | turnos |
@@ -30,8 +30,8 @@ created: 2026-07-09
 
 | Threat ID | Category | Component | Disposition | Mitigation | Status |
 |-----------|----------|-----------|-------------|------------|--------|
-| T-07-01 | Information Disclosure | camino de lectura del token (get_whatsapp_token) | mitigate | **FALLA: el wrapper es SECURITY DEFINER y `anon` puede ejecutarlo → devuelve el token en claro. Fuga CONFIRMADA en vivo (anon leyó un SENTINEL token).** | **open** |
-| T-07-02 | Elevation of Privilege | wrappers `public.get/set_whatsapp_token*` | mitigate | **FALLA: `REVOKE ALL FROM PUBLIC` no revoca de los roles `anon`/`authenticated` (default privileges de Supabase los GRANTean). Anon ejecutó get_ (lectura) Y set_ (creó un secreto). Falta `REVOKE EXECUTE ... FROM anon, authenticated`.** | **open** |
+| T-07-01 | Information Disclosure | camino de lectura del token (get_whatsapp_token) | mitigate | **CERRADO por 0006:** `REVOKE EXECUTE ... FROM anon, authenticated, PUBLIC`. Verificado en vivo: anon → `permission denied for function get_whatsapp_token`. Solo service_role puede leer. | closed |
+| T-07-02 | Elevation of Privilege | wrappers `public.get/set_whatsapp_token*` | mitigate | **CERRADO por 0006:** revocado EXECUTE de anon/authenticated en get_ y set_. Verificado en vivo: ambos → `permission denied`. (0007 corrigió la regresión RLS que 0006 introdujo al revocar de más — ver abajo.) | closed |
 | T-07-03 | Tampering (integridad) | doble-reserva bajo concurrencia | mitigate | GiST EXCLUDE `turno_no_overlap` (23P01): 10 reservas concurrentes → exactamente 1 gana / 9 slot_taken. Verificado en vivo (verify-concurrent-booking.ts, UAT test 3). | closed |
 | T-07-03b | Tampering | falso verde por re-fetch de freshData | mitigate | freshData compartido por referencia (Pitfall 4); corrido 3× determinista. | closed |
 | T-07-04 | Information Disclosure | fuga cross-negocio vía service_role (negocioScoped) | mitigate | 12 accessors + consultarNegocioTool sobre 2 tenants seed → cero filas del otro negocio. Verificado en vivo (negocioScoped.test.ts, UAT test 4). | closed |
@@ -44,7 +44,16 @@ created: 2026-07-09
 
 ---
 
-## 🔴 Critical Finding — SEC-01 bypass vía anon (T-07-01 / T-07-02)
+## ✅ Critical Finding — SEC-01 bypass vía anon (T-07-01 / T-07-02) — RESUELTO
+
+**Resolución (2026-07-09):** migración **0006** revocó EXECUTE de anon/authenticated/PUBLIC
+sobre los dos wrappers Vault. Migración **0007** corrigió una sobre-corrección de 0006 (que
+había revocado también `auth_negocio_ids`/`auth_tenant_id`, rompiendo RLS — las policies se
+evalúan con el rol que consulta, que necesita EXECUTE sobre esos helpers). Re-verificado en vivo:
+`scripts/verify-vault-wrappers-anon-denied.ts` PASSED (anon rechazado), `scripts/verify-isolation.ts`
+PASSED (RLS restaurada), `apps/bot/src/db/negocioScoped.test.ts` PASSED.
+
+### Evidencia original del agujero (histórico)
 
 **Evidencia live (2026-07-09, contra bdgufnitakelyialjoqg):**
 - Con la `anon` key (pública, embebida en el bundle del dashboard como `NEXT_PUBLIC_SUPABASE_ANON_KEY`):
@@ -82,6 +91,7 @@ Re-verificar con el probe anon (debe dar RECHAZADO en ambos wrappers) y re-corre
 | Audit Date | Threats Total | Closed | Open | Run By |
 |------------|---------------|--------|------|--------|
 | 2026-07-09 | 9 | 7 | 2 | secure-phase (live probe: anon token disclosure confirmada) |
+| 2026-07-09 | 9 | 9 | 0 | secure-phase re-run tras 0006+0007 (anon rechazado + RLS restaurada, 3 verificaciones live PASSED) |
 
 ---
 
@@ -103,7 +113,7 @@ Ningún `negocio.whatsapp_token_secret_id` quedó apuntando a estos (todos nulos
 
 - [x] All threats have a disposition (mitigate / accept / transfer)
 - [x] Accepted risks documented in Accepted Risks Log
-- [ ] `threats_open: 0` confirmed — **NO: 2 open (T-07-01, T-07-02)**
-- [ ] `status: verified` set in frontmatter — **blocked**
+- [x] `threats_open: 0` confirmed — T-07-01/T-07-02 cerrados por 0006+0007, re-verificados en vivo
+- [x] `status: verified` set in frontmatter
 
-**Approval:** BLOCKED — fix T-07-01/T-07-02 (migración 0006: REVOKE de anon/authenticated) y re-correr /gsd:secure-phase 7.
+**Approval:** verified 2026-07-09 (tras 0006 + 0007). Pendiente operativo no bloqueante: aplicar el cleanup de secretos huérfanos de Vault (arriba) y, antes del primer token real, revisar T-07-05 (statement logging).
