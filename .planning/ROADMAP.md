@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Grilla y turnos del dashboard** - El dueño puede ver, bloquear, crear, cancelar y reagendar turnos desde el dashboard (completed 2026-07-06)
 - [x] **Phase 5: Integración WhatsApp Cloud API** - El sistema recibe y envía mensajes de WhatsApp de forma segura, enrutados al tenant correcto (completed 2026-07-06)
 - [x] **Phase 6: Agente conversacional de agendamiento** - Un cliente puede agendar, consultar y cancelar/reagendar un turno real conversando por WhatsApp (completed 2026-07-08)
-- [ ] **Phase 7: Hardening y listo para producción** - El sistema resiste concurrencia, aislamiento cross-tenant y protege credenciales antes del primer tenant real
+- [x] **Phase 7: Hardening y listo para producción** - El sistema resiste concurrencia, aislamiento cross-tenant y protege credenciales antes del primer tenant real (completed 2026-07-10)
 
 ## Phase Details
 
@@ -246,7 +246,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(depende de 07-01, 07-02)*
 
-- [ ] 07-03-PLAN.md — SEC-01 (d): script gated verify-vault-no-plaintext.ts (SELECT sin token en claro + resolución vía Vault, live)
+- [x] 07-03-PLAN.md — SEC-01 (d): script gated verify-vault-no-plaintext.ts (SELECT sin token en claro + resolución vía Vault, live)
 
 ## Progress
 
@@ -261,7 +261,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Grilla y turnos del dashboard | 7/7 | Complete   | 2026-07-06 |
 | 5. Integración WhatsApp Cloud API | 6/6 | Complete    | 2026-07-06 |
 | 6. Agente conversacional de agendamiento | 7/7 | Complete   | 2026-07-08 |
-| 7. Hardening y listo para producción | 4/5 | In Progress|  |
+| 7. Hardening y listo para producción | 5/5 | Complete   | 2026-07-10 |
 
 ## Research Flags
 
