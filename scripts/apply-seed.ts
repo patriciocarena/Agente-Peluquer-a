@@ -10,18 +10,19 @@
  *
  * Post-migration-0003 shape (D-09..D-12): a `tenant` is now a
  * grupo/contenedor with ONLY `nombre` + `activo`; the WhatsApp fields
- * (whatsapp_phone_number_id, waba_id, whatsapp_token, display_phone_number)
- * + `activo` live on `negocio`; every operational row (profesional,
- * servicio, cliente, turno) carries `negocio_id` (not `tenant_id`). TENANT_A
- * is seeded with TWO negocios under the same tenant to exercise the 1:N
- * model (owner negocio selector, D-12); TENANT_B stays a single-negocio
- * tenant so cross-TENANT isolation checks still compare two distinct
- * tenants. The owner (`perfil`) remains tied to the TENANT (D-08/D-12), not
- * to an individual negocio.
+ * (whatsapp_phone_number_id, waba_id, whatsapp_token_secret_id,
+ * display_phone_number) + `activo` live on `negocio`; every operational row
+ * (profesional, servicio, cliente, turno) carries `negocio_id` (not
+ * `tenant_id`). TENANT_A is seeded with TWO negocios under the same tenant
+ * to exercise the 1:N model (owner negocio selector, D-12); TENANT_B stays
+ * a single-negocio tenant so cross-TENANT isolation checks still compare
+ * two distinct tenants. The owner (`perfil`) remains tied to the TENANT
+ * (D-08/D-12), not to an individual negocio.
  *
  * Isolation: targets ONLY bdgufnitakelyialjoqg (SUPABASE_URL from .env).
- * Never any other, unrelated Supabase project. No real WhatsApp token is
- * ever written (whatsapp_token stays NULL — SEC-01 is Phase 7).
+ * Never any other, unrelated Supabase project. This seed never creates a
+ * Vault secret (whatsapp_token_secret_id stays NULL, its column default —
+ * SEC-01/Phase 7 dropped the plaintext whatsapp_token column entirely).
  *
  * Usage: pnpm exec tsx scripts/apply-seed.ts
  */
@@ -174,7 +175,6 @@ async function upsertNegocio(tenantId: string, negocio: NegocioSeed) {
     granularidad_min: 30,
     whatsapp_phone_number_id: negocio.whatsappPhoneNumberId,
     waba_id: negocio.wabaId,
-    whatsapp_token: null,
     display_phone_number: negocio.displayPhoneNumber,
     activo: true,
   });

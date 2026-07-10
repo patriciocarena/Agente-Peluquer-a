@@ -8,7 +8,11 @@
  *
  *   1. `tenant` tiene columnas `nombre`/`activo` y NO tiene
  *      whatsapp_phone_number_id/waba_id/whatsapp_token/display_phone_number.
- *   2. `negocio` SÍ tiene esas cuatro columnas WhatsApp + `activo`.
+ *   2. `negocio` SÍ tiene esas columnas WhatsApp + `activo`. NOTA (Fase 7,
+ *      migración 0005, SEC-01): `whatsapp_token` (columna en claro) fue
+ *      dropeada de `negocio` y reemplazada por `whatsapp_token_secret_id`
+ *      (uuid, referencia a `vault.secrets`) — este script ya verifica el
+ *      shape live post-0005, no el histórico post-0003.
  *   3. Cada una de las 11 tablas operativas (profesional, horario_trabajo,
  *      servicio, profesional_servicio, cliente, turno, turno_servicio,
  *      bloqueo, conversacion, mensaje, recordatorio) tiene `negocio_id`
@@ -110,6 +114,8 @@ async function verifyTenant(): Promise<void> {
   const names = cols.map((c) => c.column_name);
   assert(names.includes("nombre"), "tenant.nombre no existe (esperado post-0003)");
   assert(names.includes("activo"), "tenant.activo no existe (esperado post-0003)");
+  // whatsapp_token nunca existió en `tenant` (siempre vivió en `negocio`) --
+  // el assert de ausencia sigue siendo válido tal cual post-0005.
   for (const col of ["whatsapp_phone_number_id", "waba_id", "whatsapp_token", "display_phone_number"]) {
     assert(!names.includes(col), `tenant todavía tiene la columna ${col} (debería haber sido dropeada por 0003)`);
   }
@@ -119,10 +125,13 @@ async function verifyTenant(): Promise<void> {
 async function verifyNegocio(): Promise<void> {
   const cols = await getColumns("negocio");
   const names = cols.map((c) => c.column_name);
-  for (const col of ["whatsapp_phone_number_id", "waba_id", "whatsapp_token", "display_phone_number", "activo"]) {
-    assert(names.includes(col), `negocio no tiene la columna ${col} (esperado post-0003)`);
+  // whatsapp_token_secret_id (no whatsapp_token) -- la migración 0005
+  // (SEC-01, Fase 7) dropeó la columna en claro y la reemplazó por esta
+  // referencia a vault.secrets.
+  for (const col of ["whatsapp_phone_number_id", "waba_id", "whatsapp_token_secret_id", "display_phone_number", "activo"]) {
+    assert(names.includes(col), `negocio no tiene la columna ${col} (esperado post-0003/0005)`);
   }
-  console.log("OK: negocio tiene las 4 columnas WhatsApp + activo.");
+  console.log("OK: negocio tiene las 4 columnas WhatsApp (whatsapp_token_secret_id post-Vault) + activo.");
 }
 
 async function verifyOperationalTables(): Promise<void> {

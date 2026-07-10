@@ -51,7 +51,7 @@ export function makeNegocio(partial: Partial<NegocioRow> = {}): NegocioRow {
     updated_at: FIXED_TS,
     waba_id: null,
     whatsapp_phone_number_id: null,
-    whatsapp_token: null,
+    whatsapp_token_secret_id: null,
     ...partial,
   };
 }

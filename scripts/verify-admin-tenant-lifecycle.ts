@@ -6,7 +6,10 @@
  *
  *   (a) Pattern 3 (02-RESEARCH.md): el alta combinada Tenant + dueño +
  *       primer Negocio crea las tres filas correctamente, y el Negocio
- *       nunca persiste un `whatsapp_token` real (D-04/T-02-24).
+ *       recién creado no arranca con un secreto de token asociado
+ *       (whatsapp_token_secret_id queda NULL — D-04/T-02-24, post-Vault
+ *       SEC-01/Fase 7: la columna en claro whatsapp_token fue dropeada por
+ *       la migración 0005 y reemplazada por esta referencia a vault.secrets).
  *   (b) La transacción compensatoria: si el insert de `perfil` falla
  *       DESPUÉS de crear el `auth.user` y el `tenant`/`negocio`, la
  *       compensación (delete tenant -> cascada a negocio/perfil vía ON
@@ -108,7 +111,6 @@ async function verifyHappyPath() {
       whatsapp_phone_number_id: "verify-fake-phone-number-id",
       waba_id: "verify-fake-waba-id",
       display_phone_number: "+54 9 11 0000-0000",
-      whatsapp_token: null,
     })
     .select()
     .single();
@@ -127,12 +129,15 @@ async function verifyHappyPath() {
     throw new Error(`(a) insert perfil falló inesperadamente: ${perfilErr.message}`);
   }
 
-  if (negocio.whatsapp_token !== null) {
+  if (negocio.whatsapp_token_secret_id !== null) {
     throw new Error(
-      "(a) FUGA -- el Negocio recién creado tiene whatsapp_token no-null (viola D-04/T-02-24).",
+      "(a) FUGA -- el Negocio recién creado tiene whatsapp_token_secret_id no-null " +
+        "(viola D-04/T-02-24: un negocio recién creado no debe arrancar con un secreto de token asociado).",
     );
   }
-  console.log("OK (a): Tenant + dueño + primer Negocio creados; whatsapp_token quedó NULL.");
+  console.log(
+    "OK (a): Tenant + dueño + primer Negocio creados; whatsapp_token_secret_id quedó NULL.",
+  );
 
   const { data: perfil, error: perfilReadErr } = await supabaseAdmin
     .from("perfil")
