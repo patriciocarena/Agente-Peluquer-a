@@ -8,12 +8,17 @@ import { defineConfig } from "vitest/config"
  * porque el foco es lógica pura; los tests de UI llegarían con su propio
  * entorno cuando se sumen. Alias @/* alineado con tsconfig.json.
  *
+ * `app/**` se sumó en Plan 07-02 (Rule 3 fix): admin-tenants.test.ts es el
+ * primer unit test mockeado de un Server Action (`app/actions/*`) del
+ * dashboard — el glob original solo cubría `lib/**`, así que sin este
+ * agregado `vitest run -- admin-tenants` no encontraba el archivo.
+ *
  * Run: pnpm --filter @turnosbot/dashboard exec vitest run
  */
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["lib/**/*.test.ts", "lib/**/__*__.test.ts"],
+    include: ["lib/**/*.test.ts", "lib/**/__*__.test.ts", "app/**/*.test.ts"],
     globals: true,
   },
   resolve: {

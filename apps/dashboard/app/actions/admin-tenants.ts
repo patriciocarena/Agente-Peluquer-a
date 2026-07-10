@@ -29,6 +29,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -58,11 +59,28 @@ function negocioInsertPayload(tenantId: string, input: NegocioAdminInput) {
     whatsapp_phone_number_id: input.whatsapp_phone_number_id ?? null,
     waba_id: input.waba_id ?? null,
     display_phone_number: input.display_phone_number ?? null,
-    // NUNCA se escribe un token real acá — la carga/encriptación del token
-    // de acceso queda diferida a Fase 7 / SEC-01 (D-04).
-    whatsapp_token: null,
+    // El token real NUNCA se escribe acá: negocio.whatsapp_token fue
+    // dropeada por la migración 0005 (SEC-01) — el único camino de
+    // escritura sancionado es setWhatsappTokenSecret(), vía
+    // .rpc('set_whatsapp_token_secret') hacia Supabase Vault.
   };
 }
+
+// Forma-only (8-4-4-4-12), no `z.uuid()` estricto: mismo fix que
+// `uuidLike` en @turnosbot/availability-engine/booking.ts (Fase 3,
+// T-03-15) -- `z.uuid()` exige version 1-8 + variante 8/9/a/b y rechazaría
+// negocioIds reales generados con otros generadores de UUID.
+const negocioIdShape = z
+  .string()
+  .regex(
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
+    "negocioId inválido.",
+  );
+
+const setWhatsappTokenSecretSchema = z.object({
+  negocioId: negocioIdShape,
+  token: z.string().min(1, "El token no puede estar vacío."),
+});
 
 /**
  * SADMIN-03 — lista todos los Tenants, aislado de RLS (service_role
@@ -281,6 +299,40 @@ export async function updateNegocio(
 
   revalidatePath(`/admin/${tenantId}`);
   return { data: undefined };
+}
+
+/**
+ * SEC-01 (D-02 b/c) — rota/setea el token de la WhatsApp Cloud API de un
+ * Negocio vía Supabase Vault. Único camino de escritura sancionado: nunca
+ * una columna plana, siempre `.rpc('set_whatsapp_token_secret', ...)`
+ * (SECURITY DEFINER, decripta/encripta del lado de la DB). Devuelve el
+ * `secret_id` (uuid de `vault.secrets`) que queda referenciado desde
+ * `negocio.whatsapp_token_secret_id`.
+ */
+export async function setWhatsappTokenSecret(
+  negocioId: string,
+  token: string,
+): Promise<AdminActionResult<{ secretId: string }>> {
+  const parsed = setWhatsappTokenSecretSchema.safeParse({ negocioId, token });
+  if (!parsed.success) {
+    return { error: "Revisá el token de WhatsApp." };
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("set_whatsapp_token_secret", {
+    p_negocio_id: parsed.data.negocioId,
+    p_token: parsed.data.token,
+    p_name: `whatsapp-token-${parsed.data.negocioId}`,
+  });
+
+  if (error || !data) {
+    return { error: GENERIC_ERROR };
+  }
+
+  // No recibimos tenantId en la firma (solo negocioId) -- revalidamos todo
+  // el árbol /admin en vez de adivinar la ruta exacta del tenant.
+  revalidatePath("/admin", "layout");
+  return { data: { secretId: data } };
 }
 
 /** SADMIN-02 — activar/desactivar un Negocio (soft delete, Tabs/Switch). */
