@@ -237,6 +237,7 @@ recalcular la duración.
 | 260704-jb5 | Terminar de actualizar 02-UI-SPEC.md y 02-RESEARCH.md de la Fase 2 (dashboard-y-datos-del-negocio) reflejando el cambio de modelo Tenant->Negocio(s), y commitear | 2026-07-04 | 591ad17 | [260704-jb5-terminar-de-actualizar-02-ui-spec-md-y-0](./quick/260704-jb5-terminar-de-actualizar-02-ui-spec-md-y-0/) |
 | 260709-w2y | verify-bot-conversation-live.ts — script gated que maneja responder() contra Gemini real + Supabase real; probó en vivo los 2 fixes de la fase 06 (memoria multi-turno + texto vacío tras tool-result). PASSED, exit 0 | 2026-07-10 | — | [260709-w2y-verify-bot-conversation-live](./quick/260709-w2y-verify-bot-conversation-live/) |
 | 260710-jgn | Cerrar SADMIN-01/02/03 tras ejecutar en vivo el bootstrap del superadmin + lifecycle verify (PASSED exit 0) contra bdgufnitakelyialjoqg. REQUIREMENTS 51/51. Solo docs. | 2026-07-10 | — | [260710-jgn-cerrar-sadmin-superadmin-live](./quick/260710-jgn-cerrar-sadmin-superadmin-live/) |
+| 260711-gos | Fix landing en blanco tras login del owner: app/page.tsx (stub `<main/>`) → `redirect("/turnos")`. Verificado en vivo en :5202, cero errores de consola. | 2026-07-11 | — | [260711-gos-fix-landing-owner-turnos](./quick/260711-gos-fix-landing-owner-turnos/) |
 
 ## Deferred Items
 
@@ -327,4 +328,4 @@ real**, sin mocks. Exit 0. Cubre los **5** Success Criteria de la fase 06:
 - **El escenario abierto del UAT de la fase 02** (`02-HUMAN-UAT.md`) — mismo bloqueo visual.
 - **Nyquist:** fase 01 sin `VALIDATION.md`; fase 05 `nyquist_compliant: false`.
 
-Last activity: 2026-07-10 — Bootstrap del superadmin ejecutado en vivo (lifecycle verify PASSED exit 0); `SADMIN-01/02/03` tildados → REQUIREMENTS 51/51 (quick 260710-jgn). Quedan 3 acciones humanas: tests visuales fase 04, cleanup Vault, decisión cuota Gemini. Handoff en `.planning/HANDOFF-milestone-v1.md`
+Last activity: 2026-07-11 — Fix del landing en blanco tras login del owner (`app/page.tsx` → `redirect("/turnos")`, quick 260711-gos, verificado en vivo). Antes: bootstrap del superadmin en vivo + `SADMIN-01/02/03` → REQUIREMENTS 51/51 (quick 260710-jgn). Quedan 3 acciones humanas: tests visuales fase 04, cleanup Vault, decisión cuota Gemini. Handoff en `.planning/HANDOFF-milestone-v1.md`
