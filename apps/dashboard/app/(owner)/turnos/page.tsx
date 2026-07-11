@@ -36,6 +36,11 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { DiaPicker } from "@/components/dia-picker";
 import { GrillaTurnos, type GrillaCelda } from "@/components/grilla-turnos";
+import {
+  GrillaSemana,
+  type SemanaDia,
+  type SemanaBloque,
+} from "@/components/grilla-semana";
 import type { TurnoDetalle } from "@/components/turno-detail-sheet";
 import type { Tables } from "@turnosbot/db-types";
 
@@ -147,13 +152,138 @@ function buildGridServicio(negocio: Tables<"negocio">): Tables<"servicio"> {
   };
 }
 
+/** Lunes (inicio de semana es-AR) de la semana que contiene `fecha`. */
+function lunesDeLaSemana(fecha: string): string {
+  const d = new Date(`${fecha}T12:00:00Z`);
+  const dow = d.getUTCDay(); // 0=Dom .. 6=Sáb
+  const offset = dow === 0 ? -6 : 1 - dow;
+  d.setUTCDate(d.getUTCDate() + offset);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Minutos desde medianoche (hora LOCAL del negocio) de un instante ISO. */
+function minutosLocalDeIso(iso: string, timezone: string): number {
+  const d = new TZDate(new Date(iso).getTime(), timezone);
+  return d.getHours() * 60 + d.getMinutes();
+}
+
+function formatDiaCorto(fecha: string): string {
+  const date = new Date(`${fecha}T12:00:00Z`);
+  const s = new Intl.DateTimeFormat("es-AR", { weekday: "short", timeZone: "UTC" }).format(date);
+  return (s.charAt(0).toUpperCase() + s.slice(1)).replace(".", "");
+}
+
+function formatMesCorto(fecha: string): string {
+  const date = new Date(`${fecha}T12:00:00Z`);
+  return new Intl.DateTimeFormat("es-AR", { month: "short", timeZone: "UTC" })
+    .format(date)
+    .replace(".", "");
+}
+
+/**
+ * Arma los 7 días de la semana (Lun–Dom) que contiene `fechaActiva`, con sus
+ * turnos/bloqueos como bloques posicionados por hora. Reusa `data` (ya cargada,
+ * sin fetch extra de turnos) y solo consulta los nombres de cliente de la semana.
+ */
+async function construirDiasSemana(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  negocio: Tables<"negocio">,
+  data: AvailabilityData,
+  fechaActiva: string,
+): Promise<{ dias: SemanaDia[]; horas: string[]; inicioMin: number }> {
+  const lunes = lunesDeLaSemana(fechaActiva);
+  const fechas = Array.from({ length: 7 }, (_, i) => shiftFecha(lunes, i));
+  const weekStart = inicioDelDiaEpoch(fechas[0], negocio.timezone);
+  const weekEnd = finDelDiaEpoch(fechas[6], negocio.timezone);
+  const hoy = hoyEnZona(negocio.timezone);
+
+  const turnosSemana = data.turnos.filter((t) => {
+    if (t.estado === "cancelado") return false; // D-06
+    const ini = new Date(t.inicio).getTime();
+    return ini >= weekStart && ini < weekEnd;
+  });
+  const bloqueosSemana = data.bloqueos.filter((b) => {
+    const ini = new Date(b.inicio).getTime();
+    return ini >= weekStart && ini < weekEnd;
+  });
+
+  const clienteIds = Array.from(new Set(turnosSemana.map((t) => t.cliente_id)));
+  const clientesRes =
+    clienteIds.length > 0
+      ? await supabase
+          .from("cliente")
+          .select("id, nombre, telefono")
+          .eq("negocio_id", negocio.id)
+          .in("id", clienteIds)
+      : { data: [] as { id: string; nombre: string | null; telefono: string }[] };
+  const clientePorId = new Map((clientesRes.data ?? []).map((c) => [c.id, c]));
+
+  const { inicioMin, finMin } = computeRangoGrilla(data.horarios);
+  const horas: string[] = [];
+  for (let m = inicioMin; m < finMin; m += negocio.granularidad_min) {
+    horas.push(minutosAHHmm(m));
+  }
+
+  const fmtPrecio = (n: number) => `$ ${Math.round(n).toLocaleString("es-AR")}`;
+
+  const dias: SemanaDia[] = fechas.map((fecha) => {
+    const dayStart = inicioDelDiaEpoch(fecha, negocio.timezone);
+    const dayEnd = finDelDiaEpoch(fecha, negocio.timezone);
+    const bloques: SemanaBloque[] = [];
+
+    for (const t of turnosSemana) {
+      const ini = new Date(t.inicio).getTime();
+      if (ini < dayStart || ini >= dayEnd) continue;
+      const cliente = clientePorId.get(t.cliente_id);
+      bloques.push({
+        id: t.id,
+        estado: t.estado === "confirmado" ? "confirmado" : "pendiente",
+        inicioMin: minutosLocalDeIso(t.inicio, negocio.timezone),
+        durMin: Math.max(
+          (new Date(t.fin).getTime() - ini) / 60000,
+          negocio.granularidad_min,
+        ),
+        titulo: cliente?.nombre ?? cliente?.telefono ?? "Turno",
+        subtitulo: fmtPrecio(t.precio_total),
+      });
+    }
+    for (const b of bloqueosSemana) {
+      const ini = new Date(b.inicio).getTime();
+      if (ini < dayStart || ini >= dayEnd) continue;
+      bloques.push({
+        id: b.id,
+        estado: "bloqueo",
+        inicioMin: minutosLocalDeIso(b.inicio, negocio.timezone),
+        durMin: Math.max(
+          (new Date(b.fin).getTime() - ini) / 60000,
+          negocio.granularidad_min,
+        ),
+        titulo: b.motivo ?? "Bloqueo",
+      });
+    }
+    bloques.sort((a, b) => a.inicioMin - b.inicioMin);
+
+    const [, , numero] = partesFecha(fecha);
+    return {
+      fecha,
+      etiqueta: formatDiaCorto(fecha),
+      numero,
+      esHoy: fecha === hoy,
+      bloques,
+    };
+  });
+
+  return { dias, horas, inicioMin };
+}
+
 export default async function TurnosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ fecha?: string }>;
+  searchParams: Promise<{ fecha?: string; vista?: string }>;
 }) {
   const { negocio } = await getNegocioActivo();
-  const { fecha: fechaParam } = await searchParams;
+  const { fecha: fechaParam, vista: vistaParam } = await searchParams;
+  const vista: "dia" | "semana" = vistaParam === "semana" ? "semana" : "dia";
 
   // T-04-25: `?fecha=` se valida como YYYY-MM-DD antes de usarla; nunca se
   // interpola cruda ni influye el scoping (T-04-24 — el negocio siempre sale
@@ -192,6 +322,12 @@ export default async function TurnosPage({
   const diaSiguiente = shiftFecha(fechaActiva, 1);
   const etiquetaFecha = formatEtiquetaFecha(fechaActiva);
 
+  const lunesSemana = lunesDeLaSemana(fechaActiva);
+  const finSemana = shiftFecha(lunesSemana, 6);
+  const semanaAnterior = shiftFecha(lunesSemana, -7);
+  const semanaSiguiente = shiftFecha(lunesSemana, 7);
+  const etiquetaSemana = `${partesFecha(lunesSemana)[2]}–${partesFecha(finSemana)[2]} ${formatMesCorto(finSemana)} ${partesFecha(finSemana)[0]}`;
+
   let contenido: React.ReactNode;
 
   if (errorCarga || !data) {
@@ -210,6 +346,21 @@ export default async function TurnosPage({
           Activá al menos un profesional en la sección Profesionales para poder cargar turnos.
         </p>
       </div>
+    );
+  } else if (vista === "semana") {
+    const { dias, horas, inicioMin } = await construirDiasSemana(
+      supabase,
+      negocio,
+      data,
+      fechaActiva,
+    );
+    contenido = (
+      <GrillaSemana
+        dias={dias}
+        horas={horas}
+        inicioMin={inicioMin}
+        granularidadMin={negocio.granularidad_min}
+      />
     );
   } else {
     const granularidadMin = negocio.granularidad_min;
@@ -402,19 +553,46 @@ export default async function TurnosPage({
         <h1 className="text-2xl font-semibold">Turnos</h1>
       </div>
 
-      <div className="flex items-center justify-center gap-2">
-        <Button asChild variant="ghost" size="icon" aria-label="Día anterior">
-          <Link href={`/turnos?fecha=${diaAnterior}`}>
-            <ChevronLeft />
-          </Link>
-        </Button>
-        <span className="min-w-48 text-center text-sm font-medium">{etiquetaFecha}</span>
-        <DiaPicker fecha={fechaActiva} />
-        <Button asChild variant="ghost" size="icon" aria-label="Día siguiente">
-          <Link href={`/turnos?fecha=${diaSiguiente}`}>
-            <ChevronRight />
-          </Link>
-        </Button>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <div className="mr-1 inline-flex rounded-lg border border-border bg-muted p-0.5">
+          <Button asChild variant={vista === "dia" ? "default" : "ghost"} size="sm">
+            <Link href={`/turnos?fecha=${fechaActiva}&vista=dia`}>Día</Link>
+          </Button>
+          <Button asChild variant={vista === "semana" ? "default" : "ghost"} size="sm">
+            <Link href={`/turnos?fecha=${fechaActiva}&vista=semana`}>Semana</Link>
+          </Button>
+        </div>
+
+        {vista === "dia" ? (
+          <>
+            <Button asChild variant="ghost" size="icon" aria-label="Día anterior">
+              <Link href={`/turnos?fecha=${diaAnterior}`}>
+                <ChevronLeft />
+              </Link>
+            </Button>
+            <span className="min-w-48 text-center text-sm font-medium">{etiquetaFecha}</span>
+            <DiaPicker fecha={fechaActiva} />
+            <Button asChild variant="ghost" size="icon" aria-label="Día siguiente">
+              <Link href={`/turnos?fecha=${diaSiguiente}`}>
+                <ChevronRight />
+              </Link>
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button asChild variant="ghost" size="icon" aria-label="Semana anterior">
+              <Link href={`/turnos?fecha=${semanaAnterior}&vista=semana`}>
+                <ChevronLeft />
+              </Link>
+            </Button>
+            <span className="min-w-40 text-center text-sm font-medium">{etiquetaSemana}</span>
+            <Button asChild variant="ghost" size="icon" aria-label="Semana siguiente">
+              <Link href={`/turnos?fecha=${semanaSiguiente}&vista=semana`}>
+                <ChevronRight />
+              </Link>
+            </Button>
+          </>
+        )}
       </div>
 
       {contenido}
