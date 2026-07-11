@@ -190,6 +190,7 @@ async function construirDiasSemana(
   negocio: Tables<"negocio">,
   data: AvailabilityData,
   fechaActiva: string,
+  profFiltro: string | null,
 ): Promise<{ dias: SemanaDia[]; horas: string[]; inicioMin: number }> {
   const lunes = lunesDeLaSemana(fechaActiva);
   const fechas = Array.from({ length: 7 }, (_, i) => shiftFecha(lunes, i));
@@ -199,10 +200,12 @@ async function construirDiasSemana(
 
   const turnosSemana = data.turnos.filter((t) => {
     if (t.estado === "cancelado") return false; // D-06
+    if (profFiltro && t.profesional_id !== profFiltro) return false;
     const ini = new Date(t.inicio).getTime();
     return ini >= weekStart && ini < weekEnd;
   });
   const bloqueosSemana = data.bloqueos.filter((b) => {
+    if (profFiltro && b.profesional_id !== profFiltro) return false;
     const ini = new Date(b.inicio).getTime();
     return ini >= weekStart && ini < weekEnd;
   });
@@ -279,10 +282,10 @@ async function construirDiasSemana(
 export default async function TurnosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ fecha?: string; vista?: string }>;
+  searchParams: Promise<{ fecha?: string; vista?: string; prof?: string }>;
 }) {
   const { negocio } = await getNegocioActivo();
-  const { fecha: fechaParam, vista: vistaParam } = await searchParams;
+  const { fecha: fechaParam, vista: vistaParam, prof: profParam } = await searchParams;
   const vista: "dia" | "semana" = vistaParam === "semana" ? "semana" : "dia";
 
   // T-04-25: `?fecha=` se valida como YYYY-MM-DD antes de usarla; nunca se
@@ -328,6 +331,10 @@ export default async function TurnosPage({
   const semanaSiguiente = shiftFecha(lunesSemana, 7);
   const etiquetaSemana = `${partesFecha(lunesSemana)[2]}–${partesFecha(finSemana)[2]} ${formatMesCorto(finSemana)} ${partesFecha(finSemana)[0]}`;
 
+  // Filtro de profesional (solo aplica a la vista Semana): id válido o null=Todos.
+  const profSeleccionado =
+    profParam && profesionales.some((p) => p.id === profParam) ? profParam : null;
+
   let contenido: React.ReactNode;
 
   if (errorCarga || !data) {
@@ -353,6 +360,7 @@ export default async function TurnosPage({
       negocio,
       data,
       fechaActiva,
+      profSeleccionado,
     );
     contenido = (
       <GrillaSemana
@@ -594,6 +602,34 @@ export default async function TurnosPage({
           </>
         )}
       </div>
+
+      {vista === "semana" && profesionales.length > 0 ? (
+        <div className="flex flex-wrap items-center justify-center gap-1.5">
+          <Link
+            href={`/turnos?fecha=${fechaActiva}&vista=semana`}
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+              !profSeleccionado
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            Todos
+          </Link>
+          {profesionales.map((profesional) => (
+            <Link
+              key={profesional.id}
+              href={`/turnos?fecha=${fechaActiva}&vista=semana&prof=${profesional.id}`}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                profSeleccionado === profesional.id
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {profesional.nombre}
+            </Link>
+          ))}
+        </div>
+      ) : null}
 
       {contenido}
     </div>
