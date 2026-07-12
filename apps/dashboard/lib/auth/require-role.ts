@@ -27,6 +27,7 @@ export type PerfilAutenticado = {
   userId: string;
   rol: Rol;
   tenantId: string | null;
+  email: string;
 };
 
 /**
@@ -64,5 +65,5 @@ export async function requireRole(rol: Rol): Promise<PerfilAutenticado> {
     redirect(perfil.rol === "superadmin" ? "/admin" : "/");
   }
 
-  return { userId: user.id, rol, tenantId: perfil.tenant_id };
+  return { userId: user.id, rol, tenantId: perfil.tenant_id, email: user.email ?? "" };
 }
