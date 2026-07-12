@@ -247,7 +247,7 @@ async function construirDiasSemana(
           negocio.granularidad_min,
         ),
         titulo: cliente?.nombre ?? cliente?.telefono ?? "Turno",
-        subtitulo: fmtPrecio(t.precio_total),
+        subtitulo: t.precio_total != null ? fmtPrecio(t.precio_total) : undefined,
       });
     }
     for (const b of bloqueosSemana) {
