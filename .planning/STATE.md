@@ -239,6 +239,7 @@ recalcular la duración.
 | 260710-jgn | Cerrar SADMIN-01/02/03 tras ejecutar en vivo el bootstrap del superadmin + lifecycle verify (PASSED exit 0) contra bdgufnitakelyialjoqg. REQUIREMENTS 51/51. Solo docs. | 2026-07-10 | — | [260710-jgn-cerrar-sadmin-superadmin-live](./quick/260710-jgn-cerrar-sadmin-superadmin-live/) |
 | 260711-gos | Fix landing en blanco tras login del owner: app/page.tsx (stub `<main/>`) → `redirect("/turnos")`. Verificado en vivo en :5202, cero errores de consola. | 2026-07-11 | — | [260711-gos-fix-landing-owner-turnos](./quick/260711-gos-fix-landing-owner-turnos/) |
 | 260712-g2y | Servicios dashboard: (1) inputs precio/duración del diálogo dejan de renderizar `value={NaN}` (warning React) y guardan `undefined` al vaciarse; (2) `ServiciosTable` re-sincroniza su estado local con las props revalidadas (patrón "ajustar estado en render"), así editar un precio se refleja al instante en vez de quedar pegado hasta un remonte. Typecheck: 0 errores nuevos. | 2026-07-12 | 7952cb7 / b51c5e3 | [260712-g2y-corregir-nan-en-inputs-de-precio-duracio](./quick/260712-g2y-corregir-nan-en-inputs-de-precio-duracio/) |
+| 260712-gnl | Auditoría UX proactiva del dashboard (no solo build/typecheck) — 3 bugs confirmados EN VIVO y corregidos: (1) `TurnoDetailSheet` quedaba con el horario viejo tras un reagendado exitoso hasta cerrarlo a mano (ahora se cierra solo, mismo patrón que "Cancelar turno"); (2) `DiaPicker` (`type=date`) se desincronizaba al navegar Día anterior/siguiente — `defaultValue` no reacciona a props, fix con `key={fecha}` para forzar remount; (3) `UserMenu` tenía `<AvatarFallback>OW</AvatarFallback>` hardcodeado, nunca conectado a la sesión real — ahora deriva iniciales del email real (`requireRole()` expone `email`) y lo muestra en el dropdown. Los 3 verificados en vivo en :5202 tras limpiar una caché `.next` corrupta (ver Trampas de entorno). Typecheck + 62 tests: 0 errores. | 2026-07-12 | 07cb6b3 / a8a0955 / fdd46f9 | [260712-gnl-fix-3-bugs-ux-confirmados-en-dashboard-t](./quick/260712-gnl-fix-3-bugs-ux-confirmados-en-dashboard-t/) |
 
 ## Deferred Items
 
@@ -284,6 +285,11 @@ Resume file: **`.planning/HANDOFF-milestone-v1.md`** ← empezar acá
 - `gsd query progress` reporta "1 sesión de debug activa": es un falso positivo, el glob levanta
   `knowledge-base.md`. **Hay 0 abiertas.**
 - Un `turno` sin filas en `turno_servicio` **se puede cancelar pero no reagendar**.
+- **Nunca correr `pnpm build` en `apps/dashboard` mientras un `next dev --port 5202` está corriendo** —
+  ambos comparten `apps/dashboard/.next/`; el build de producción pisa el cache/manifests del dev
+  server y lo deja sirviendo código viejo indefinidamente (sobrevive a reiniciar el proceso). Si el
+  dashboard en vivo no refleja un cambio ya committeado, primero sospechar de esto: `rm -rf
+  apps/dashboard/.next` y reiniciar el dev server antes de asumir que el fix no funcionó.
 
 ### Verificado EN VIVO en esta sesión (pasó)
 
@@ -329,4 +335,4 @@ real**, sin mocks. Exit 0. Cubre los **5** Success Criteria de la fase 06:
 - **El escenario abierto del UAT de la fase 02** (`02-HUMAN-UAT.md`) — mismo bloqueo visual.
 - **Nyquist:** fase 01 sin `VALIDATION.md`; fase 05 `nyquist_compliant: false`.
 
-Last activity: 2026-07-12 — Fix Servicios dashboard (quick 260712-g2y): NaN en inputs precio/duración del diálogo + re-sync de `ServiciosTable` con props revalidadas (ediciones ahora se reflejan al instante). Typecheck sin errores nuevos; queda un error preexistente ajeno en `turnos/page.tsx:250` (`fmtPrecio(precio_total)` con `number | null`, de la vista Semana). Antes: Fix del landing en blanco tras login del owner (`app/page.tsx` → `redirect("/turnos")`, quick 260711-gos, verificado en vivo). Antes: bootstrap del superadmin en vivo + `SADMIN-01/02/03` → REQUIREMENTS 51/51 (quick 260710-jgn). Quedan 3 acciones humanas: tests visuales fase 04, cleanup Vault, decisión cuota Gemini. Handoff en `.planning/HANDOFF-milestone-v1.md`
+Last activity: 2026-07-12 — Auditoría UX proactiva del dashboard (quick 260712-gnl): 3 bugs confirmados en vivo y corregidos (Sheet de turno stale tras reagendar, DiaPicker desincronizado al navegar días, UserMenu con "OW" hardcodeado). Antes: fix Servicios dashboard (quick 260712-g2y), NaN en inputs + re-sync de `ServiciosTable`. Nota: el fix de `turnos/page.tsx:250` (`fmtPrecio(precio_total)` con `number | null`) quedó aplicado en el working tree pero **sin commitear** — pendiente de confirmación del usuario. Antes: Fix del landing en blanco tras login del owner (`app/page.tsx` → `redirect("/turnos")`, quick 260711-gos, verificado en vivo). Antes: bootstrap del superadmin en vivo + `SADMIN-01/02/03` → REQUIREMENTS 51/51 (quick 260710-jgn). Quedan 3 acciones humanas: tests visuales fase 04, cleanup Vault, decisión cuota Gemini. Handoff en `.planning/HANDOFF-milestone-v1.md`
