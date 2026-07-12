@@ -27,3 +27,6 @@ supabase/.temp/
 
 # Cache de gsd-project-researcher (no versionar)
 .planning/research/.cache/
+
+# graphify: generated knowledge-graph artifacts, regenerate locally with 'graphify .'
+graphify-out/
