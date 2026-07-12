@@ -132,7 +132,12 @@ export function ServicioDialog({ servicio, trigger }: Props) {
                       step="0.01"
                       inputMode="decimal"
                       {...field}
-                      onChange={(event) => field.onChange(event.target.valueAsNumber)}
+                      value={Number.isFinite(field.value) ? field.value : ""}
+                      onChange={(event) =>
+                        field.onChange(
+                          event.target.value === "" ? undefined : event.target.valueAsNumber,
+                        )
+                      }
                     />
                   </FormControl>
                   <FormMessage />
@@ -152,7 +157,12 @@ export function ServicioDialog({ servicio, trigger }: Props) {
                       step="1"
                       inputMode="numeric"
                       {...field}
-                      onChange={(event) => field.onChange(event.target.valueAsNumber)}
+                      value={Number.isFinite(field.value) ? field.value : ""}
+                      onChange={(event) =>
+                        field.onChange(
+                          event.target.value === "" ? undefined : event.target.valueAsNumber,
+                        )
+                      }
                     />
                   </FormControl>
                   <FormMessage />
