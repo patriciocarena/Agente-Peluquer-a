@@ -26,6 +26,7 @@ export function DiaPicker({ fecha }: Props) {
 
   return (
     <input
+      key={fecha}
       type="date"
       aria-label="Elegir fecha"
       defaultValue={fecha}
