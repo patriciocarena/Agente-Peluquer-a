@@ -9,7 +9,7 @@ RUN corepack enable
 
 WORKDIR /app
 
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.base.json tsconfig.json ./
 COPY apps/bot/package.json ./apps/bot/package.json
 COPY packages/db-types/package.json ./packages/db-types/package.json
 COPY packages/availability-engine/package.json ./packages/availability-engine/package.json
