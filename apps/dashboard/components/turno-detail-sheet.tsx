@@ -170,6 +170,7 @@ export function TurnoDetailSheet({ turno, fecha, timezone, open, onOpenChange }:
         timezone={timezone}
         open={reagendarOpen}
         onOpenChange={setReagendarOpen}
+        onSuccess={() => onOpenChange(false)}
       />
     </>
   );

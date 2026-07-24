@@ -17,11 +17,26 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export function UserMenu() {
+type Props = {
+  /** Email del usuario autenticado (owner o superadmin) — única fuente
+   * disponible de identidad legible, `perfil` no tiene columna `nombre`. */
+  email: string;
+};
+
+/** Primeras 2 letras (mayúsculas) de la parte local del email, ej.
+ * "ana.perez@x.com" -> "AN". Fallback "?" si el email viene vacío. */
+function inicialesDeEmail(email: string): string {
+  if (!email) return "?";
+  const local = email.split("@")[0] ?? "";
+  return local.slice(0, 2).toUpperCase() || "?";
+}
+
+export function UserMenu({ email }: Props) {
   const { theme, setTheme } = useTheme();
   const [isPending, startTransition] = useTransition();
 
@@ -45,11 +60,15 @@ export function UserMenu() {
           aria-label="Abrir menú de usuario"
         >
           <Avatar size="sm">
-            <AvatarFallback>OW</AvatarFallback>
+            <AvatarFallback>{inicialesDeEmail(email)}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="truncate font-normal" title={email}>
+          {email}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
         <div className="flex items-center justify-between px-1.5 py-1">
           <span className="text-sm text-muted-foreground">Tema</span>
           <Button

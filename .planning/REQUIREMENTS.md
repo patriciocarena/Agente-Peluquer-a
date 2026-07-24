@@ -81,16 +81,20 @@ Requisitos para el release inicial. Cada uno mapea a una fase del roadmap.
 
 ### Superadmin (SADMIN)
 
-> **Sin tildar a propósito (2026-07-09).** El panel `/admin` está construido y commiteado
-> (plan 02-08, Tasks 1-2), pero el plan quedó **pausado en Task 3**: nunca se corrió
-> `scripts/bootstrap-superadmin.ts` ni `scripts/verify-admin-tenant-lifecycle.ts` contra la
-> base real, así que el flujo jamás se ejerció end-to-end. Su `02-08-SUMMARY.md` tiene
-> `requirements-completed: []`. Tildarlos hoy sería asumir, no verificar.
-> Pasos para cerrarlos: `.planning/HANDOFF-milestone-v1.md`, sección 2.7.
+> **Verificado en vivo (2026-07-10).** El bootstrap del primer superadmin se ejecutó contra
+> `bdgufnitakelyialjoqg`: `scripts/bootstrap-superadmin.ts` creó el `perfil` superadmin
+> (`auth.users.id=f66ffbaf-6141-4441-87bd-543faea1c2f9`, `phono4884@gmail.com`, `tenant_id=NULL`)
+> y `scripts/verify-admin-tenant-lifecycle.ts` pasó **exit 0**: SADMIN-01 por happy-path (alta
+> Tenant+dueño+Negocio) + rollback compensatorio sin huérfanos; SADMIN-03 por listado
+> `service_role` aislado de RLS; SADMIN-02 (phone_number_id/waba_id/número visible por el alta
+> del negocio, token encriptado por `verify-vault-no-plaintext.ts` + `verify-vault-wrappers-anon-denied.ts`, SEC-01).
+> **Único pendiente (no bloquea este requisito):** confirmación *visual* del gate `/admin` por
+> la UI (superadmin lo ve, owner no) — paso 4 humano de `02-08-PLAN.md` Task 3, dentro de los
+> tests visuales de la fase 04.
 
-- [ ] **SADMIN-01**: El superadmin puede crear, editar y desactivar tenants (peluquerías)
-- [ ] **SADMIN-02**: El superadmin puede vincular a cada tenant su config de WhatsApp (phone_number_id, waba_id, token encriptado, número visible)
-- [ ] **SADMIN-03**: El superadmin puede listar y acceder a todos los tenants; su panel está aislado del acceso RLS de los dueños
+- [x] **SADMIN-01**: El superadmin puede crear, editar y desactivar tenants (peluquerías)
+- [x] **SADMIN-02**: El superadmin puede vincular a cada tenant su config de WhatsApp (phone_number_id, waba_id, token encriptado, número visible)
+- [x] **SADMIN-03**: El superadmin puede listar y acceder a todos los tenants; su panel está aislado del acceso RLS de los dueños
 
 ### Hardening / launch readiness (SEC)
 
@@ -151,9 +155,9 @@ Qué fases cubren qué requisitos.
 | BIZ-01 | Phase 2 | Pending |
 | BIZ-02 | Phase 2 | Pending |
 | BIZ-03 | Phase 2 | Pending |
-| SADMIN-01 | Phase 2 | Pending |
-| SADMIN-02 | Phase 2 | Pending |
-| SADMIN-03 | Phase 2 | Pending |
+| SADMIN-01 | Phase 2 | Done |
+| SADMIN-02 | Phase 2 | Done |
+| SADMIN-03 | Phase 2 | Done |
 | AVAIL-01 | Phase 3 | Complete |
 | AVAIL-02 | Phase 3 | Complete |
 | AVAIL-03 | Phase 3 | Complete |

@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TurnosBot — Modelo de agenda (sketch 001)</title>
+<style>
+  :root{
+    --bg:#f7f7f8; --panel:#ffffff; --ink:#0f1115; --muted:#6b7280; --line:#e6e7eb;
+    --accent:#2563eb; --accent-soft:#dbe4ff; --accent-ink:#1d4ed8;
+    --ok:#2563eb; --ok-soft:#e5edff;
+    --warn:#b45309; --warn-soft:#fef3c7; --warn-line:#f5c877;
+    --block:#6b7280; --block-soft:#eceef1;
+    --free:#ffffff; --radius:12px; --shadow:0 1px 2px rgba(16,18,24,.06),0 6px 24px rgba(16,18,24,.05);
+    font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#0b0d10;--panel:#14171c;--ink:#e9eaee;--muted:#9aa1ad;--line:#242832;
+      --accent:#3b82f6;--accent-soft:#1b2a4a;--accent-ink:#93b4fb;
+      --ok:#3b82f6;--ok-soft:#17233d;--warn:#f5b544;--warn-soft:#3a2c12;--warn-line:#6b5220;
+      --block:#8a92a0;--block-soft:#1c2028;--free:#14171c;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 24px rgba(0,0,0,.35);}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.45}
+  .app{max-width:1180px;margin:0 auto;padding:18px}
+  /* top toolbar */
+  .toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .brand{font-weight:700;letter-spacing:-.02em;font-size:16px}
+  .tag{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+  .tabs{display:flex;gap:4px;margin-left:auto;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px}
+  .tab{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:600;font-size:13px;padding:7px 14px;border-radius:999px;cursor:pointer}
+  .tab[aria-selected="true"]{background:var(--accent);color:#fff}
+  .screen{display:none}
+  .screen.active{display:block}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  /* header controls inside a view */
+  .vhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .vtitle{font-size:20px;font-weight:700;letter-spacing:-.02em}
+  .neg{display:flex;align-items:center;gap:8px;font-weight:600}
+  .neg .dot{width:22px;height:22px;border-radius:6px;background:var(--accent-soft);color:var(--accent-ink);display:grid;place-items:center;font-size:11px;font-weight:700}
+  .seg{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px}
+  .seg button{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:600;font-size:13px;padding:5px 12px;border-radius:7px;cursor:pointer}
+  .seg button.on{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+  .nav{display:flex;align-items:center;gap:6px}
+  .icnbtn{width:32px;height:32px;border:1px solid var(--line);background:var(--panel);border-radius:9px;color:var(--ink);cursor:pointer;font-size:15px;line-height:1}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:4px 10px;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted)}
+  .chip.on{border-color:var(--accent);color:var(--accent-ink);background:var(--accent-soft)}
+  .chip .av{width:18px;height:18px;border-radius:999px;background:var(--accent-soft);color:var(--accent-ink);display:grid;place-items:center;font-size:9px;font-weight:700}
+  .spacer{margin-left:auto}
+  .btn{border:1px solid var(--accent);background:var(--accent);color:#fff;font:inherit;font-weight:600;font-size:13px;padding:7px 12px;border-radius:9px;cursor:pointer}
+  .btn.ghost{background:var(--panel);color:var(--ink);border-color:var(--line)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;padding:10px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
+  .lg{display:flex;align-items:center;gap:6px}
+  .sw{width:12px;height:12px;border-radius:4px}
+  .note{font-size:12px;color:var(--muted);padding:10px 16px 16px}
+
+  /* ===== calendar grid (week + day share the machinery) ===== */
+  .cal{display:grid;overflow:auto;max-height:560px}
+  .cal .col-time{position:sticky;left:0;background:var(--panel);z-index:3;border-right:1px solid var(--line)}
+  .head-row{display:contents}
+  .colhead{position:sticky;top:0;z-index:2;background:var(--panel);border-bottom:1px solid var(--line);border-left:1px solid var(--line);padding:8px 10px;text-align:center;font-weight:600}
+  .colhead.time{border-left:0;z-index:4}
+  .colhead small{display:block;color:var(--muted);font-weight:500;font-size:11px}
+  .colhead.today{color:var(--accent-ink)}
+  .colhead .av{width:26px;height:26px;border-radius:999px;background:var(--accent-soft);color:var(--accent-ink);display:inline-grid;place-items:center;font-size:11px;font-weight:700;margin-right:6px;vertical-align:middle}
+  .track{position:relative;border-left:1px solid var(--line);min-width:120px}
+  .track.today{background:linear-gradient(var(--accent-soft),transparent 60%)}
+  .slot{height:34px;border-bottom:1px dashed var(--line)}
+  .slot:hover{background:var(--accent-soft);cursor:pointer}
+  .hourlab{height:34px;border-bottom:1px solid transparent;font-size:11px;color:var(--muted);padding:2px 8px 0;text-align:right}
+  .hourlab.major{border-top:1px solid var(--line)}
+  /* appointment block absolutely placed over a track */
+  .appt{position:absolute;left:4px;right:4px;border-radius:9px;padding:5px 8px;overflow:hidden;font-size:12px;cursor:pointer;border:1px solid transparent}
+  .appt b{font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .appt small{color:inherit;opacity:.8;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .appt.ok{background:var(--ok-soft);border-color:var(--ok);color:var(--accent-ink)}
+  .appt.pend{background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn)}
+  .appt.blk{background:var(--block-soft);border-color:var(--line);color:var(--muted);background-image:repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(120,120,120,.09) 5px,rgba(120,120,120,.09) 10px)}
+  .nowline{position:absolute;left:0;right:0;height:2px;background:var(--accent);z-index:5}
+  .nowline::before{content:"";position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:999px;background:var(--accent)}
+  .colempty{padding:14px 8px;color:var(--muted);font-size:12px;text-align:center;border-left:1px solid var(--line)}
+
+  /* ===== agenda list ===== */
+  .daygroup{padding:6px 16px 14px}
+  .dayhdr{display:flex;align-items:baseline;gap:10px;position:sticky;top:0;background:var(--panel);padding:12px 0 8px;z-index:2}
+  .dayhdr h3{margin:0;font-size:15px;font-weight:700}
+  .dayhdr .sub{color:var(--muted);font-size:12px}
+  .dayhdr .count{margin-left:auto;font-size:12px;color:var(--muted)}
+  .arow{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:11px;margin-top:8px;background:var(--panel)}
+  .arow:hover{border-color:var(--accent)}
+  .atime{min-width:74px;text-align:center}
+  .atime b{font-size:15px;display:block}
+  .atime span{font-size:11px;color:var(--muted)}
+  .abar{width:4px;align-self:stretch;border-radius:3px;background:var(--ok)}
+  .abar.pend{background:var(--warn)}
+  .amain{flex:1;min-width:0}
+  .amain b{font-weight:600}
+  .svcchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+  .svc{font-size:11px;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--muted)}
+  .who{display:flex;align-items:center;gap:7px;min-width:120px}
+  .who .av{width:26px;height:26px;border-radius:999px;background:var(--accent-soft);color:var(--accent-ink);display:grid;place-items:center;font-size:11px;font-weight:700}
+  .price{min-width:84px;text-align:right;font-weight:700}
+  .pill{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:2px 7px;border-radius:999px}
+  .pill.ok{background:var(--ok-soft);color:var(--accent-ink)}
+  .pill.pend{background:var(--warn-soft);color:var(--warn)}
+  .emptyday{padding:16px;border:1px dashed var(--line);border-radius:11px;margin-top:8px;color:var(--muted);display:flex;align-items:center;justify-content:space-between}
+  .callout{margin:0 16px 14px;padding:12px 14px;border:1px solid var(--warn-line);background:var(--warn-soft);color:var(--warn);border-radius:11px;font-size:13px}
+  .mobilehint{font-size:11px;color:var(--muted);padding:0 16px 14px}
+  @media(max-width:640px){
+    .who,.price{display:none}
+    .app{padding:10px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="toolbar">
+    <span class="brand">TurnosBot</span>
+    <span class="tag">sketch 001 · modelo de agenda · mockup descartable</span>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="false" data-s="a">★ A · Semana</button>
+      <button class="tab" role="tab" aria-selected="true" data-s="b">★ B · Día (staff)</button>
+      <button class="tab" role="tab" aria-selected="false" data-s="c">C · Agenda</button>
+    </div>
+  </div>
+
+  <!-- ============ VARIANT A: SEMANA (columnas = días) ============ -->
+  <section class="screen card" id="s-a">
+    <div class="vhead">
+      <span class="neg"><span class="dot">BN</span> Barbería Norte</span>
+      <div class="seg"><button>Día</button><button class="on">Semana</button></div>
+      <div class="nav"><button class="icnbtn">‹</button><span style="font-weight:600;min-width:150px;text-align:center">7 – 13 jul 2026</span><button class="icnbtn">›</button></div>
+      <div class="chips" style="margin-left:8px">
+        <span class="chip on">Todos</span>
+        <span class="chip"><span class="av">AR</span>Augusto</span>
+        <span class="chip"><span class="av">C</span>Caro</span>
+        <span class="chip"><span class="av">F</span>Fede</span>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn">＋ Nuevo turno</button>
+    </div>
+
+    <div class="cal" id="week" style="grid-template-columns:56px repeat(7,minmax(120px,1fr))">
+      <!-- headers -->
+      <div class="colhead time"><small>&nbsp;</small></div>
+      <div class="colhead">Lun<small>7</small></div>
+      <div class="colhead">Mar<small>8</small></div>
+      <div class="colhead">Mié<small>9</small></div>
+      <div class="colhead">Jue<small>10</small></div>
+      <div class="colhead today">Sáb·hoy<small>11</small></div>
+      <div class="colhead">Dom<small>12</small></div>
+      <div class="colhead">Lun<small>13</small></div>
+      <!-- time gutter -->
+      <div class="col-time" id="wtime"></div>
+      <!-- 7 day tracks -->
+      <div class="track" id="wd1"></div>
+      <div class="track" id="wd2"></div>
+      <div class="track" id="wd3"></div>
+      <div class="track" id="wd4"></div>
+      <div class="track today" id="wd5"></div>
+      <div class="track" id="wd6"></div>
+      <div class="track" id="wd7"></div>
+    </div>
+    <div class="legend">
+      <span class="lg"><span class="sw" style="background:var(--ok-soft);border:1px solid var(--ok)"></span>Confirmado</span>
+      <span class="lg"><span class="sw" style="background:var(--warn-soft);border:1px solid var(--warn-line)"></span>Pendiente</span>
+      <span class="lg"><span class="sw" style="background:var(--block-soft);border:1px solid var(--line)"></span>Bloqueo</span>
+      <span class="lg"><span class="sw" style="background:var(--accent-soft)"></span>Slot libre (click para crear)</span>
+    </div>
+    <p class="note"><b>Semana de un vistazo.</b> Columnas = días. El dueño ve la carga de toda la semana. Con varios profesionales se filtra por chip (o "Todos" apila los turnos con color por profesional). Resuelve la queja #1: pensar en semanas, no día por día.</p>
+  </section>
+
+  <!-- ============ VARIANT B: DÍA (columnas = profesionales) mejorado ============ -->
+  <section class="screen active card" id="s-b">
+    <div class="vhead">
+      <span class="neg"><span class="dot">BN</span> Barbería Norte</span>
+      <div class="seg"><button class="on">Día</button><button>Semana</button></div>
+      <div class="nav"><button class="icnbtn">‹</button><span style="font-weight:600;min-width:150px;text-align:center">sábado 11 jul</span><button class="icnbtn">›</button></div>
+      <div class="spacer"></div>
+      <div class="seg" title="demo: cambiar cantidad de profesionales"><button class="on" id="b3">3 profesionales</button><button id="b1">1 profesional</button></div>
+      <button class="btn">＋ Nuevo turno</button>
+    </div>
+
+    <!-- 3 profesionales: columnas por staff -->
+    <div class="cal" id="dayMulti" style="grid-template-columns:56px repeat(3,minmax(150px,1fr))">
+      <div class="colhead time"><small>&nbsp;</small></div>
+      <div class="colhead"><span class="av">AR</span>Augusto Rinaldi</div>
+      <div class="colhead"><span class="av">C</span>Caro</div>
+      <div class="colhead"><span class="av">F</span>Fede</div>
+      <div class="col-time" id="dtime"></div>
+      <div class="track" id="dp1"></div>
+      <div class="track" id="dp2"></div>
+      <div class="track" id="dp3" data-empty="1"></div>
+    </div>
+
+    <!-- 1 profesional: columna ancha centrada + resumen, NO una columna flaca -->
+    <div id="daySingle" style="display:none">
+      <div class="cal" style="grid-template-columns:56px minmax(320px,560px) 1fr">
+        <div class="colhead time"><small>&nbsp;</small></div>
+        <div class="colhead"><span class="av">FD</span>Feli Diaz</div>
+        <div class="colhead" style="border-left:1px solid var(--line);color:var(--muted);font-weight:600">Resumen del día</div>
+        <div class="col-time" id="stime"></div>
+        <div class="track" id="sp1"></div>
+        <div style="border-left:1px solid var(--line);padding:14px">
+          <div style="font-size:26px;font-weight:800;letter-spacing:-.02em">3 turnos</div>
+          <div style="color:var(--muted);margin-bottom:12px">$ 21.000 estimado</div>
+          <div class="svcchips" style="flex-direction:column;align-items:stretch;gap:8px">
+            <div class="svc" style="padding:8px 10px;text-align:left">10:00 · Bruno — Corte + barba</div>
+            <div class="svc" style="padding:8px 10px;text-align:left">12:30 · Nico — Corte clásico</div>
+            <div class="svc" style="padding:8px 10px;text-align:left">17:00 · Lucas — Corte + barba <span style="color:var(--warn)">· pendiente</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Con <b>un solo profesional</b> la vista no desperdicia la pantalla en una columna flaca: la agenda va a un ancho legible y al lado aparece un resumen del día. Resuelve la queja #2.</p>
+    </div>
+
+    <div class="callout" id="emptyNote">💡 <b>Fede</b> no tiene horario cargado el sábado — su columna lo dice en línea (no un cartel a pantalla completa), y las celdas siguen clickeables para cargar una excepción. Mejor empty-state que el overlay actual.</div>
+    <p class="note"><b>Deep-dive operativo del día.</b> Columnas = profesionales, bloques con la duración real del servicio y color por estado. Es el modelo estándar del rubro (Fresha/Booksy/Square), pero adaptado a 1 vs N profesionales y con mejor estado vacío.</p>
+  </section>
+
+  <!-- ============ VARIANT C: AGENDA (lista cronológica) ============ -->
+  <section class="screen card" id="s-c">
+    <div class="vhead">
+      <span class="neg"><span class="dot">BN</span> Barbería Norte</span>
+      <div class="seg"><button>Día</button><button>Semana</button><button class="on">Agenda</button></div>
+      <div class="nav"><button class="icnbtn">‹</button><span style="font-weight:600;min-width:120px;text-align:center">próximos días</span><button class="icnbtn">›</button></div>
+      <div class="spacer"></div>
+      <button class="btn">＋ Nuevo turno</button>
+    </div>
+
+    <div class="daygroup">
+      <div class="dayhdr"><h3>Hoy</h3><span class="sub">sábado 11 jul</span><span class="count">3 turnos · $ 24.000</span></div>
+
+      <div class="arow">
+        <div class="atime"><b>10:00</b><span>45 min</span></div>
+        <div class="abar"></div>
+        <div class="amain"><b>Bruno Sosa</b>
+          <div class="svcchips"><span class="svc">Corte + barba</span></div>
+        </div>
+        <div class="who"><span class="av">AR</span>Augusto</div>
+        <div class="price">$ 9.000</div>
+        <span class="pill ok">Confirmado</span>
+      </div>
+
+      <div class="arow">
+        <div class="atime"><b>12:30</b><span>30 min</span></div>
+        <div class="abar"></div>
+        <div class="amain"><b>Nicolás Vera</b>
+          <div class="svcchips"><span class="svc">Corte clásico</span></div>
+        </div>
+        <div class="who"><span class="av">C</span>Caro</div>
+        <div class="price">$ 6.000</div>
+        <span class="pill ok">Confirmado</span>
+      </div>
+
+      <div class="arow">
+        <div class="atime"><b>17:00</b><span>45 min</span></div>
+        <div class="abar pend"></div>
+        <div class="amain"><b>Lucas Pérez</b>
+          <div class="svcchips"><span class="svc">Corte + barba</span></div>
+        </div>
+        <div class="who"><span class="av">AR</span>Augusto</div>
+        <div class="price">$ 9.000</div>
+        <span class="pill pend">Pendiente</span>
+      </div>
+    </div>
+
+    <div class="daygroup">
+      <div class="dayhdr"><h3>Mañana</h3><span class="sub">domingo 12 jul</span><span class="count">día libre</span></div>
+      <div class="emptyday"><span>Sin turnos — día libre 🎉</span><button class="btn ghost">＋ Cargar turno</button></div>
+    </div>
+
+    <div class="daygroup">
+      <div class="dayhdr"><h3>Lunes</h3><span class="sub">13 jul</span><span class="count">1 turno · $ 6.000</span></div>
+      <div class="arow">
+        <div class="atime"><b>09:30</b><span>30 min</span></div>
+        <div class="abar"></div>
+        <div class="amain"><b>Martín Gómez</b>
+          <div class="svcchips"><span class="svc">Corte clásico</span></div>
+        </div>
+        <div class="who"><span class="av">F</span>Fede</div>
+        <div class="price">$ 6.000</div>
+        <span class="pill ok">Confirmado</span>
+      </div>
+    </div>
+    <p class="mobilehint">📱 Este modelo es el que mejor cae en el teléfono y en días flojos: lista limpia, sin pared de celdas vacías. Ideal como vista por defecto en mobile.</p>
+  </section>
+</div>
+
+<script>
+  // ---- tab switching
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected','false'));
+    t.setAttribute('aria-selected','true');
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('s-'+t.dataset.s).classList.add('active');
+  }));
+
+  // ---- build hour gutters + empty slots for calendars
+  const START=9, END=20, SLOT=30, PXH=34; // 09:00-20:00, 30-min slots, 34px each
+  function hoursHTML(){let h='';for(let m=START*60;m<END*60;m+=SLOT){const hh=String(Math.floor(m/60)).padStart(2,'0'),mm=String(m%60).padStart(2,'0');h+=`<div class="hourlab ${mm==='00'?'major':''}">${mm==='00'?hh+':00':''}</div>`;}return h;}
+  function slotsHTML(){let h='';for(let m=START*60;m<END*60;m+=SLOT)h+='<div class="slot"></div>';return h;}
+  function top(hhmm){const [h,m]=hhmm.split(':').map(Number);return ((h*60+m)-START*60)/SLOT*PXH;}
+  function hgt(mins){return mins/SLOT*PXH - 4;}
+  function appt(cls,start,mins,name,sub){return `<div class="appt ${cls}" style="top:${top(start)+2}px;height:${hgt(mins)}px"><b>${name}</b><small>${sub}</small></div>`;}
+
+  ['wtime','dtime','stime'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=hoursHTML();});
+  ['wd1','wd2','wd3','wd4','wd5','wd6','wd7','dp1','dp2','dp3','sp1'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=slotsHTML();});
+
+  // week appointments (spread across days, filtered "Todos")
+  document.getElementById('wd1').innerHTML+=appt('ok','10:00',30,'Bruno','Corte');
+  document.getElementById('wd1').innerHTML+=appt('ok','16:30',45,'Lucas','Corte+barba');
+  document.getElementById('wd2').innerHTML+=appt('pend','11:00',45,'Nico','Corte+barba');
+  document.getElementById('wd3').innerHTML+=appt('ok','09:30',30,'Martín','Corte');
+  document.getElementById('wd3').innerHTML+=appt('blk','13:00',60,'Almuerzo','Bloqueo');
+  document.getElementById('wd4').innerHTML+=appt('ok','15:00',30,'Diego','Corte');
+  document.getElementById('wd5').innerHTML+=appt('ok','10:00',45,'Bruno','Corte+barba');
+  document.getElementById('wd5').innerHTML+=appt('ok','12:30',30,'Nico','Corte');
+  document.getElementById('wd5').innerHTML+=appt('pend','17:00',45,'Lucas','Corte+barba');
+  document.getElementById('wd7').innerHTML+=appt('ok','09:30',30,'Martín','Corte');
+
+  // day (3 pros)
+  document.getElementById('dp1').innerHTML+=appt('ok','10:00',45,'Bruno','Corte+barba · $9.000');
+  document.getElementById('dp1').innerHTML+=appt('pend','17:00',45,'Lucas','Corte+barba · pend.');
+  document.getElementById('dp2').innerHTML+=appt('ok','12:30',30,'Nico','Corte · $6.000');
+  document.getElementById('dp2').innerHTML+=appt('blk','14:00',60,'Bloqueo','Descanso');
+  // dp3 = Fede sin horario → inline empty note over the track
+  document.getElementById('dp3').innerHTML='<div class="colempty">Sin horario cargado el sábado.<br>Las celdas siguen clickeables para una excepción.</div>';
+  // now line on today (day view) ~ 15:20
+  document.getElementById('dp1').innerHTML+=`<div class="nowline" style="top:${top('15:20')}px"></div>`;
+  document.getElementById('dp2').innerHTML+=`<div class="nowline" style="top:${top('15:20')}px"></div>`;
+
+  // single pro
+  document.getElementById('sp1').innerHTML+=appt('ok','10:00',45,'Bruno','Corte+barba · $9.000');
+  document.getElementById('sp1').innerHTML+=appt('ok','12:30',30,'Nico','Corte · $6.000');
+  document.getElementById('sp1').innerHTML+=appt('pend','17:00',45,'Lucas','Corte+barba · pend.');
+
+  // toggle 3 vs 1 professional in variant B
+  const b3=document.getElementById('b3'), b1=document.getElementById('b1');
+  b3.addEventListener('click',()=>{b3.classList.add('on');b1.classList.remove('on');
+    document.getElementById('dayMulti').style.display='grid';
+    document.getElementById('daySingle').style.display='none';
+    document.getElementById('emptyNote').style.display='block';});
+  b1.addEventListener('click',()=>{b1.classList.add('on');b3.classList.remove('on');
+    document.getElementById('dayMulti').style.display='none';
+    document.getElementById('daySingle').style.display='block';
+    document.getElementById('emptyNote').style.display='none';});
+</script>
+</body>
+</html>

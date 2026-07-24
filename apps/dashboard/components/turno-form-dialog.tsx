@@ -60,6 +60,10 @@ type Props = {
   timezone: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Invocada además de `onOpenChange(false)` cuando el submit termina en
+   * éxito — permite a un contenedor padre (ej. `turno-detail-sheet.tsx`)
+   * reaccionar (cerrarse) sin que este Dialog conozca a su padre. */
+  onSuccess?: () => void;
 };
 
 export function TurnoFormDialog({
@@ -72,6 +76,7 @@ export function TurnoFormDialog({
   timezone,
   open,
   onOpenChange,
+  onSuccess,
 }: Props) {
   const isReagendar = mode === "reagendar";
 
@@ -135,6 +140,7 @@ export function TurnoFormDialog({
 
       toast.success(isReagendar ? "Turno reagendado." : "Turno creado.");
       onOpenChange(false);
+      onSuccess?.();
     });
   }
 

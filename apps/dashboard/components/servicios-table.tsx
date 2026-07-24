@@ -83,11 +83,35 @@ type Props = {
   servicios: Servicio[];
 };
 
+function firmaServicios(lista: Servicio[]): string {
+  return JSON.stringify(
+    lista.map((s) => ({
+      id: s.id,
+      orden: s.orden,
+      activo: s.activo,
+      precio: s.precio,
+      duracion_min: s.duracion_min,
+      nombre: s.nombre,
+      descripcion: s.descripcion,
+    })),
+  );
+}
+
 export function ServiciosTable({ servicios: initialServicios }: Props) {
   const [servicios, setServicios] = useState<Servicio[]>(
     [...initialServicios].sort((a, b) => a.orden - b.orden),
   );
   const [estado, setEstado] = useState<EstadoFilter>("todos");
+
+  // Re-sincronizar el estado local con las props revalidadas (ej. tras
+  // editar un servicio por el diálogo, que dispara revalidatePath). Patrón
+  // idiomático de React "ajustar estado durante el render" — NO useEffect.
+  const firmaActual = firmaServicios(initialServicios);
+  const [firmaPrevia, setFirmaPrevia] = useState(firmaActual);
+  if (firmaActual !== firmaPrevia) {
+    setServicios([...initialServicios].sort((a, b) => a.orden - b.orden));
+    setFirmaPrevia(firmaActual);
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor),

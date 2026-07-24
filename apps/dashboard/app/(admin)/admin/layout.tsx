@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/sidebar";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  await requireRole("superadmin");
+  const { email } = await requireRole("superadmin");
 
   return (
     <SidebarProvider>
@@ -70,7 +70,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <Separator orientation="vertical" className="h-6" />
             <span className="text-sm font-medium text-foreground">Panel superadmin</span>
           </div>
-          <UserMenu />
+          <UserMenu email={email} />
         </header>
         <main className="flex-1 p-6">{children}</main>
       </SidebarInset>
