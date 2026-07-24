@@ -14,7 +14,7 @@ COPY apps/bot/package.json ./apps/bot/package.json
 COPY packages/db-types/package.json ./packages/db-types/package.json
 COPY packages/availability-engine/package.json ./packages/availability-engine/package.json
 
-RUN pnpm install --frozen-lockfile --filter @turnosbot/bot...
+RUN pnpm install --frozen-lockfile --ignore-scripts --filter @turnosbot/bot...
 
 COPY packages/db-types ./packages/db-types
 COPY packages/availability-engine ./packages/availability-engine
